@@ -335,27 +335,37 @@ const MobileHeader = () => {
               <motion.div
                 ref={logoRef}
                 className="overflow-visible relative z-[10003] flex items-center"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ 
                   opacity: 1, 
-                  scale: [1, 1.03, 1] 
+                  scale: [1, 1.06, 1],
+                  filter: [
+                    "drop-shadow(0 0 0px rgba(74, 222, 128, 0))",
+                    "drop-shadow(0 0 6px rgba(74, 222, 128, 0.3))",
+                    "drop-shadow(0 0 0px rgba(74, 222, 128, 0))"
+                  ]
                 }}
                 transition={{ 
                   opacity: { duration: 0.5 },
                   scale: { 
-                    duration: 3, 
+                    duration: 3.5, 
                     repeat: Infinity, 
                     ease: "easeInOut" 
+                  },
+                  filter: {
+                    duration: 3.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
                   }
                 }}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.1, filter: "drop-shadow(0 0 10px rgba(74, 222, 128, 0.5))" }}
+                whileTap={{ scale: 0.9 }}
               >
                 {appLogo.src ? (
                   <img
                     src={appLogo.src}
                     alt={appLogo.alt}
-                    className="h-24 sm:h-32 w-48 sm:w-56 object-contain origin-left relative z-[10004]"
+                    className="h-28 sm:h-36 w-auto max-w-[200px] sm:max-w-[280px] object-contain origin-left relative z-[10004] drop-shadow-md"
                     onError={(e) => {
                       // Hide image if logo doesn't exist
                       e.target.style.display = "none";
@@ -367,14 +377,14 @@ const MobileHeader = () => {
                       ) {
                         const fallback = document.createElement("span");
                         fallback.className =
-                          "logo-text-fallback bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent font-bold text-xl sm:text-2xl";
+                          "logo-text-fallback bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent font-extrabold text-2xl sm:text-3xl drop-shadow-sm";
                         fallback.textContent = "Dwell Mart";
                         parent.appendChild(fallback);
                       }
                     }}
                   />
                 ) : (
-                  <span className="logo-text-fallback bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent font-bold text-xl sm:text-2xl">
+                  <span className="logo-text-fallback bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent font-extrabold text-2xl sm:text-3xl drop-shadow-sm">
                     Dwell Mart
                   </span>
                 )}

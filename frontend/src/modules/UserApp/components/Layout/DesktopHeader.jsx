@@ -54,36 +54,46 @@ const DesktopHeader = () => {
 
   return (
     <header className="hidden md:block sticky top-0 z-[999] bg-white shadow-sm border-b border-gray-100">
-      <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-24 flex items-center justify-between gap-8">
+      <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-20 flex items-center justify-between gap-8">
         {/* Logo */}
-        <Link to="/home" className="flex-shrink-0 flex items-center gap-2">
+        <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            initial={{ opacity: 0, scale: 0.8, y: -20 }}
             animate={{ 
               opacity: 1, 
-              scale: [1, 1.02, 1],
-              y: 0 
+              scale: [1, 1.05, 1],
+              y: 0,
+              filter: [
+                "drop-shadow(0 0 0px rgba(74, 222, 128, 0))",
+                "drop-shadow(0 0 8px rgba(74, 222, 128, 0.4))",
+                "drop-shadow(0 0 0px rgba(74, 222, 128, 0))"
+              ]
             }}
             transition={{ 
-              opacity: { duration: 0.5 },
+              opacity: { duration: 0.6 },
               scale: { 
-                duration: 3, 
+                duration: 4, 
                 repeat: Infinity, 
                 ease: "easeInOut" 
               },
-              y: { duration: 0.5 }
+              filter: {
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              },
+              y: { duration: 0.6, type: "spring", stiffness: 100 }
             }}
-            whileHover={{ scale: 1.08 }}
-            className="flex items-center"
+            whileHover={{ scale: 1.12, filter: "drop-shadow(0 0 12px rgba(74, 222, 128, 0.6))" }}
+            className="flex items-center overflow-visible"
           >
             {appLogo.src ? (
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-20 lg:h-24 xl:h-28 w-48 lg:w-56 xl:w-64 object-contain transition-all"
+                className="h-28 lg:h-32 xl:h-36 w-auto max-w-[300px] lg:max-w-[350px] xl:max-w-[400px] object-contain transition-all drop-shadow-md"
               />
             ) : (
-              <span className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">Dwell Mart</span>
+              <span className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>
             )}
           </motion.div>
         </Link>
