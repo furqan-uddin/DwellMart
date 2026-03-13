@@ -1,5 +1,9 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
+  ? (import.meta.env.VITE_API_BASE_URL.endsWith('/api') 
+      ? import.meta.env.VITE_API_BASE_URL 
+      : `${import.meta.env.VITE_API_BASE_URL}/api`) 
+  : '/api';
 
 // App Constants
 export const APP_NAME = 'Dwell Mart multi vendor E-commerce';

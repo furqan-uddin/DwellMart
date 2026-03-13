@@ -46,6 +46,7 @@ app.use(helmet());
 app.use(mongoSanitize());
 const allowedOrigins = [
     process.env.CLIENT_URL,
+    'https://dwell-mart-3u11.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:3001'
