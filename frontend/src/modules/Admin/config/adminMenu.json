@@ -1,0 +1,157 @@
+[
+  {
+    "title": "Dashboard",
+    "route": "/admin/dashboard",
+    "children": []
+  },
+  {
+    "title": "Orders",
+    "route": "/admin/orders",
+    "children": [
+      "All Orders",
+      "Order Tracking"
+    ]
+  },
+  {
+    "title": "Return Requests",
+    "route": "/admin/return-requests",
+    "children": []
+  },
+  {
+    "title": "Products",
+    "route": "/admin/products",
+    "children": [
+      "Manage Products",
+      "Add Product",
+      "Tax & Pricing",
+      "Product Ratings"
+    ]
+  },
+  {
+    "title": "Categories",
+    "route": "/admin/categories",
+    "children": [
+      "Manage Categories",
+      "Category Order"
+    ]
+  },
+  {
+    "title": "Brands",
+    "route": "/admin/brands",
+    "children": [
+      "Manage Brands"
+    ]
+  },
+  {
+    "title": "Customers",
+    "route": "/admin/customers",
+    "children": [
+      "View Customers",
+      "Addresses",
+      "Transactions"
+    ]
+  },
+  {
+    "title": "Delivery Management",
+    "route": "/admin/delivery",
+    "children": [
+      "Delivery Boys",
+      "Cash Collection",
+      "Assign Delivery"
+    ]
+  },
+  {
+    "title": "Vendors",
+    "route": "/admin/vendors",
+    "children": [
+      "Manage Vendors",
+      "Pending Approvals",
+      "Commission Rates",
+      "Vendor Analytics"
+    ]
+  },
+  {
+    "title": "Offers & Sliders",
+    "route": "/admin/offers",
+    "children": [
+      "Home Sliders",
+      "Festival Offers"
+    ]
+  },
+  {
+    "title": "Banners",
+    "route": "/admin/banners",
+    "children": []
+  },
+  {
+    "title": "Promo Codes",
+    "route": "/admin/promocodes",
+    "children": []
+  },
+  {
+    "title": "Notifications",
+    "route": "/admin/notifications",
+    "children": [
+      "Push Notifications",
+      "Custom Messages"
+    ]
+  },
+  {
+    "title": "Support Desk",
+    "route": "/admin/support",
+    "children": [
+      "Live Chat",
+      "Ticket Types",
+      "Tickets"
+    ]
+  },
+  {
+    "title": "Reports",
+    "route": "/admin/reports",
+    "children": [
+      "Sales Report",
+      "Inventory Report"
+    ]
+  },
+  {
+    "title": "Analytics & Finance",
+    "route": "/admin/finance",
+    "children": [
+      "Revenue Overview",
+      "Profit & Loss",
+      "Order Trends",
+      "Payment Breakdown",
+      "Tax Reports",
+      "Refund Reports"
+    ]
+  },
+  {
+    "title": "Settings",
+    "route": "/admin/settings",
+    "children": [
+      "General",
+      "Payment & Shipping",
+      "Orders & Customers",
+      "Products & Inventory",
+      "Content & Features",
+      "Notifications & SEO"
+    ]
+  },
+  {
+    "title": "Policies",
+    "route": "/admin/policies",
+    "children": [
+      "Privacy Policy",
+      "Refund Policy",
+      "Terms & Conditions"
+    ]
+  },
+  {
+    "title": "Firebase",
+    "route": "/admin/firebase",
+    "children": [
+      "Push Config",
+      "Authentication"
+    ]
+  }
+]
