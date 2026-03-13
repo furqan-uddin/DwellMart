@@ -54,21 +54,36 @@ const DesktopHeader = () => {
 
   return (
     <header className="hidden md:block sticky top-0 z-[999] bg-white shadow-sm border-b border-gray-100">
-      <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-20 flex items-center justify-between gap-8">
+      <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-24 flex items-center justify-between gap-8">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2">
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            animate={{ 
+              opacity: 1, 
+              scale: [1, 1.02, 1],
+              y: 0 
+            }}
+            transition={{ 
+              opacity: { duration: 0.5 },
+              scale: { 
+                duration: 3, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              },
+              y: { duration: 0.5 }
+            }}
+            whileHover={{ scale: 1.08 }}
+            className="flex items-center"
           >
             {appLogo.src ? (
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-20 lg:h-24 xl:h-28 w-auto object-contain"
+                className="h-20 lg:h-24 xl:h-28 w-48 lg:w-56 xl:w-64 object-contain transition-all"
               />
             ) : (
-              <span className="text-3xl font-bold text-primary-600">Dwell Mart</span>
+              <span className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">Dwell Mart</span>
             )}
           </motion.div>
         </Link>

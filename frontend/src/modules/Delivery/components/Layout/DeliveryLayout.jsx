@@ -57,12 +57,29 @@ const DeliveryLayout = () => {
           <Link
             to="/delivery/dashboard"
             className="flex items-center flex-shrink-0 overflow-visible relative z-10">
-            <div className="overflow-visible">
+            <motion.div 
+              className="overflow-visible flex items-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ 
+                opacity: 1, 
+                scale: [1, 1.03, 1] 
+              }}
+              transition={{ 
+                opacity: { duration: 0.5 },
+                scale: { 
+                  duration: 3, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }
+              }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+            >
               {appLogo.src ? (
                 <img
                   src={appLogo.src}
                   alt={appLogo.alt}
-                  className="h-12 sm:h-16 w-auto object-contain origin-left"
+                  className="h-16 sm:h-20 w-32 sm:w-40 object-contain origin-left"
                   onError={(e) => {
                     // Hide image if logo doesn't exist
                     e.target.style.display = "none";
@@ -74,18 +91,18 @@ const DeliveryLayout = () => {
                     ) {
                       const fallback = document.createElement("span");
                       fallback.className =
-                        "logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl";
+                        "logo-text-fallback bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent font-bold text-lg sm:text-xl";
                       fallback.textContent = "Dwell Mart";
                       parent.appendChild(fallback);
                     }
                   }}
                 />
               ) : (
-                <span className="logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl">
+                <span className="logo-text-fallback bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent font-bold text-lg sm:text-xl">
                   Dwell Mart
                 </span>
               )}
-            </div>
+            </motion.div>
           </Link>
 
           <div
