@@ -79,55 +79,8 @@ const MobileHeader = () => {
 
   const currentPage = getCurrentPage();
 
-  // Memoize gradient background style to prevent unnecessary re-renders
-  const headerBackground = useMemo(() => {
-    // Category pages - keep existing category-specific gradients
-    if (currentCategoryId) {
-      const gradientMap = {
-        1: "linear-gradient(to bottom, rgb(252, 231, 243) 0%, rgb(255, 240, 245) 50%, rgb(255, 255, 255) 100%)", // Pink - moderate
-        2: "linear-gradient(to bottom, rgb(254, 243, 199) 0%, rgb(255, 248, 220) 50%, rgb(255, 255, 255) 100%)", // Brown/Amber - moderate
-        3: "linear-gradient(to bottom, rgb(255, 237, 213) 0%, rgb(255, 245, 230) 50%, rgb(255, 255, 255) 100%)", // Orange - moderate
-        4: "linear-gradient(to bottom, rgb(209, 250, 229) 0%, rgb(236, 253, 245) 50%, rgb(255, 255, 255) 100%)", // Green - moderate
-        5: "linear-gradient(to bottom, rgb(243, 232, 255) 0%, rgb(250, 245, 255) 50%, rgb(255, 255, 255) 100%)", // Purple - moderate
-        6: "linear-gradient(to bottom, rgb(219, 234, 254) 0%, rgb(239, 246, 255) 50%, rgb(255, 255, 255) 100%)", // Blue - moderate
-      };
-      return (
-        gradientMap[currentCategoryId] ||
-        "linear-gradient(to bottom, #EDE9FE 0%, #F5F3FF 50%, #FFFFFF 100%)"
-      );
-    }
-
-    // Page-specific gradients
-    const pageGradients = {
-      home: "linear-gradient(to bottom, rgb(196, 181, 253) 0%, rgb(221, 214, 254) 25%, rgb(245, 243, 255) 50%, rgb(255, 255, 255) 100%)", // Purple gradient for home - lighter intensity
-      product:
-        "linear-gradient(to bottom, rgb(237, 233, 254) 0%, rgb(245, 243, 255) 50%, rgb(255, 255, 255) 100%)", // Light purple
-      search:
-        "linear-gradient(to bottom, rgb(249, 115, 22) 0%, rgb(251, 146, 60) 30%, rgb(255, 237, 213) 60%, rgb(255, 255, 255) 100%)", // Orange gradient
-      wishlist:
-        "linear-gradient(to bottom, rgb(239, 68, 68) 0%, rgb(248, 113, 113) 30%, rgb(254, 226, 226) 60%, rgb(255, 255, 255) 100%)", // Red/pink gradient
-      profile:
-        "linear-gradient(to bottom, rgb(16, 185, 129) 0%, rgb(52, 211, 153) 30%, rgb(209, 250, 229) 60%, rgb(255, 255, 255) 100%)", // Green gradient
-      orders:
-        "linear-gradient(to bottom, rgb(59, 130, 246) 0%, rgb(96, 165, 250) 30%, rgb(219, 234, 254) 60%, rgb(255, 255, 255) 100%)", // Blue gradient
-      orderDetail:
-        "linear-gradient(to bottom, rgb(59, 130, 246) 0%, rgb(96, 165, 250) 30%, rgb(219, 234, 254) 60%, rgb(255, 255, 255) 100%)", // Blue gradient
-      checkout:
-        "linear-gradient(to bottom, rgb(16, 185, 129) 0%, rgb(52, 211, 153) 30%, rgb(209, 250, 229) 60%, rgb(255, 255, 255) 100%)", // Green gradient
-      offers:
-        "linear-gradient(to bottom, rgb(249, 115, 22) 0%, rgb(251, 146, 60) 30%, rgb(255, 237, 213) 60%, rgb(255, 255, 255) 100%)", // Orange gradient
-      dailyDeals:
-        "linear-gradient(to bottom, rgb(234, 179, 8) 0%, rgb(250, 204, 21) 30%, rgb(254, 243, 199) 60%, rgb(255, 255, 255) 100%)", // Yellow gradient
-      flashSale:
-        "linear-gradient(to bottom, rgb(239, 68, 68) 0%, rgb(248, 113, 113) 30%, rgb(254, 226, 226) 60%, rgb(255, 255, 255) 100%)", // Red gradient
-      vendor:
-        "linear-gradient(to bottom, rgb(124, 58, 237) 0%, rgb(167, 139, 250) 30%, rgb(237, 233, 254) 60%, rgb(255, 255, 255) 100%)", // Purple gradient
-      default:
-        "linear-gradient(to bottom, rgb(237, 233, 254) 0%, rgb(245, 243, 255) 50%, rgb(255, 255, 255) 100%)", // Light purple default
-    };
-
-    return pageGradients[currentPage] || pageGradients.default;
-  }, [currentCategoryId, currentPage, location.pathname]);
+  // Header background is now solid white
+  const headerBackground = "rgb(255, 255, 255)";
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -309,7 +262,7 @@ const MobileHeader = () => {
         damping: 30,
         mass: 0.8,
       }}>
-      <div className="px-4 py-3 overflow-visible">
+      <div className="px-4 py-0.5 overflow-visible">
         {/* First Row: Logo and Actions */}
         <motion.div
           ref={topRowRef}
@@ -338,22 +291,28 @@ const MobileHeader = () => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ 
                   opacity: 1, 
-                  scale: [1, 1.06, 1],
+                  scale: [1, 1.1, 1.05, 1.1, 1],
+                  y: [0, -8, 0, -5, 0],
                   filter: [
-                    "drop-shadow(0 0 0px rgba(74, 222, 128, 0))",
-                    "drop-shadow(0 0 6px rgba(74, 222, 128, 0.3))",
-                    "drop-shadow(0 0 0px rgba(74, 222, 128, 0))"
+                    "drop-shadow(0 4px 6px rgba(0,0,0,0.1))",
+                    "drop-shadow(0 15px 15px rgba(74, 222, 128, 0.4))",
+                    "drop-shadow(0 4px 6px rgba(0,0,0,0.1))"
                   ]
                 }}
                 transition={{ 
                   opacity: { duration: 0.5 },
                   scale: { 
-                    duration: 3.5, 
+                    duration: 4, 
                     repeat: Infinity, 
                     ease: "easeInOut" 
                   },
+                  y: {
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  },
                   filter: {
-                    duration: 3.5,
+                    duration: 4,
                     repeat: Infinity,
                     ease: "easeInOut"
                   }
@@ -365,7 +324,7 @@ const MobileHeader = () => {
                   <img
                     src={appLogo.src}
                     alt={appLogo.alt}
-                    className="h-28 sm:h-36 w-auto max-w-[200px] sm:max-w-[280px] object-contain origin-left relative z-[10004] drop-shadow-md"
+                    className="h-32 sm:h-40 w-auto max-w-[250px] sm:max-w-[350px] object-contain origin-left relative z-[10004] filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.1)] hover:drop-shadow-[0_20px_25px_rgba(0,0,0,0.2)] transition-all duration-500"
                     onError={(e) => {
                       // Hide image if logo doesn't exist
                       e.target.style.display = "none";
