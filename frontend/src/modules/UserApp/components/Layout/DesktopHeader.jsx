@@ -57,15 +57,20 @@ const DesktopHeader = () => {
       <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-20 flex items-center justify-between gap-8">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2">
-          {appLogo.src ? (
-            <img
-              src={appLogo.src}
-              alt={appLogo.alt}
-              className="h-16 lg:h-18 xl:h-20 w-auto object-contain"
-            />
-          ) : (
-            <span className="text-2xl font-bold text-primary-600">LOGO</span>
-          )}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            {appLogo.src ? (
+              <img
+                src={appLogo.src}
+                alt={appLogo.alt}
+                className="h-20 lg:h-24 xl:h-28 w-auto object-contain"
+              />
+            ) : (
+              <span className="text-3xl font-bold text-primary-600">Dwell Mart</span>
+            )}
+          </motion.div>
         </Link>
 
         {/* Navigation Links */}

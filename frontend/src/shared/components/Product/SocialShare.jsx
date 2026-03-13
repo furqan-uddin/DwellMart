@@ -6,7 +6,7 @@ const SocialShare = ({ productName, productUrl, productImage }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
 
   const currentUrl = productUrl || window.location.href;
-  const shareText = `Check out ${productName} on Appzeto E-commerce!`;
+  const shareText = `Check out ${productName} on Dwell Mart!`;
 
   const shareToFacebook = () => {
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;

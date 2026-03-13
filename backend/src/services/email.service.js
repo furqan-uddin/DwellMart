@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
  */
 export const sendEmail = async ({ to, subject, html, text }) => {
     const mailOptions = {
-        from: `"${process.env.FROM_NAME || 'Appzeto Store'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+        from: `"${process.env.FROM_NAME || 'Dwell Mart'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
         to,
         subject,
         html,

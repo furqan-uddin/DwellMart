@@ -332,14 +332,17 @@ const MobileHeader = () => {
             <Link
               to="/home"
               className="flex items-center overflow-visible relative z-[10002]">
-              <div
+              <motion.div
                 ref={logoRef}
-                className="overflow-visible relative z-[10003]">
+                className="overflow-visible relative z-[10003]"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 {appLogo.src ? (
                   <img
                     src={appLogo.src}
                     alt={appLogo.alt}
-                    className="h-20 sm:h-24 w-auto object-contain origin-left relative z-[10004]"
+                    className="h-24 sm:h-28 w-auto object-contain origin-left relative z-[10004]"
                     onError={(e) => {
                       // Hide image if logo doesn't exist
                       e.target.style.display = "none";
@@ -351,18 +354,18 @@ const MobileHeader = () => {
                       ) {
                         const fallback = document.createElement("span");
                         fallback.className =
-                          "logo-text-fallback text-primary-600 font-bold text-sm sm:text-lg";
-                        fallback.textContent = "LOGO";
+                          "logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl";
+                        fallback.textContent = "Dwell Mart";
                         parent.appendChild(fallback);
                       }
                     }}
                   />
                 ) : (
-                  <span className="logo-text-fallback text-primary-600 font-bold text-sm sm:text-lg">
-                    LOGO
+                  <span className="logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl">
+                    Dwell Mart
                   </span>
                 )}
-              </div>
+              </motion.div>
             </Link>
           </div>
 

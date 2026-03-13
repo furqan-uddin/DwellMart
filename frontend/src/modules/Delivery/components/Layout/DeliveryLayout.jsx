@@ -62,7 +62,7 @@ const DeliveryLayout = () => {
                 <img
                   src={appLogo.src}
                   alt={appLogo.alt}
-                  className="h-6 sm:h-8 w-auto object-contain origin-left"
+                  className="h-12 sm:h-16 w-auto object-contain origin-left"
                   onError={(e) => {
                     // Hide image if logo doesn't exist
                     e.target.style.display = "none";
@@ -74,15 +74,15 @@ const DeliveryLayout = () => {
                     ) {
                       const fallback = document.createElement("span");
                       fallback.className =
-                        "logo-text-fallback text-primary-600 font-bold text-sm sm:text-lg";
-                      fallback.textContent = "LOGO";
+                        "logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl";
+                      fallback.textContent = "Dwell Mart";
                       parent.appendChild(fallback);
                     }
                   }}
                 />
               ) : (
-                <span className="logo-text-fallback text-primary-600 font-bold text-sm sm:text-lg">
-                  LOGO
+                <span className="logo-text-fallback text-primary-600 font-bold text-lg sm:text-xl">
+                  Dwell Mart
                 </span>
               )}
             </div>

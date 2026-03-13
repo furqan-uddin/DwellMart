@@ -15,7 +15,7 @@ const Invoice = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { settings } = useSettingsStore();
   const storeLogo = settings?.general?.storeLogo || logoImage;
-  const storeName = settings?.general?.storeName || "Appzeto E-commerce";
+  const storeName = settings?.general?.storeName || "Dwell Mart";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -199,7 +199,7 @@ ${order.trackingNumber ? `Tracking Number: ${order.trackingNumber}` : ""}
               <img
                 src={storeLogo}
                 alt={storeName}
-                className="h-24 sm:h-32 md:h-40 w-auto object-contain"
+                className="h-32 sm:h-40 md:h-48 w-auto object-contain"
                 onError={(e) => {
                   e.target.src = logoImage;
                 }}
