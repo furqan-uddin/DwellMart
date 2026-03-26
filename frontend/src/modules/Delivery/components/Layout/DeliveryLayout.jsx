@@ -51,7 +51,7 @@ const DeliveryLayout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900 shadow-lg">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Logo */}
           <Link
@@ -120,12 +120,12 @@ const DeliveryLayout = () => {
             style={{ marginLeft: "30px" }}>
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-gray-100"
+              className="p-2 rounded-lg hover:bg-gray-800"
               aria-label="Open menu">
-              <FiMenu className="text-gray-700 text-xl" />
+              <FiMenu className="text-gray-200 text-xl" />
             </button>
             <FiTruck className="text-primary-600 text-xl" />
-            <h1 className="text-lg font-bold text-gray-800">Delivery</h1>
+            <h1 className="text-lg font-bold text-white">Delivery</h1>
           </div>
         </div>
       </header>

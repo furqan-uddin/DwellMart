@@ -57,7 +57,7 @@ const AdminHeader = ({ onMenuClick }) => {
 
   return (
     <header
-      className="bg-white border-b border-gray-200 fixed top-0 left-0 lg:left-64 right-0 z-30"
+      className="bg-gray-900 border-b border-gray-800 fixed top-0 left-0 lg:left-64 right-0 z-30"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
@@ -68,14 +68,14 @@ const AdminHeader = ({ onMenuClick }) => {
           <Button
             onClick={onMenuClick}
             variant="icon"
-            className="lg:hidden text-gray-700"
+            className="lg:hidden text-gray-300"
             icon={FiMenu}
           />
 
           {/* Page Heading - Desktop Only */}
           <div className="hidden lg:block">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">{pageName}</h1>
-            <p className="text-sm text-gray-600">Welcome back! Here's your business overview.</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{pageName}</h1>
+            <p className="text-sm text-gray-400">Welcome back! Here's your business overview.</p>
           </div>
         </div>
 
@@ -87,7 +87,7 @@ const AdminHeader = ({ onMenuClick }) => {
               data-notification-button
               onClick={toggleNotifications}
               variant="icon"
-              className="text-gray-700"
+              className="text-gray-300"
               icon={FiBell}
             />
             {unreadCount > 0 && (
@@ -108,7 +108,7 @@ const AdminHeader = ({ onMenuClick }) => {
             variant="ghost"
             icon={FiLogOut}
             size="sm"
-            className="text-gray-700 hover:bg-red-600 hover:text-white hover:border-red-600 border border-gray-300"
+            className="text-gray-300 hover:bg-red-600 hover:text-white hover:border-red-600 border border-gray-700"
           >
             Logout
           </Button>

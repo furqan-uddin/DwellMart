@@ -53,7 +53,7 @@ const DesktopHeader = () => {
   };
 
   return (
-    <header className="hidden md:block sticky top-0 z-[999] bg-white shadow-sm border-b border-gray-100">
+    <header className="hidden md:block sticky top-0 z-[999] bg-gray-900 shadow-lg border-b border-gray-800">
       <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-20 flex items-center justify-between gap-8">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
@@ -102,17 +102,17 @@ const DesktopHeader = () => {
         <nav className="flex items-center gap-6">
           <Link
             to="/home"
-            className="text-gray-600 hover:text-primary-600 font-medium text-sm lg:text-base">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
             Home
           </Link>
           <Link
             to="/categories"
-            className="text-gray-600 hover:text-primary-600 font-medium text-sm lg:text-base flex items-center gap-1">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base flex items-center gap-1">
             <FiGrid /> Categories
           </Link>
           <Link
             to="/offers"
-            className="text-gray-600 hover:text-primary-600 font-medium text-sm lg:text-base">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
             Offers
           </Link>
         </nav>
@@ -127,7 +127,7 @@ const DesktopHeader = () => {
           {/* Wishlist */}
           <Link
             to="/wishlist"
-            className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors">
+            className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
             <FiHeart className="text-2xl" />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
@@ -139,7 +139,7 @@ const DesktopHeader = () => {
           {/* Cart */}
           <button
             onClick={toggleCart}
-            className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors">
+            className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
             <FiShoppingBag className="text-2xl" />
             {itemCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">
@@ -151,7 +151,7 @@ const DesktopHeader = () => {
           {/* Notifications */}
           <Link
             to={isAuthenticated ? "/notifications" : "/login"}
-            className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors">
+            className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
             <FiBell className="text-2xl" />
             {isAuthenticated && unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
@@ -165,7 +165,7 @@ const DesktopHeader = () => {
             <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1 lg:p-1.5 hover:bg-gray-50 rounded-full transition-all border border-transparent hover:border-gray-200">
+                className="flex items-center gap-2 p-1 lg:p-1.5 hover:bg-gray-800 rounded-full transition-all border border-transparent hover:border-gray-700">
                 {user?.avatar ? (
                   <img
                     src={user.avatar}
@@ -173,9 +173,9 @@ const DesktopHeader = () => {
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 ) : (
-                  <HiOutlineUserCircle className="text-gray-600 text-3xl" />
+                  <HiOutlineUserCircle className="text-gray-300 text-3xl" />
                 )}
-                <span className="hidden lg:block text-sm font-medium text-gray-700 max-w-[100px] truncate">
+                <span className="hidden lg:block text-sm font-medium text-gray-200 max-w-[100px] truncate">
                   {user?.name || "User"}
                 </span>
               </button>
@@ -186,8 +186,8 @@ const DesktopHeader = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-2 z-[60] min-w-[200px]">
-                    <div className="px-3 py-2 border-b border-gray-200 mb-2">
+                    className="absolute right-0 mt-2 bg-gray-900 rounded-xl shadow-xl border border-gray-800 p-2 z-[60] min-w-[200px]">
+                    <div className="px-3 py-2 border-b border-gray-800 mb-2">
                       <p className="font-semibold text-gray-800 text-sm">
                         {user?.name || "User"}
                       </p>
@@ -198,16 +198,16 @@ const DesktopHeader = () => {
                     <Link
                       to="/profile"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors text-left w-full">
-                      <FiUser className="text-gray-500" />
-                      <span className="text-gray-700 text-sm">Profile</span>
+                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors text-left w-full">
+                      <FiUser className="text-gray-400" />
+                      <span className="text-gray-200 text-sm">Profile</span>
                     </Link>
                     <Link
                       to="/orders"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors text-left w-full">
-                      <FiShoppingBag className="text-gray-500" />
-                      <span className="text-gray-700 text-sm">Orders</span>
+                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors text-left w-full">
+                      <FiShoppingBag className="text-gray-400" />
+                      <span className="text-gray-200 text-sm">Orders</span>
                     </Link>
                     <button
                       onClick={handleLogout}

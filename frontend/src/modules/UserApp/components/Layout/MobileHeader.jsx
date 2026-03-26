@@ -79,8 +79,8 @@ const MobileHeader = () => {
 
   const currentPage = getCurrentPage();
 
-  // Header background is now solid white
-  const headerBackground = "rgb(255, 255, 255)";
+  // Header background is now dark gray (gray-900)
+  const headerBackground = "rgb(17, 24, 39)";
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -367,7 +367,7 @@ const MobileHeader = () => {
                   : {}
               }
               transition={{ duration: 0.5, ease: "easeOut" }}>
-              <FiShoppingBag className="text-xl text-gray-700" />
+              <FiShoppingBag className="text-xl text-gray-200" />
               {itemCount > 0 && (
                 <motion.span
                   key={itemCount}
