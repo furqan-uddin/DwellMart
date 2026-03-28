@@ -79,8 +79,8 @@ const MobileHeader = () => {
 
   const currentPage = getCurrentPage();
 
-  // Header background is now dark gray (gray-900)
-  const headerBackground = "rgb(17, 24, 39)";
+  // Header background is now black
+  const headerBackground = "rgb(0, 0, 0)";
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -288,43 +288,15 @@ const MobileHeader = () => {
               <motion.div
                 ref={logoRef}
                 className="overflow-visible relative z-[10003] flex items-center"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: [1, 1.1, 1.05, 1.1, 1],
-                  y: [0, -8, 0, -5, 0],
-                  filter: [
-                    "drop-shadow(0 4px 6px rgba(0,0,0,0.1))",
-                    "drop-shadow(0 15px 15px rgba(74, 222, 128, 0.4))",
-                    "drop-shadow(0 4px 6px rgba(0,0,0,0.1))"
-                  ]
-                }}
-                transition={{ 
-                  opacity: { duration: 0.5 },
-                  scale: { 
-                    duration: 4, 
-                    repeat: Infinity, 
-                    ease: "easeInOut" 
-                  },
-                  y: {
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  },
-                  filter: {
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }
-                }}
-                whileHover={{ scale: 1.1, filter: "drop-shadow(0 0 10px rgba(74, 222, 128, 0.5))" }}
-                whileTap={{ scale: 0.9 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
               >
                 {appLogo.src ? (
                   <img
                     src={appLogo.src}
                     alt={appLogo.alt}
-                    className="h-32 sm:h-40 w-auto max-w-[250px] sm:max-w-[350px] object-contain origin-left relative z-[10004] filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.1)] hover:drop-shadow-[0_20px_25px_rgba(0,0,0,0.2)] transition-all duration-500"
+                    className="h-28 sm:h-32 w-auto max-w-[200px] sm:max-w-[250px] object-contain origin-left relative z-[10004] filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)] transition-all duration-300 scale-110 sm:scale-100"
                     onError={(e) => {
                       // Hide image if logo doesn't exist
                       e.target.style.display = "none";
@@ -358,9 +330,9 @@ const MobileHeader = () => {
               to="/sell-on-dwellmart"
               className="px-3 py-1.5 bg-primary-600/90 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors mr-1"
             >
-              Sell
+              Sell On DwellMart
             </Link>
-            
+
             {/* Cart Button */}
             <motion.button
               ref={cartRef}
