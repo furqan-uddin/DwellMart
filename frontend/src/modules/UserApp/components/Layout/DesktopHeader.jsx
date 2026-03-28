@@ -53,7 +53,7 @@ const DesktopHeader = () => {
   };
 
   return (
-    <header className="hidden md:block sticky top-0 z-[999] bg-gray-900 shadow-lg border-b border-gray-800">
+    <header className="hidden md:block sticky top-0 z-[999] bg-black shadow-lg border-b border-gray-800">
       <div className="max-w-[1920px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between gap-4 lg:gap-8">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
