@@ -150,8 +150,13 @@
     "route": "/admin/policies",
     "children": [
       "Privacy Policy",
-      "Refund Policy",
-      "Terms & Conditions"
+      "Returns & Exchanges",
+      "Terms & Conditions",
+      "About Us",
+      "Contact Us",
+      "Shipping Policy",
+      "FAQs",
+      "Become a Partner"
     ]
   },
   {

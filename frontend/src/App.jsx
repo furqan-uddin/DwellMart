@@ -97,6 +97,11 @@ import NotificationsSEOSettings from "./modules/Admin/pages/settings/Notificatio
 import PrivacyPolicy from "./modules/Admin/pages/policies/PrivacyPolicy";
 import RefundPolicy from "./modules/Admin/pages/policies/RefundPolicy";
 import TermsConditions from "./modules/Admin/pages/policies/TermsConditions";
+import AboutUs from "./modules/Admin/pages/policies/AboutUs";
+import ContactUs from "./modules/Admin/pages/policies/ContactUs";
+import ShippingPolicy from "./modules/Admin/pages/policies/ShippingPolicy";
+import FAQs from "./modules/Admin/pages/policies/FAQs";
+import BecomePartner from "./modules/Admin/pages/policies/BecomePartner";
 // Firebase child pages
 import PushConfig from "./modules/Admin/pages/firebase/PushConfig";
 import Authentication from "./modules/Admin/pages/firebase/Authentication";
@@ -133,6 +138,7 @@ import MobileTrackOrder from "./modules/UserApp/pages/TrackOrder";
 import MobileOrderConfirmation from "./modules/UserApp/pages/OrderConfirmation";
 import ComingSoon from "./modules/UserApp/pages/ComingSoon";
 import SellOnDwellmart from "./modules/UserApp/pages/SellOnDwellmart";
+import StaticPage from "./modules/UserApp/pages/StaticPage";
 // Delivery Routes
 import DeliveryLogin from "./modules/Delivery/pages/Login";
 import DeliveryRegister from "./modules/Delivery/pages/Register";
@@ -428,6 +434,15 @@ const AppRoutes = () => {
           </RouteWrapper>
         }
       />
+      {/* Static content pages — powered by admin-editable content */}
+      <Route path="/about" element={<RouteWrapper><StaticPage slug="about" /></RouteWrapper>} />
+      <Route path="/contact" element={<RouteWrapper><StaticPage slug="contact" /></RouteWrapper>} />
+      <Route path="/terms" element={<RouteWrapper><StaticPage slug="terms" /></RouteWrapper>} />
+      <Route path="/privacy" element={<RouteWrapper><StaticPage slug="privacy" /></RouteWrapper>} />
+      <Route path="/returns" element={<RouteWrapper><StaticPage slug="returns" /></RouteWrapper>} />
+      <Route path="/shipping" element={<RouteWrapper><StaticPage slug="shipping" /></RouteWrapper>} />
+      <Route path="/faq" element={<RouteWrapper><StaticPage slug="faq" /></RouteWrapper>} />
+      <Route path="/partner" element={<RouteWrapper><StaticPage slug="partner" /></RouteWrapper>} />
       {/* Admin Routes */}
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route
@@ -532,6 +547,11 @@ const AppRoutes = () => {
         <Route path="policies/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="policies/refund-policy" element={<RefundPolicy />} />
         <Route path="policies/terms-conditions" element={<TermsConditions />} />
+        <Route path="policies/about-us" element={<AboutUs />} />
+        <Route path="policies/contact-us" element={<ContactUs />} />
+        <Route path="policies/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="policies/faqs" element={<FAQs />} />
+        <Route path="policies/become-partner" element={<BecomePartner />} />
         <Route path="firebase" element={<PushConfig />} />
         <Route path="firebase/push-config" element={<PushConfig />} />
         <Route path="firebase/authentication" element={<Authentication />} />

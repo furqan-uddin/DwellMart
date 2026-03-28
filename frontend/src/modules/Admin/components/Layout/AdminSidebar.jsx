@@ -116,8 +116,13 @@ const getChildRoute = (parentRoute, childName) => {
     },
     "/admin/policies": {
       "Privacy Policy": "/admin/policies/privacy-policy",
-      "Refund Policy": "/admin/policies/refund-policy",
+      "Returns & Exchanges": "/admin/policies/refund-policy",
       "Terms & Conditions": "/admin/policies/terms-conditions",
+      "About Us": "/admin/policies/about-us",
+      "Contact Us": "/admin/policies/contact-us",
+      "Shipping Policy": "/admin/policies/shipping-policy",
+      "FAQs": "/admin/policies/faqs",
+      "Become a Partner": "/admin/policies/become-partner",
     },
     "/admin/firebase": {
       "Push Config": "/admin/firebase/push-config",

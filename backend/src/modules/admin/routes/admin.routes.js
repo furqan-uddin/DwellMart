@@ -15,6 +15,7 @@ import * as notificationController from '../controllers/notification.controller.
 import * as uploadController from '../controllers/upload.controller.js';
 import * as subscriptionPlanController from '../controllers/subscriptionPlan.controller.js';
 import * as termsController from '../controllers/termsAndConditions.controller.js';
+import * as staticPagesController from '../controllers/staticPages.controller.js';
 import { authenticate } from '../../../middlewares/authenticate.js';
 import { authorize, enforceAccountStatus } from '../../../middlewares/authorize.js';
 import { authLimiter } from '../../../middlewares/rateLimiter.js';
@@ -206,5 +207,9 @@ router.patch('/vendor-subscriptions/:id/confirm-payment', ...adminAuth, subscrip
 // ─── Vendor Terms & Conditions ────────────────────────────────────────────────
 router.get('/settings/vendor-terms', ...adminAuth, termsController.getVendorTerms);
 router.put('/settings/vendor-terms', ...adminAuth, termsController.updateVendorTerms);
+
+// ─── Static Pages (About, Contact, Terms, Privacy, Returns, Shipping, FAQ, Partner) ──
+router.get('/pages/:slug', ...adminAuth, staticPagesController.getPage);
+router.put('/pages/:slug', ...adminAuth, staticPagesController.updatePage);
 
 export default router;

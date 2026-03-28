@@ -658,6 +658,23 @@ router.get('/vendor-terms', catalogCache, asyncHandler(async (req, res) => {
     }, 'Vendor terms fetched.'));
 }));
 
+// ─── Public Static Pages ──────────────────────────────────────────────────────
+// GET /api/pages/:slug (public — no auth required so user-facing pages can fetch content)
+router.get('/pages/:slug', asyncHandler(async (req, res) => {
+    const { slug } = req.params;
+    const ALLOWED_SLUGS = ['about', 'contact', 'terms', 'privacy', 'returns', 'shipping', 'faq', 'partner'];
+    if (!ALLOWED_SLUGS.includes(slug)) {
+        throw new ApiError(404, 'Page not found.');
+    }
+    const setting = await Settings.findOne({ key: `page_${slug}` });
+    res.status(200).json(new ApiResponse(200, {
+        slug,
+        title: setting?.value?.title || '',
+        content: setting?.value?.content || '',
+        lastUpdated: setting?.updatedAt || null,
+    }, 'Page fetched.'));
+}));
+
 // Legacy support: GET /api/:id (only ObjectId-like values to avoid swallowing unknown routes)
 router.get('/:id([a-fA-F0-9]{24})', detailCache, getProductDetail);
 

@@ -1,48 +1,50 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { 
-  FiFacebook, 
-  FiTwitter, 
-  FiInstagram, 
-  FiYoutube, 
+import {
+  FiFacebook,
+  FiTwitter,
+  FiInstagram,
+  FiYoutube,
   FiChevronRight
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { appLogo } from "../../../../data/logos";
+import api from "../../../../shared/utils/api";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [categories, setCategories] = useState([]);
 
-  const footerSections = [
-    {
-      title: "Shop Categories",
-      links: [
-        { label: "Electronics", path: "/categories?cat=electronics" },
-        { label: "Fashion", path: "/categories?cat=fashion" },
-        { label: "Beauty & Health", path: "/categories?cat=beauty" },
-        { label: "Home & Kitchen", path: "/categories?cat=home" },
-        { label: "Toys & Games", path: "/categories?cat=toys" },
-      ],
-    },
-    {
-      title: "Customer Service",
-      links: [
-        { label: "Contact Us", path: "/contact" },
-        { label: "Track Your Order", path: "/orders" },
-        { label: "Returns & Exchanges", path: "/returns" },
-        { label: "Shipping Policy", path: "/shipping" },
-        { label: "FAQs", path: "/faq" },
-      ],
-    },
-    {
-      title: "Quick Links",
-      links: [
-        { label: "About Dwell Mart", path: "/about" },
-        { label: "Vendor Registration", path: "/vendor/register" },
-        { label: "Terms & Conditions", path: "/terms" },
-        { label: "Privacy Policy", path: "/privacy" },
-        { label: "Become a Partner", path: "/partner" },
-      ],
-    },
+  useEffect(() => {
+    api.get("/categories/all")
+      .then((res) => {
+        const data = res.data?.data || res.data || [];
+        // Sort by order field, take first 5 active ones
+        const sorted = data
+          .filter((c) => c.isActive !== false)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .slice(0, 5);
+        setCategories(sorted);
+      })
+      .catch(() => {
+        // Silently fail — footer still renders without categories
+      });
+  }, []);
+
+  const customerServiceLinks = [
+    { label: "Contact Us", path: "/contact" },
+    { label: "Track Your Order", path: "/orders" },
+    { label: "Returns & Exchanges", path: "/returns" },
+    { label: "Shipping Policy", path: "/shipping" },
+    { label: "FAQs", path: "/faq" },
+  ];
+
+  const quickLinks = [
+    { label: "About Dwell Mart", path: "/about" },
+    { label: "Vendor Registration", path: "/sell-on-dwellmart" },
+    { label: "Terms & Conditions", path: "/terms" },
+    { label: "Privacy Policy", path: "/privacy" },
+    { label: "Become a Partner", path: "/partner" },
   ];
 
   return (
@@ -80,27 +82,68 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Dynamic Sections */}
-          {footerSections.map((section, idx) => (
-            <div key={idx} className="space-y-6">
-              <h4 className="text-white font-bold text-lg tracking-wide uppercase text-sm">
-                {section.title}
-              </h4>
-              <ul className="space-y-4">
-                {section.links.map((link, i) => (
-                  <li key={i}>
+          {/* Shop Categories — dynamic from DB */}
+          <div className="space-y-6">
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Shop Categories</h4>
+            <ul className="space-y-4">
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <li key={cat._id}>
                     <Link
-                      to={link.path}
+                      to={`/category/${cat._id}`}
                       className="group flex items-center gap-2 text-gray-400 hover:text-primary-400 transition-colors"
                     >
                       <FiChevronRight className="text-xs opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                      {link.label}
+                      {cat.name}
                     </Link>
                   </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                ))
+              ) : (
+                // Skeleton placeholders while loading
+                [...Array(5)].map((_, i) => (
+                  <li key={i}>
+                    <div className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: `${60 + i * 8}%` }} />
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+
+          {/* Customer Service */}
+          <div className="space-y-6">
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Customer Service</h4>
+            <ul className="space-y-4">
+              {customerServiceLinks.map((link, i) => (
+                <li key={i}>
+                  <Link
+                    to={link.path}
+                    className="group flex items-center gap-2 text-gray-400 hover:text-primary-400 transition-colors"
+                  >
+                    <FiChevronRight className="text-xs opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-6">
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Quick Links</h4>
+            <ul className="space-y-4">
+              {quickLinks.map((link, i) => (
+                <li key={i}>
+                  <Link
+                    to={link.path}
+                    className="group flex items-center gap-2 text-gray-400 hover:text-primary-400 transition-colors"
+                  >
+                    <FiChevronRight className="text-xs opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Bottom copyright */}
@@ -109,9 +152,9 @@ const Footer = () => {
             &copy; {currentYear} <span className="text-white font-semibold">Dwell Mart</span>. All rights reserved.
           </p>
           <div className="flex items-center gap-4 opacity-50">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-6" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-6" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
           </div>
         </div>
       </div>
