@@ -247,7 +247,7 @@ const MobileHeader = () => {
   const headerContent = (
     <motion.header
       key="mobile-header" // Stable key to prevent re-mounting
-      className="fixed top-0 left-0 right-0 z-[9999] shadow-lg overflow-visible md:hidden"
+      className="fixed top-0 left-0 right-0 z-[9999] shadow-lg overflow-visible md:hidden h-16"
       style={{
         background: headerBackground,
         transition: "background 0.5s ease-in-out",
@@ -262,11 +262,11 @@ const MobileHeader = () => {
         damping: 30,
         mass: 0.8,
       }}>
-      <div className="px-4 py-0.5 overflow-visible">
+      <div className="px-4 h-full flex items-center overflow-visible">
         {/* First Row: Logo and Actions */}
         <motion.div
           ref={topRowRef}
-          className="flex items-center justify-between gap-3 mb-3"
+          className="flex items-center justify-between w-full gap-3 overflow-visible"
           initial={false}
           animate={{
             opacity: isTopRowVisible ? 1 : 0,

@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  FiDollarSign,
   FiTrendingUp,
   FiClock,
   FiCheckCircle,
   FiFileText,
 } from "react-icons/fi";
+import { MdCurrencyRupee } from "react-icons/md";
 import { motion } from "framer-motion";
 import Badge from "../../../shared/components/Badge";
 import ExportButton from "../../Admin/components/ExportButton";
@@ -121,7 +121,7 @@ const Earnings = () => {
                 ? "border-purple-600 text-purple-600 font-semibold"
                 : "border-transparent text-gray-600 hover:text-gray-800"
                 }`}>
-              <FiDollarSign />
+              <MdCurrencyRupee />
               <span>Overview</span>
             </button>
             <button
@@ -155,7 +155,7 @@ const Earnings = () => {
                     <p className="text-sm text-green-700 font-medium">
                       Total Earnings
                     </p>
-                    <FiDollarSign className="text-green-600" />
+                    <MdCurrencyRupee className="text-green-600" />
                   </div>
                   <p className="text-2xl font-bold text-green-800">
                     {earningsSummary

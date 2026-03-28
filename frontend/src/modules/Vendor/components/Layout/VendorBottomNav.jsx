@@ -5,8 +5,8 @@ import {
   FiHome,
   FiPackage,
   FiShoppingBag,
-  FiDollarSign,
 } from "react-icons/fi";
+import { MdCurrencyRupee } from "react-icons/md";
 
 const VendorBottomNav = () => {
   const location = useLocation();
@@ -15,7 +15,7 @@ const VendorBottomNav = () => {
     { path: "/vendor/dashboard", icon: FiHome, label: "Home" },
     { path: "/vendor/products", icon: FiPackage, label: "Products" },
     { path: "/vendor/orders", icon: FiShoppingBag, label: "Orders" },
-    { path: "/vendor/earnings", icon: FiDollarSign, label: "Earnings" },
+    { path: "/vendor/earnings", icon: MdCurrencyRupee, label: "Earnings" },
   ];
 
   const isActive = (path) => {

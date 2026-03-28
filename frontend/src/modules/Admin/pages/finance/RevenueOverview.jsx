@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { FiDollarSign, FiTrendingUp, FiCalendar } from "react-icons/fi";
+import { FiTrendingUp, FiCalendar } from "react-icons/fi";
+import { MdCurrencyRupee } from "react-icons/md";
 import { motion } from "framer-motion";
 import RevenueComparisonChart from "../../components/Analytics/RevenueComparisonChart";
 import AnimatedSelect from "../../components/AnimatedSelect";
@@ -95,7 +96,7 @@ const RevenueOverview = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">Total Revenue</p>
-            <FiDollarSign className="text-green-600" />
+            <MdCurrencyRupee className="text-green-600" />
           </div>
           <p className="text-2xl font-bold text-gray-800">
             {formatPrice(stats.revenue)}

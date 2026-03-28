@@ -703,34 +703,61 @@ const MobileHome = () => {
           {/* Recommended for You */}
           <RecommendedSection products={computedRecommended} />
 
-          {/* Tagline Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="px-4 py-12 text-left">
-            <motion.h2
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-gray-400 leading-tight flex items-center justify-start gap-3 flex-wrap"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+          {/* Enhanced Tagline Section */}
+          <section className="relative py-16 sm:py-24 px-6 overflow-hidden">
+            {/* Background Decoration */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-primary-500/10 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none" />
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}>
-              <span>Shop from 50+ Trusted Vendors</span>
-              <motion.span
-                animate={{
-                  scale: [1, 1.2, 1],
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="relative z-10 max-w-4xl mx-auto text-center"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-50 border border-primary-100 text-primary-600 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 sm:mb-8"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse" />
+                Trusted Marketplace
+              </motion.div>
+
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-gray-900 leading-[1.15] mb-8 sm:mb-10 tracking-tight">
+                Shop from <span className="bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">50+ Trusted</span> 
+                <br className="hidden sm:block" /> Vendors Nationwide
+              </h2>
+
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  scale: [1, 1.05, 1]
                 }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  repeatDelay: 2,
+                transition={{ 
+                  duration: 4, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
                 }}
-                className="text-primary-500 inline-block">
-                <FiHeart className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl fill-primary-500" />
-              </motion.span>
-            </motion.h2>
-          </motion.div>
+                className="inline-block"
+              >
+                <div className="relative group cursor-pointer">
+                  <motion.div 
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.4, 0.1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 bg-primary-400 rounded-full blur-xl group-hover:bg-primary-500 transition-colors"
+                  />
+                  <FiHeart className="text-5xl sm:text-7xl text-primary-500 fill-primary-500 relative z-10 drop-shadow-xl transition-transform group-hover:scale-110" />
+                </div>
+              </motion.div>
+
+              <p className="mt-10 text-gray-400 text-sm sm:text-base font-medium max-w-lg mx-auto leading-relaxed italic">
+                "Connecting you with the finest curated vendors, ensuring quality and trust in every single purchase."
+              </p>
+            </motion.div>
+          </section>
 
           {/* Bottom Spacing */}
           <div className="h-4" />

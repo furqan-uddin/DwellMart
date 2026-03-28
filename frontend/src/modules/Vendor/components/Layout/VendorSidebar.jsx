@@ -6,7 +6,6 @@ import {
   FiPackage,
   FiShoppingBag,
   FiBarChart2,
-  FiDollarSign,
   FiSettings,
   FiUser,
   FiChevronDown,
@@ -26,6 +25,7 @@ import {
   FiTrendingUp,
   FiFile,
 } from "react-icons/fi";
+import { MdCurrencyRupee } from "react-icons/md";
 import { useVendorAuthStore } from "../../store/vendorAuthStore";
 import vendorMenu from "../../config/vendorMenu.json";
 
@@ -49,7 +49,7 @@ const iconMap = {
   "Performance Metrics": FiTrendingUp,
   Documents: FiFile,
   Analytics: FiBarChart2,
-  Earnings: FiDollarSign,
+  Earnings: MdCurrencyRupee,
   Settings: FiSettings,
   Profile: FiUser,
 };

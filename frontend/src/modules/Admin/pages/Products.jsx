@@ -3,9 +3,9 @@ import { motion } from "framer-motion";
 import {
   FiPackage,
   FiPlus,
-  FiDollarSign,
   FiStar,
 } from "react-icons/fi";
+import { MdCurrencyRupee } from "react-icons/md";
 
 const Products = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ const Products = () => {
     {
       path: "/admin/products/tax-pricing",
       label: "Tax & Pricing",
-      icon: FiDollarSign,
+      icon: MdCurrencyRupee,
       gradient: "from-orange-500 via-orange-600 to-orange-700",
       lightGradient: "from-orange-50 via-orange-100/80 to-orange-50",
       shadowColor: "shadow-orange-500/20",

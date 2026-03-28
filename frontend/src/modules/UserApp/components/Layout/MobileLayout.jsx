@@ -6,14 +6,19 @@ import MobileBottomNav from './MobileBottomNav';
 import MobileCartBar from './MobileCartBar';
 import CartDrawer from '../../../../shared/components/Cart/CartDrawer';
 import useMobileHeaderHeight from '../../hooks/useMobileHeaderHeight';
+import Footer from './Footer';
 
 const MobileLayout = ({ children, showBottomNav = true, showCartBar = true }) => {
   const location = useLocation();
   const headerHeight = useMobileHeaderHeight();
   // Hide header and bottom nav on login, register, and verification pages
-  const isAuthPage = location.pathname === '/login' ||
-    location.pathname === '/register' ||
-    location.pathname === '/verification';
+  const isAuthPage = [
+    '/login',
+    '/register',
+    '/verification',
+    '/forgot-password',
+    '/reset-password',
+  ].includes(location.pathname);
 
   const isCheckoutPage = location.pathname === '/checkout';
 
@@ -46,6 +51,7 @@ const MobileLayout = ({ children, showBottomNav = true, showCartBar = true }) =>
       >
         {children}
       </main>
+      {!isAuthPage && !isCheckoutPage && <Footer />}
       {showCartBar && <MobileCartBar />}
       {shouldShowBottomNav && <MobileBottomNav />}
       <CartDrawer />

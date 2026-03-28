@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiPhone } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiPhone, FiArrowLeft } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useCartStore } from '../../../shared/store/useStore';
@@ -86,7 +86,16 @@ const MobileLogin = () => {
             transition={{ duration: 0.5 }}
             className="w-full max-w-md"
           >
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="bg-white rounded-2xl p-6 shadow-sm relative">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate(-1)}
+                className="mb-2 -ml-2 inline-flex items-center gap-2 text-gray-400 hover:text-primary-600 transition-all group px-2 py-1 rounded-lg hover:bg-primary-50/50"
+              >
+                <FiArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
+                <span className="text-sm font-semibold tracking-wide">Back</span>
+              </button>
+
               {/* Header */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
