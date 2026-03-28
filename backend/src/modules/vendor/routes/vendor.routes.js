@@ -40,8 +40,28 @@ const router = Router();
 const vendorAuth = [authenticate, authorize('vendor'), enforceAccountStatus];
 const vendorAuthOnly = [authenticate, authorize('vendor')];
 
+const parseJsonFields = (req, res, next) => {
+    try {
+        if (typeof req.body.address === 'string') {
+            req.body.address = JSON.parse(req.body.address);
+        }
+        if (req.body.agreedToTerms === 'true') req.body.agreedToTerms = true;
+        if (req.body.agreedToTerms === 'false') req.body.agreedToTerms = false;
+    } catch (e) {
+        // Will be naturally caught by the validator later
+    }
+    next();
+};
+
 // Auth
-router.post('/auth/register', authLimiter, validate(registerSchema), authController.register);
+router.post(
+    '/auth/register',
+    authLimiter,
+    uploadDocumentSingle('tradeLicense'),
+    parseJsonFields,
+    validate(registerSchema),
+    authController.register
+);
 router.post('/auth/verify-otp', validate(verifyOtpSchema), authController.verifyOTP);
 router.post('/auth/resend-otp', validate(resendOtpSchema), authController.resendOTP);
 router.post('/auth/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);

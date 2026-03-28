@@ -50,6 +50,10 @@ const vendorSchema = new mongoose.Schema(
             pan: String,
             aadhar: String,
             businessLicense: String,
+            tradeLicense: {
+                url: { type: String },
+                fileType: { type: String, enum: ['image', 'pdf', 'word'] },
+            },
         },
         otp: { type: String, select: false },
         otpExpiry: { type: Date, select: false },

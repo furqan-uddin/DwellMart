@@ -11,6 +11,8 @@ const ALLOWED_DOCUMENT_MIME_TYPES = [
     'image/png',
     'image/webp',
     'image/gif',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -79,7 +81,7 @@ export const uploadDocumentSingle = (fieldName) =>
                 cb(
                     new ApiError(
                         400,
-                        'Invalid file type. Only PDF, JPEG, PNG, WEBP, and GIF are allowed.'
+                        'Invalid file type. Only PDF, Word, JPEG, PNG, WEBP, and GIF are allowed.'
                     ),
                     false
                 );
@@ -99,7 +101,7 @@ export const uploadDeliveryDocuments = (fields) =>
                 cb(
                     new ApiError(
                         400,
-                        'Invalid file type. Only PDF, JPEG, PNG, WEBP, and GIF are allowed.'
+                        'Invalid file type. Only PDF, Word, JPEG, PNG, WEBP, and GIF are allowed.'
                     ),
                     false
                 );

@@ -178,6 +178,16 @@ const PendingApprovals = () => {
   };
 
   const getModalContent = () => {
+    const renderDocumentLink = () => {
+      if (!actionModal.tradeLicenseUrl) return null;
+      const url = actionModal.tradeLicenseUrl.startsWith('http') ? actionModal.tradeLicenseUrl : `http://localhost:5000${actionModal.tradeLicenseUrl}`;
+      return (
+        <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
+          <span className="text-sm font-semibold text-gray-800">Trade Licence Provided</span>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-primary-600 font-medium hover:bg-primary-50 transition-colors shadow-sm">View Document</a>
+        </div>
+      );
+    };
     if (actionModal.type === "approve") {
       return {
         title: "Approve Vendor?",
@@ -194,8 +204,10 @@ const PendingApprovals = () => {
           onConfirm: handleReject,
           type: "danger",
           customContent: (
-            <div className="mt-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className="mt-4 space-y-4">
+              {renderDocumentLink()}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Rejection Reason (optional)
               </label>
               <textarea
@@ -205,6 +217,7 @@ const PendingApprovals = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Provide a reason for rejection..."
               />
+              </div>
             </div>
           ),
         };

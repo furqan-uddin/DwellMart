@@ -393,6 +393,31 @@ const VendorDetail = () => {
                       </div>
                     </div>
                   </div>
+
+                  {vendor?.documents?.tradeLicense?.url && (
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-800 mb-3">Documents</h3>
+                      <div className="flex justify-between items-center bg-gray-50/80 p-3 rounded-xl border border-gray-200/60">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm text-primary-500">
+                            <FiFileText className="text-lg" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">Trade Licence</p>
+                            <p className="text-xs text-gray-500 uppercase">{vendor.documents.tradeLicense.fileType}</p>
+                          </div>
+                        </div>
+                        <a 
+                          href={vendor.documents.tradeLicense.url.startsWith('http') ? vendor.documents.tradeLicense.url : `http://localhost:5000${vendor.documents.tradeLicense.url}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:ring-2 focus:ring-primary-500/20 transition-all shadow-sm"
+                        >
+                          View File
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Performance Stats */}

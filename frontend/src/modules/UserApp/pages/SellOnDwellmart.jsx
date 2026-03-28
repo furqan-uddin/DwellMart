@@ -30,6 +30,7 @@ const SellOnDwellmart = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [tradeLicense, setTradeLicense] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -92,6 +93,10 @@ const SellOnDwellmart = () => {
       toast.error('Please fill in all required fields.');
       return;
     }
+    if (!tradeLicense) {
+      toast.error('Trade Licence document is required.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match.');
       return;
@@ -107,16 +112,20 @@ const SellOnDwellmart = () => {
 
     setIsLoading(true);
     try {
-      await api.post('/vendor/auth/register', {
-        name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        phone: formData.phone.trim(),
-        storeName: formData.storeName.trim(),
-        storeDescription: formData.storeDescription.trim(),
-        address: formData.address,
-        selectedPlanId: selectedPlan._id,
-        agreedToTerms: true,
+      const submitData = new FormData();
+      submitData.append('name', formData.name.trim());
+      submitData.append('email', formData.email.trim().toLowerCase());
+      submitData.append('password', formData.password);
+      submitData.append('phone', formData.phone.trim());
+      submitData.append('storeName', formData.storeName.trim());
+      submitData.append('storeDescription', formData.storeDescription.trim());
+      submitData.append('address', JSON.stringify(formData.address));
+      submitData.append('selectedPlanId', selectedPlan._id);
+      submitData.append('agreedToTerms', true);
+      submitData.append('tradeLicense', tradeLicense);
+
+      await api.post('/vendor/auth/register', submitData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Registration successful! Please verify your email.');
       setCurrentStep(2);
@@ -373,6 +382,22 @@ const SellOnDwellmart = () => {
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 text-gray-800 placeholder:text-gray-400 text-sm resize-none"
                           />
                         </div>
+                      </div>
+
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                          Trade Licence Document <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept=".pdf, .doc, .docx, image/*"
+                            onChange={(e) => setTradeLicense(e.target.files[0])}
+                            required
+                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 text-gray-800 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Accepted formats: PDF, Word, Images (Max 10MB).</p>
                       </div>
                     </div>
 
