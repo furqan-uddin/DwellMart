@@ -54,13 +54,13 @@ const DesktopHeader = () => {
 
   return (
     <header className="hidden md:block sticky top-0 z-[999] bg-gray-900 shadow-lg border-b border-gray-800">
-      <div className="container mx-auto px-4 md:px-12 lg:px-24 xl:px-40 h-20 flex items-center justify-between gap-8">
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between gap-4 lg:gap-8">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ 
-              opacity: 1, 
+            animate={{
+              opacity: 1,
               scale: [1, 1.05, 1],
               y: 0,
               filter: [
@@ -69,12 +69,12 @@ const DesktopHeader = () => {
                 "drop-shadow(0 0 0px rgba(74, 222, 128, 0))"
               ]
             }}
-            transition={{ 
+            transition={{
               opacity: { duration: 0.6 },
-              scale: { 
-                duration: 4, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
+              scale: {
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
               },
               filter: {
                 duration: 4,
@@ -90,7 +90,7 @@ const DesktopHeader = () => {
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-28 lg:h-32 xl:h-36 w-auto max-w-[300px] lg:max-w-[350px] xl:max-w-[400px] object-contain transition-all drop-shadow-md"
+                className="h-28 lg:h-32 xl:h-36 w-auto max-w-[250px] lg:max-w-[280px] xl:max-w-[320px] object-contain transition-all drop-shadow-md"
               />
             ) : (
               <span className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>
@@ -99,31 +99,31 @@ const DesktopHeader = () => {
         </Link>
 
         {/* Navigation Links */}
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-4 xl:gap-6 whitespace-nowrap">
           <Link
             to="/home"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
             Home
           </Link>
           <Link
             to="/categories"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base flex items-center gap-1">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base flex items-center gap-1 transition-colors">
             <FiGrid /> Categories
           </Link>
           <Link
             to="/offers"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
             Offers
           </Link>
           <Link
             to="/sell-on-dwellmart"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
-            Sell on DwellMart
+            className="px-4 py-2 bg-primary-600/10 text-primary-400 hover:bg-primary-600 hover:text-white rounded-lg font-medium text-sm lg:text-base border border-primary-500/30 transition-all ml-2">
+            Sell On DwellMart
           </Link>
         </nav>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-xl">
+        <div className="flex-1 max-w-2xl min-w-[200px]">
           <SearchBar />
         </div>
 
