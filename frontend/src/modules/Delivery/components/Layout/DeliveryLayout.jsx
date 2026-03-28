@@ -51,8 +51,8 @@ const DeliveryLayout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900 shadow-lg">
-        <div className="flex items-center justify-between px-4 py-3">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black shadow-lg overflow-visible h-16">
+        <div className="flex items-center justify-between px-4 h-full overflow-visible">
           {/* Logo */}
           <Link
             to="/delivery/dashboard"
@@ -89,7 +89,7 @@ const DeliveryLayout = () => {
                 <img
                   src={appLogo.src}
                   alt={appLogo.alt}
-                  className="h-24 sm:h-28 w-auto max-w-[180px] sm:max-w-[240px] object-contain origin-left drop-shadow-md"
+                  className="h-28 sm:h-32 w-auto max-w-[200px] sm:max-w-[250px] object-contain origin-left drop-shadow-md scale-110 sm:scale-100"
                   onError={(e) => {
                     // Hide image if logo doesn't exist
                     e.target.style.display = "none";

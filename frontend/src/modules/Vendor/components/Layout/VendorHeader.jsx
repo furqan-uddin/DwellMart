@@ -50,7 +50,7 @@ const VendorHeader = ({ onMenuClick }) => {
 
   return (
     <header
-      className="bg-gray-900 border-b border-gray-800 fixed top-0 left-0 lg:left-64 right-0 z-30"
+      className="bg-black border-b border-gray-800 fixed top-0 left-0 lg:left-64 right-0 z-30"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}>
