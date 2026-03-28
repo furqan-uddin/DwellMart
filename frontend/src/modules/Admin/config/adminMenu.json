@@ -71,6 +71,14 @@
     ]
   },
   {
+    "title": "Sell on DwellMart",
+    "route": "/admin/sell-on-dwellmart",
+    "children": [
+      "Subscription Plans",
+      "Vendor Terms"
+    ]
+  },
+  {
     "title": "Offers & Sliders",
     "route": "/admin/offers",
     "children": [

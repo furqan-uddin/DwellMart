@@ -353,6 +353,14 @@ const MobileHeader = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
+            {/* Sell Button */}
+            <Link
+              to="/sell-on-dwellmart"
+              className="px-3 py-1.5 bg-primary-600/90 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors mr-1"
+            >
+              Sell
+            </Link>
+            
             {/* Cart Button */}
             <motion.button
               ref={cartRef}

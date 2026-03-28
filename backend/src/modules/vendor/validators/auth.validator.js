@@ -14,6 +14,13 @@ export const registerSchema = Joi.object({
         zipCode: Joi.string().allow('').optional(),
         country: Joi.string().allow('').optional(),
     }).optional(),
+    selectedPlanId: Joi.string().required().messages({
+        'any.required': 'Please select a subscription plan.',
+    }),
+    agreedToTerms: Joi.boolean().valid(true).required().messages({
+        'any.only': 'You must agree to the Terms & Conditions.',
+        'any.required': 'You must agree to the Terms & Conditions.',
+    }),
 });
 
 export const loginSchema = Joi.object({

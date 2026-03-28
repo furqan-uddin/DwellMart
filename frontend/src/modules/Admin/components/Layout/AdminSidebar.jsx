@@ -47,6 +47,7 @@ const iconMap = {
   Settings: FiSettings,
   Policies: FiShield,
   Firebase: FiDatabase,
+  "Sell on DwellMart": FiShoppingBag,
 };
 
 // Helper function to convert child name to route path
@@ -121,6 +122,10 @@ const getChildRoute = (parentRoute, childName) => {
     "/admin/firebase": {
       "Push Config": "/admin/firebase/push-config",
       Authentication: "/admin/firebase/authentication",
+    },
+    "/admin/sell-on-dwellmart": {
+      "Subscription Plans": "/admin/subscription-plans",
+      "Vendor Terms": "/admin/vendor-terms",
     },
   };
 

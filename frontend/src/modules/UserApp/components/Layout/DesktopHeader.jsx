@@ -115,6 +115,11 @@ const DesktopHeader = () => {
             className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
             Offers
           </Link>
+          <Link
+            to="/sell-on-dwellmart"
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base">
+            Sell on DwellMart
+          </Link>
         </nav>
 
         {/* Search Bar */}

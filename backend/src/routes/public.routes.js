@@ -9,6 +9,8 @@ import Vendor from '../models/Vendor.model.js';
 import Coupon from '../models/Coupon.model.js';
 import Banner from '../models/Banner.model.js';
 import Campaign from '../models/Campaign.model.js';
+import SubscriptionPlan from '../models/SubscriptionPlan.model.js';
+import Settings from '../models/Settings.model.js';
 import { calculateVendorShippingForGroups } from '../services/vendorShipping.service.js';
 import { cacheResponse } from '../middlewares/responseCache.js';
 
@@ -638,6 +640,22 @@ router.get('/orders/track/:id', detailCache, asyncHandler(async (req, res) => {
         .lean();
     if (!order) throw new ApiError(404, 'Order not found.');
     res.status(200).json(new ApiResponse(200, order, 'Order tracking info.'));
+}));
+
+// ─── Sell on DwellMart (Public) ───────────────────────────────────────────────
+// GET /api/public/subscription-plans — list active plans for public display
+router.get('/subscription-plans', catalogCache, asyncHandler(async (req, res) => {
+    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
+    res.status(200).json(new ApiResponse(200, plans, 'Subscription plans fetched.'));
+}));
+
+// GET /api/public/vendor-terms — get T&C for vendor registration
+router.get('/vendor-terms', catalogCache, asyncHandler(async (req, res) => {
+    const setting = await Settings.findOne({ key: 'vendor_terms_and_conditions' }).lean();
+    res.status(200).json(new ApiResponse(200, {
+        content: setting?.value?.content || '',
+        lastUpdated: setting?.updatedAt || null,
+    }, 'Vendor terms fetched.'));
 }));
 
 // Legacy support: GET /api/:id (only ObjectId-like values to avoid swallowing unknown routes)

@@ -62,6 +62,8 @@ import PendingApprovals from "./modules/Admin/pages/vendors/PendingApprovals";
 import VendorDetail from "./modules/Admin/pages/vendors/VendorDetail";
 import CommissionRates from "./modules/Admin/pages/vendors/CommissionRates";
 import AdminVendorAnalytics from "./modules/Admin/pages/vendors/VendorAnalytics";
+import AdminSubscriptionPlans from "./modules/Admin/pages/SubscriptionPlans";
+import AdminVendorTerms from "./modules/Admin/pages/VendorTerms";
 
 // Offers & Sliders child pages
 import HomeSliders from "./modules/Admin/pages/offers/HomeSliders";
@@ -130,6 +132,7 @@ import MobileCampaignSale from "./modules/UserApp/pages/CampaignSale";
 import MobileTrackOrder from "./modules/UserApp/pages/TrackOrder";
 import MobileOrderConfirmation from "./modules/UserApp/pages/OrderConfirmation";
 import ComingSoon from "./modules/UserApp/pages/ComingSoon";
+import SellOnDwellmart from "./modules/UserApp/pages/SellOnDwellmart";
 // Delivery Routes
 import DeliveryLogin from "./modules/Delivery/pages/Login";
 import DeliveryRegister from "./modules/Delivery/pages/Register";
@@ -318,6 +321,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/sell-on-dwellmart"
+        element={
+          <RouteWrapper>
+            <SellOnDwellmart />
+          </RouteWrapper>
+        }
+      />
+      <Route
         path="/daily-deals"
         element={
           <RouteWrapper>
@@ -472,6 +483,9 @@ const AppRoutes = () => {
           element={<AdminVendorAnalytics />}
         />
         <Route path="vendors/:id" element={<VendorDetail />} />
+
+        <Route path="subscription-plans" element={<AdminSubscriptionPlans />} />
+        <Route path="vendor-terms" element={<AdminVendorTerms />} />
 
         <Route path="offers" element={<HomeSliders />} />
         <Route path="offers/home-sliders" element={<HomeSliders />} />

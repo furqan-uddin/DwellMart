@@ -13,6 +13,8 @@ import * as reportController from '../controllers/report.controller.js';
 import * as marketingController from '../controllers/marketing.controller.js';
 import * as notificationController from '../controllers/notification.controller.js';
 import * as uploadController from '../controllers/upload.controller.js';
+import * as subscriptionPlanController from '../controllers/subscriptionPlan.controller.js';
+import * as termsController from '../controllers/termsAndConditions.controller.js';
 import { authenticate } from '../../../middlewares/authenticate.js';
 import { authorize, enforceAccountStatus } from '../../../middlewares/authorize.js';
 import { authLimiter } from '../../../middlewares/rateLimiter.js';
@@ -189,5 +191,20 @@ router.get('/reports/inventory', ...adminAuth, reportController.getInventoryRepo
 router.get('/notifications', ...adminAuth, notificationController.getAdminNotifications);
 router.put('/notifications/:id/read', ...adminAuth, notificationController.markAsRead);
 router.put('/notifications/read-all', ...adminAuth, notificationController.markAllAsRead);
+
+// ─── Subscription Plans ───────────────────────────────────────────────────────
+router.get('/subscription-plans', ...adminAuth, subscriptionPlanController.getAllPlans);
+router.get('/subscription-plans/:id', ...adminAuth, subscriptionPlanController.getPlanById);
+router.post('/subscription-plans', ...adminAuth, subscriptionPlanController.createPlan);
+router.put('/subscription-plans/:id', ...adminAuth, subscriptionPlanController.updatePlan);
+router.delete('/subscription-plans/:id', ...adminAuth, subscriptionPlanController.deletePlan);
+
+// ─── Vendor Subscriptions ─────────────────────────────────────────────────────
+router.get('/vendor-subscriptions', ...adminAuth, subscriptionPlanController.getVendorSubscriptions);
+router.patch('/vendor-subscriptions/:id/confirm-payment', ...adminAuth, subscriptionPlanController.confirmSubscriptionPayment);
+
+// ─── Vendor Terms & Conditions ────────────────────────────────────────────────
+router.get('/settings/vendor-terms', ...adminAuth, termsController.getVendorTerms);
+router.put('/settings/vendor-terms', ...adminAuth, termsController.updateVendorTerms);
 
 export default router;

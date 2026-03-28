@@ -58,6 +58,9 @@ const vendorSchema = new mongoose.Schema(
         resetOtpVerified: { type: Boolean, default: false, select: false },
         refreshTokenHash: { type: String, select: false },
         refreshTokenExpiresAt: { type: Date, select: false },
+        agreedToTerms: { type: Boolean, default: false },
+        agreedToTermsAt: { type: Date },
+        selectedPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
         joinDate: { type: Date, default: Date.now },
     },
     { timestamps: true }

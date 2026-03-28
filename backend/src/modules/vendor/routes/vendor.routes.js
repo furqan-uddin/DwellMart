@@ -13,6 +13,7 @@ import * as returnController from '../controllers/return.controller.js';
 import * as reviewController from '../controllers/review.controller.js';
 import * as shippingController from '../controllers/shipping.controller.js';
 import * as uploadController from '../controllers/upload.controller.js';
+import * as subscriptionController from '../controllers/subscription.controller.js';
 import { authenticate } from '../../../middlewares/authenticate.js';
 import { authorize, enforceAccountStatus } from '../../../middlewares/authorize.js';
 import { authLimiter } from '../../../middlewares/rateLimiter.js';
@@ -37,6 +38,7 @@ import { uploadSingle, uploadMultiple, uploadDocumentSingle } from '../../../mid
 
 const router = Router();
 const vendorAuth = [authenticate, authorize('vendor'), enforceAccountStatus];
+const vendorAuthOnly = [authenticate, authorize('vendor')];
 
 // Auth
 router.post('/auth/register', authLimiter, validate(registerSchema), authController.register);
@@ -51,6 +53,11 @@ router.post('/auth/logout', validate(logoutSchema), authController.logout);
 router.get('/auth/profile', ...vendorAuth, authController.getProfile);
 router.put('/auth/profile', ...vendorAuth, authController.updateProfile);
 router.put('/auth/bank-details', ...vendorAuth, authController.updateBankDetails);
+
+// Subscription (uses vendorAuthOnly so vendor can access even when expired)
+router.get('/subscription', ...vendorAuthOnly, subscriptionController.getCurrentSubscription);
+router.get('/subscription/plans', ...vendorAuthOnly, subscriptionController.getAvailablePlans);
+router.post('/subscription/renew', ...vendorAuthOnly, subscriptionController.renewSubscription);
 
 // Products
 router.get('/products', ...vendorAuth, productController.getVendorProducts);

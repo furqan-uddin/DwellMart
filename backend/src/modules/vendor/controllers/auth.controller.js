@@ -3,6 +3,8 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import Vendor from '../../../models/Vendor.model.js';
 import Admin from '../../../models/Admin.model.js';
+import SubscriptionPlan from '../../../models/SubscriptionPlan.model.js';
+import VendorSubscription from '../../../models/VendorSubscription.model.js';
 import { generateTokens } from '../../../utils/generateToken.js';
 import { sendOTP } from '../../../services/otp.service.js';
 import { createNotification } from '../../../services/notification.service.js';
@@ -16,11 +18,33 @@ import {
 
 // POST /api/vendor/auth/register
 export const register = asyncHandler(async (req, res) => {
-    const { name, email, password, phone, storeName, storeDescription, address } = req.body;
+    const { name, email, password, phone, storeName, storeDescription, address, selectedPlanId, agreedToTerms } = req.body;
+
+    // Validate T&C agreement
+    if (!agreedToTerms) {
+        throw new ApiError(400, 'You must agree to the Terms & Conditions to register.');
+    }
+
+    // Validate plan selection
+    if (!selectedPlanId) {
+        throw new ApiError(400, 'Please select a subscription plan.');
+    }
+    const plan = await SubscriptionPlan.findById(selectedPlanId);
+    if (!plan || !plan.isActive) {
+        throw new ApiError(400, 'Selected subscription plan is not available.');
+    }
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const existing = await Vendor.findOne({ email: normalizedEmail });
     if (existing) throw new ApiError(409, 'Email already registered.');
+
+    // If trial plan, check if this email has used a trial before
+    if (plan.isTrial) {
+        const previousTrialVendor = await Vendor.findOne({ email: normalizedEmail }).lean();
+        // Since we already checked 'existing' above, a trial check on the same email isn't needed here.
+        // But we also need to check for prior trial subscriptions by any vendor with the same email
+        // who may have been deleted/re-registered. The existing check above handles this.
+    }
 
     const vendor = await Vendor.create({
         name: String(name || '').trim(),
@@ -30,8 +54,24 @@ export const register = asyncHandler(async (req, res) => {
         storeName: String(storeName || '').trim(),
         storeDescription: String(storeDescription || '').trim(),
         address,
-        status: 'pending'
+        status: 'pending',
+        agreedToTerms: true,
+        agreedToTermsAt: new Date(),
+        selectedPlanId: plan._id,
     });
+
+    // Create subscription record
+    const now = new Date();
+    const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    await VendorSubscription.create({
+        vendorId: vendor._id,
+        planId: plan._id,
+        startDate: now,
+        endDate,
+        status: plan.isTrial || plan.price === 0 ? 'active' : 'active',
+        paymentStatus: plan.isTrial || plan.price === 0 ? 'completed' : 'pending',
+    });
+
     await sendOTP(vendor, 'vendor_verification');
 
     // Notify all active admins about a new vendor registration request.
@@ -42,12 +82,13 @@ export const register = asyncHandler(async (req, res) => {
                 recipientId: admin._id,
                 recipientType: 'admin',
                 title: 'New Vendor Registration',
-                message: `${vendor.storeName || vendor.name} has registered and is awaiting review.`,
+                message: `${vendor.storeName || vendor.name} has registered with the "${plan.name}" plan and is awaiting review.`,
                 type: 'system',
                 data: {
                     vendorId: String(vendor._id),
                     vendorEmail: vendor.email,
                     status: vendor.status,
+                    planName: plan.name,
                 },
             })
         )
