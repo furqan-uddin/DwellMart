@@ -70,6 +70,13 @@ const getChildRoute = (parentRoute, childName) => {
     "/admin/brands": {
       "Manage Brands": "/admin/brands/manage-brands",
     },
+    "/admin/vendors": {
+      "Manage Vendors": "/admin/vendors/manage-vendors",
+      "Pending Approvals": "/admin/vendors/pending-approvals",
+      "Commission Rates": "/admin/vendors/commission-rates",
+      "Vendor Analytics": "/admin/vendors/vendor-analytics",
+      "Vendor Subscriptions": "/admin/vendors/vendor-subscriptions",
+    },
     "/admin/customers": {
       "View Customers": "/admin/customers/view-customers",
       Addresses: "/admin/customers/addresses",

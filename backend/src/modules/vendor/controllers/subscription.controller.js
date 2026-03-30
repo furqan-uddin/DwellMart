@@ -69,20 +69,24 @@ export const renewSubscription = asyncHandler(async (req, res) => {
     }
 
     const now = new Date();
-    const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    // If they have an existing subscription (even if expired/cancelled), 
+    // we should extend from the latest one if it's still in the future,
+    // but for "renewal" of an expired one, we start from now.
+    const lastSubscription = await VendorSubscription.findOne({ vendorId: req.user.id }).sort({ endDate: -1 });
+    const baseDate = (lastSubscription && new Date(lastSubscription.endDate) > now) 
+        ? new Date(lastSubscription.endDate) 
+        : now;
+
+    const endDate = new Date(baseDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
 
     const subscription = await VendorSubscription.create({
         vendorId: req.user.id,
         planId: plan._id,
-        startDate: now,
+        startDate: baseDate,
         endDate,
         status: 'active',
-        paymentStatus: plan.isTrial || plan.price === 0 ? 'completed' : 'pending',
+        paymentStatus: 'completed', // Renewals are auto-completed for immediate access
     });
 
-    const message = plan.price > 0
-        ? 'Subscription created. Your payment is pending admin confirmation.'
-        : 'Subscription activated successfully.';
-
-    res.status(201).json(new ApiResponse(201, subscription, message));
+    res.status(201).json(new ApiResponse(201, subscription, 'Subscription renewed and activated successfully.'));
 });

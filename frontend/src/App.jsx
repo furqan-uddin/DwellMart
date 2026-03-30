@@ -62,6 +62,7 @@ import PendingApprovals from "./modules/Admin/pages/vendors/PendingApprovals";
 import VendorDetail from "./modules/Admin/pages/vendors/VendorDetail";
 import CommissionRates from "./modules/Admin/pages/vendors/CommissionRates";
 import AdminVendorAnalytics from "./modules/Admin/pages/vendors/VendorAnalytics";
+import VendorSubscriptions from "./modules/Admin/pages/vendors/VendorSubscriptions";
 import AdminSubscriptionPlans from "./modules/Admin/pages/SubscriptionPlans";
 import AdminVendorTerms from "./modules/Admin/pages/VendorTerms";
 
@@ -157,6 +158,7 @@ import VendorRegister from "./modules/Vendor/pages/Register";
 import VendorVerification from "./modules/Vendor/pages/Verification";
 import VendorForgotPassword from "./modules/Vendor/pages/ForgotPassword";
 import VendorResetPassword from "./modules/Vendor/pages/ResetPassword";
+import VendorRenewSubscription from "./modules/Vendor/pages/VendorRenewSubscription";
 import VendorProtectedRoute from "./modules/Vendor/components/VendorProtectedRoute";
 import VendorLayout from "./modules/Vendor/components/Layout/VendorLayout";
 import VendorDashboard from "./modules/Vendor/pages/Dashboard";
@@ -497,6 +499,10 @@ const AppRoutes = () => {
           path="vendors/vendor-analytics"
           element={<AdminVendorAnalytics />}
         />
+        <Route
+          path="vendors/vendor-subscriptions"
+          element={<VendorSubscriptions />}
+        />
         <Route path="vendors/:id" element={<VendorDetail />} />
 
         <Route path="subscription-plans" element={<AdminSubscriptionPlans />} />
@@ -594,6 +600,8 @@ const AppRoutes = () => {
         element={<VendorForgotPassword />}
       />
       <Route path="/vendor/reset-password" element={<VendorResetPassword />} />
+      {/* Renewal page — outside VendorProtectedRoute so expired vendors can access it */}
+      <Route path="/vendor/renew-subscription" element={<VendorRenewSubscription />} />
       <Route
         path="/vendor"
         element={
