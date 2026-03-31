@@ -55,7 +55,7 @@ const Footer = () => {
           <div className="space-y-6">
             <Link to="/home" className="flex items-center gap-2">
               {appLogo.src ? (
-                <img src={appLogo.src} alt={appLogo.alt} className="h-28 w-auto object-contain brightness-0 invert -ml-4" />
+                <img src={appLogo.src} alt={appLogo.alt} className="h-28 w-auto object-contain -ml-4" />
               ) : (
                 <span className="text-2xl font-black text-white">Dwell Mart</span>
               )}
@@ -152,9 +152,9 @@ const Footer = () => {
             &copy; {currentYear} <span className="text-white font-semibold">Dwell Mart</span>. All rights reserved.
           </p>
           <div className="flex items-center gap-4 opacity-50">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-6" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
+            <img src="https://cdn.jsdelivr.net/gh/aaronfagan/svg-credit-card-payment-icons@master/flat/visa.svg" alt="Visa" className="h-5" />
+            <img src="https://cdn.jsdelivr.net/gh/aaronfagan/svg-credit-card-payment-icons@master/flat/mastercard.svg" alt="Mastercard" className="h-7" />
+            <img src="https://cdn.jsdelivr.net/gh/aaronfagan/svg-credit-card-payment-icons@master/flat/paypal.svg" alt="PayPal" className="h-5" />
           </div>
         </div>
       </div>

@@ -22,7 +22,7 @@ const categoryGradients = {
   6: "from-blue-50 via-cyan-50 to-teal-50", // Athletic
 };
 
-const MobileHeader = () => {
+const MobileHeader = ({ hideSellButton = false }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCartAnimation, setShowCartAnimation] = useState(false);
   const [positionsReady, setPositionsReady] = useState(false);
@@ -326,12 +326,14 @@ const MobileHeader = () => {
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
             {/* Sell Button */}
-            <Link
-              to="/sell-on-dwellmart"
-              className="px-3 py-1.5 bg-primary-600/90 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors mr-1"
-            >
-              Sell On DwellMart
-            </Link>
+            {!hideSellButton && (
+              <Link
+                to="/sell-on-dwellmart"
+                className="px-3 py-1.5 bg-primary-600/90 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors mr-1"
+              >
+                Sell On DwellMart
+              </Link>
+            )}
 
             {/* Cart Button */}
             <motion.button

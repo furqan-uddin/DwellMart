@@ -17,7 +17,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserNotificationStore } from "../../store/userNotificationStore";
 
-const DesktopHeader = () => {
+const DesktopHeader = ({ hideSellButton = false }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
   const itemCount = useCartStore((state) => state.getItemCount());
@@ -115,11 +115,13 @@ const DesktopHeader = () => {
             className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
             Offers
           </Link>
-          <Link
-            to="/sell-on-dwellmart"
-            className="px-4 py-2 bg-primary-600/10 text-primary-400 hover:bg-primary-600 hover:text-white rounded-lg font-medium text-sm lg:text-base border border-primary-500/30 transition-all ml-2">
-            Sell On DwellMart
-          </Link>
+          {!hideSellButton && (
+            <Link
+              to="/sell-on-dwellmart"
+              className="px-4 py-2 bg-primary-600/10 text-primary-400 hover:bg-primary-600 hover:text-white rounded-lg font-medium text-sm lg:text-base border border-primary-500/30 transition-all ml-2">
+              Sell On DwellMart
+            </Link>
+          )}
         </nav>
 
         {/* Search Bar */}

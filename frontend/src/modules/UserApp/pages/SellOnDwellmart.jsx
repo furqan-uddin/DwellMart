@@ -18,6 +18,9 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
+import DesktopHeader from '../components/Layout/DesktopHeader';
+import MobileHeader from '../components/Layout/MobileHeader';
+import Footer from '../components/Layout/Footer';
 
 const STEPS = ['Plans', 'Registration', 'Thank You'];
 
@@ -138,14 +141,12 @@ const SellOnDwellmart = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <DesktopHeader hideSellButton={true} />
+      <MobileHeader hideSellButton={true} />
+
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16 px-4">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="absolute top-4 left-4 text-gray-400 hover:text-white flex items-center gap-2 transition-colors z-10 font-medium text-sm sm:text-base border border-gray-600/30 hover:border-gray-500/50 bg-gray-800/20 hover:bg-gray-700/40 backdrop-blur-md px-3 py-1.5 rounded-lg"
-        >
-          <FiArrowLeft className="text-lg" /> Back to Home
-        </button>
         <div className="max-w-4xl mx-auto text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -640,6 +641,9 @@ const SellOnDwellmart = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
