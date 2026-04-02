@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   FiArrowLeft,
   FiMail,
@@ -30,6 +30,8 @@ const VendorDetail = () => {
   const navigate = useNavigate();
   const { getVendor, updateVendorStatus, updateCommissionRate } =
     useVendorStore();
+  const location = useLocation();
+  const hideActions = new URLSearchParams(location.search).get("hideActions") === "true";
 
   const [vendor, setVendor] = useState(null);
   const [vendorOrders, setVendorOrders] = useState([]);
@@ -294,7 +296,7 @@ const VendorDetail = () => {
             }>
             {vendor.status?.toUpperCase()}
           </Badge>
-          {vendor.status === "pending" && (
+          {!hideActions && vendor.status === "pending" && (
             <button
               onClick={() => handleStatusUpdate("approved")}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
@@ -302,7 +304,7 @@ const VendorDetail = () => {
               Approve
             </button>
           )}
-          {vendor.status === "approved" && (
+          {!hideActions && vendor.status === "approved" && (
             <button
               onClick={() => handleStatusUpdate("suspended")}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
@@ -320,10 +322,11 @@ const VendorDetail = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 font-semibold text-sm transition-colors ${activeTab === tab
-                ? "text-primary-600 border-b-2 border-primary-600"
-                : "text-gray-600 hover:text-gray-800"
-                }`}>
+              className={`px-6 py-3 font-semibold text-sm transition-colors ${
+                activeTab === tab
+                  ? "text-primary-600 border-b-2 border-primary-600"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}

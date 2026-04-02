@@ -180,7 +180,7 @@ const VendorSubscriptions = () => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (vendorId) navigate(`/admin/vendors/${vendorId}`);
+              if (vendorId) navigate(`/admin/vendors/${vendorId}?hideActions=true`);
             }}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="View Vendor"
