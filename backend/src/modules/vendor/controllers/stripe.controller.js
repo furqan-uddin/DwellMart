@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Create Stripe Checkout Session
 export const createStripeSession = asyncHandler(async (req, res) => {
-    const { planId } = req.body;
+    const { planId, returnPath } = req.body;
 
     if (!planId) {
         throw new ApiError(400, 'Plan ID is required');
@@ -22,6 +22,13 @@ export const createStripeSession = asyncHandler(async (req, res) => {
     if (plan.price <= 0 || plan.isTrial) {
         return res.status(200).json(new ApiResponse(200, { isFree: true }, 'Free plan selected'));
     }
+
+    const safeReturnPath =
+        typeof returnPath === 'string' &&
+        returnPath.startsWith('/') &&
+        !returnPath.startsWith('//')
+            ? returnPath
+            : '/sell-on-dwellmart';
 
     let currency = String(plan.currency || 'INR').trim().toLowerCase();
     // Stripe expects 3-letter currency code. If it's "rupees", map to "inr"
@@ -46,8 +53,8 @@ export const createStripeSession = asyncHandler(async (req, res) => {
                 },
             ],
             mode: 'payment',
-            success_url: `${process.env.CLIENT_URL}/sell-on-dwellmart?success=true&session_id={CHECKOUT_SESSION_ID}&plan_id=${plan._id}`,
-            cancel_url: `${process.env.CLIENT_URL}/sell-on-dwellmart?canceled=true`,
+            success_url: `${process.env.CLIENT_URL}${safeReturnPath}?success=true&session_id={CHECKOUT_SESSION_ID}&plan_id=${plan._id}`,
+            cancel_url: `${process.env.CLIENT_URL}${safeReturnPath}?canceled=true`,
         });
 
         res.status(200).json(new ApiResponse(200, { sessionId: session.id, url: session.url }, 'Stripe session created'));

@@ -174,7 +174,10 @@ const SellOnDwellmart = () => {
     setShowPaymentModal(false);
     setIsLoading(true);
     try {
-      const response = await api.post('/subscription/create-stripe-session', { planId: plan._id });
+      const response = await api.post('/subscription/create-stripe-session', {
+        planId: plan._id,
+        returnPath: window.location.pathname,
+      });
       if (response.data.url) {
         window.location.href = response.data.url;
       }
