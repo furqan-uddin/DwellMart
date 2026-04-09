@@ -17,6 +17,11 @@ export const registerSchema = Joi.object({
     selectedPlanId: Joi.string().required().messages({
         'any.required': 'Please select a subscription plan.',
     }),
+    payment_method: Joi.string().valid('razorpay', 'stripe').optional(),
+    razorpay_order_id: Joi.string().allow('').optional(),
+    razorpay_payment_id: Joi.string().allow('').optional(),
+    razorpay_signature: Joi.string().allow('').optional(),
+    stripe_session_id: Joi.string().allow('').optional(),
     agreedToTerms: Joi.boolean().valid(true).required().messages({
         'any.only': 'You must agree to the Terms & Conditions.',
         'any.required': 'You must agree to the Terms & Conditions.',
