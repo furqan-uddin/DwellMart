@@ -13,6 +13,8 @@ import SubscriptionPlan from '../models/SubscriptionPlan.model.js';
 import Settings from '../models/Settings.model.js';
 import { calculateVendorShippingForGroups } from '../services/vendorShipping.service.js';
 import { cacheResponse } from '../middlewares/responseCache.js';
+import { createSubscriptionOrder } from '../modules/vendor/controllers/razorpay.controller.js';
+import { createStripeSession } from '../modules/vendor/controllers/stripe.controller.js';
 
 const router = Router();
 const listCache = cacheResponse({ ttlSeconds: 30, maxEntries: 1000 });
@@ -657,6 +659,12 @@ router.get('/vendor-terms', catalogCache, asyncHandler(async (req, res) => {
         lastUpdated: setting?.updatedAt || null,
     }, 'Vendor terms fetched.'));
 }));
+
+// Create Razorpay Order for Subscription (Public)
+router.post('/subscription/create-order', createSubscriptionOrder);
+
+// Create Stripe Session for Subscription (Public)
+router.post('/subscription/create-stripe-session', createStripeSession);
 
 // ─── Public Static Pages ──────────────────────────────────────────────────────
 // GET /api/pages/:slug (public — no auth required so user-facing pages can fetch content)

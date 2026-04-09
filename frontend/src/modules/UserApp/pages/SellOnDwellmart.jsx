@@ -15,6 +15,8 @@ import {
   FiArrowRight,
   FiArrowLeft,
   FiFileText,
+  FiCreditCard,
+  FiX,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
@@ -36,6 +38,11 @@ const SellOnDwellmart = () => {
   const [tradeLicense, setTradeLicense] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [razorpayData, setRazorpayData] = useState(null);
+  const [stripeData, setStripeData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState(null); // 'razorpay' or 'stripe'
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [tempSelectedPlan, setTempSelectedPlan] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -62,8 +69,30 @@ const SellOnDwellmart = () => {
           api.get('/subscription-plans'),
           api.get('/vendor-terms'),
         ]);
-        setPlans(plansRes?.data || []);
+        const fetchedPlans = plansRes?.data || [];
+        setPlans(fetchedPlans);
         setTermsContent(termsRes?.data?.content || '');
+
+        // Handle Stripe Success Redirect
+        const queryParams = new URLSearchParams(window.location.search);
+        if (queryParams.get('success') === 'true' && queryParams.get('session_id')) {
+          const sessionId = queryParams.get('session_id');
+          const planId = queryParams.get('plan_id');
+          const plan = fetchedPlans.find(p => p._id === planId);
+          if (plan) {
+            setStripeData({ stripe_session_id: sessionId });
+            setPaymentMethod('stripe');
+            setSelectedPlan(plan);
+            setCurrentStep(1);
+            toast.success('Payment successful! Now complete your registration.');
+            
+            // Cleanup URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } else if (queryParams.get('canceled') === 'true') {
+          toast.error('Payment was canceled.');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       } catch (err) {
         console.error('Failed to fetch data:', err);
       }
@@ -85,8 +114,75 @@ const SellOnDwellmart = () => {
   };
 
   const handleSelectPlan = (plan) => {
-    setSelectedPlan(plan);
-    setCurrentStep(1);
+    if (plan.price > 0 && !plan.isTrial) {
+      setTempSelectedPlan(plan);
+      setShowPaymentModal(true);
+    } else {
+      setSelectedPlan(plan);
+      setPaymentMethod(null);
+      setCurrentStep(1);
+    }
+  };
+
+  const handleRazorpay = async () => {
+    const plan = tempSelectedPlan;
+    setShowPaymentModal(false);
+    try {
+      const response = await api.post('/subscription/create-order', { planId: plan._id });
+      const { orderId, amount, currency, keyId } = response.data;
+
+      const options = {
+        key: keyId,
+        amount,
+        currency,
+        name: "DwellMart",
+        description: `Subscription: ${plan.name}`,
+        order_id: orderId,
+        handler: function (response) {
+          setRazorpayData({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          });
+          setPaymentMethod('razorpay');
+          setSelectedPlan(plan);
+          setCurrentStep(1);
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone
+        },
+        theme: { color: "#4f46e5" },
+        modal: {
+          ondismiss: function() {
+            toast.error('Payment cancelled.');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('Razorpay Error:', err);
+      toast.error('Could not initiate payment.');
+    }
+  };
+
+  const handleStripe = async () => {
+    const plan = tempSelectedPlan;
+    setShowPaymentModal(false);
+    setIsLoading(true);
+    try {
+      const response = await api.post('/subscription/create-stripe-session', { planId: plan._id });
+      if (response.data.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (err) {
+      console.error('Stripe Error:', err);
+      toast.error('Could not initiate Stripe payment.');
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -126,6 +222,15 @@ const SellOnDwellmart = () => {
       submitData.append('selectedPlanId', selectedPlan._id);
       submitData.append('agreedToTerms', true);
       submitData.append('tradeLicense', tradeLicense);
+      submitData.append('payment_method', paymentMethod);
+
+      if (paymentMethod === 'razorpay' && razorpayData) {
+        submitData.append('razorpay_order_id', razorpayData.razorpay_order_id);
+        submitData.append('razorpay_payment_id', razorpayData.razorpay_payment_id);
+        submitData.append('razorpay_signature', razorpayData.razorpay_signature);
+      } else if (paymentMethod === 'stripe' && stripeData) {
+        submitData.append('stripe_session_id', stripeData.stripe_session_id);
+      }
 
       await api.post('/vendor/auth/register', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -521,11 +626,11 @@ const SellOnDwellmart = () => {
 
                     {/* Info */}
                     {selectedPlan && selectedPlan.price > 0 && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <p className="text-sm text-amber-800">
-                          <strong>Note:</strong> After registration and email verification, your payment of{' '}
-                          <strong>{selectedPlan.price} {selectedPlan.currency || 'AED'}</strong> will be confirmed by admin.
-                          Your subscription will activate once payment is verified.
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                        <p className="text-sm text-emerald-800">
+                          <strong>Payment Verified:</strong> {paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'} payment of{' '}
+                          <strong>{selectedPlan.price} {selectedPlan.currency || 'AED'}</strong> has been received. 
+                          Complete this form to finish registration.
                         </p>
                       </div>
                     )}
@@ -589,6 +694,66 @@ const SellOnDwellmart = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Payment Method Selection Modal */}
+      <AnimatePresence>
+        {showPaymentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-center border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-800">Select Payment Method</h3>
+                <p className="text-gray-500 text-sm mt-1">
+                  Payment for {tempSelectedPlan?.name} ({tempSelectedPlan?.price} {tempSelectedPlan?.currency || 'AED'})
+                </p>
+              </div>
+              <div className="p-6 flex flex-col gap-3">
+                <button
+                  onClick={handleRazorpay}
+                  className="w-full py-4 px-6 bg-[#3392fd] text-white rounded-xl font-bold hover:bg-[#2081eb] transition-all flex items-center justify-between group"
+                >
+                  <span className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
+                      <FiStar className="text-white" />
+                    </div>
+                    Razorpay
+                  </span>
+                  <FiArrowRight className="opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
+                </button>
+                <button
+                  onClick={handleStripe}
+                  className="w-full py-4 px-6 bg-[#635bff] text-white rounded-xl font-bold hover:bg-[#5851e0] transition-all flex items-center justify-between group"
+                >
+                  <span className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
+                      <FiCreditCard className="text-white" />
+                    </div>
+                    Stripe (Cards)
+                  </span>
+                  <FiArrowRight className="opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
+                </button>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full py-3 mt-2 text-gray-400 font-medium hover:text-gray-600 transition-all flex items-center justify-center gap-2"
+                >
+                  <FiX size={14} /> Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Terms & Conditions Modal */}
       <AnimatePresence>

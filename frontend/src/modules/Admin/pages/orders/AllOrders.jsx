@@ -576,12 +576,6 @@ const AllOrders = () => {
 
   const columns = [
     {
-      key: "id",
-      label: "Order ID",
-      sortable: true,
-      render: (value) => <span className="font-semibold">{value}</span>,
-    },
-    {
       key: "customer",
       label: "Customer",
       sortable: true,
@@ -838,7 +832,6 @@ const AllOrders = () => {
             <ExportButton
               data={filteredOrders}
               headers={[
-                { label: "Order ID", accessor: (row) => row.id },
                 { label: "Customer", accessor: (row) => row.customer.name },
                 { label: "Email", accessor: (row) => row.customer.email },
                 {

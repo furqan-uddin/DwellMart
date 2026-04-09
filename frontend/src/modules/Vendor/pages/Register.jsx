@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiShoppingBag, FiMapPin } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone, FiShoppingBag, FiMapPin, FiFileText, FiCheck, FiInfo } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useVendorAuthStore } from "../store/vendorAuthStore";
+import { getPublicSubscriptionPlans } from "../services/vendorService";
 import toast from 'react-hot-toast';
 
 const VendorRegister = () => {
   const navigate = useNavigate();
   const { register: registerVendor, isLoading } = useVendorAuthStore();
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -24,9 +27,27 @@ const VendorRegister = () => {
       zipCode: '',
       country: 'USA',
     },
+    selectedPlanId: '',
+    agreedToTerms: false,
+    tradeLicense: null,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await getPublicSubscriptionPlans();
+        const data = response?.data ?? response;
+        setPlans(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,6 +61,16 @@ const VendorRegister = () => {
           [addressField]: value,
         },
       });
+    } else if (name === 'agreedToTerms') {
+      setFormData({
+        ...formData,
+        [name]: e.target.checked,
+      });
+    } else if (name === 'tradeLicense') {
+      setFormData({
+        ...formData,
+        [name]: e.target.files[0],
+      });
     } else {
       setFormData({
         ...formData,
@@ -52,8 +83,18 @@ const VendorRegister = () => {
     e.preventDefault();
 
     // Validation
-    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.storeName) {
-      toast.error('Please fill in all required fields');
+    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.storeName || !formData.selectedPlanId) {
+      toast.error('Please fill in all required fields including plan selection');
+      return;
+    }
+
+    if (!formData.tradeLicense) {
+      toast.error('Trade Licence document is required');
+      return;
+    }
+
+    if (!formData.agreedToTerms) {
+      toast.error('You must agree to the Terms & Conditions');
       return;
     }
 
@@ -68,15 +109,19 @@ const VendorRegister = () => {
     }
 
     try {
-      const result = await registerVendor({
-        name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        phone: formData.phone.trim(),
-        storeName: formData.storeName.trim(),
-        storeDescription: formData.storeDescription.trim(),
-        address: formData.address,
-      });
+      const fd = new FormData();
+      fd.append('name', formData.name.trim());
+      fd.append('email', formData.email.trim().toLowerCase());
+      fd.append('password', formData.password);
+      fd.append('phone', formData.phone.trim());
+      fd.append('storeName', formData.storeName.trim());
+      fd.append('storeDescription', formData.storeDescription.trim());
+      fd.append('address', JSON.stringify(formData.address));
+      fd.append('selectedPlanId', formData.selectedPlanId);
+      fd.append('agreedToTerms', String(formData.agreedToTerms));
+      fd.append('tradeLicense', formData.tradeLicense);
+
+      const result = await registerVendor(fd);
 
       toast.success(result.message || 'Registration successful!');
       // Navigate to verification page
@@ -199,7 +244,94 @@ const VendorRegister = () => {
                   className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 text-gray-800 placeholder:text-gray-400"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Trade Licence Document <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <FiFileText className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="file"
+                    name="tradeLicense"
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 text-gray-800 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                    required
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Upload your trade licence or business permit (PDF, Image, or DOC)</p>
+              </div>
             </div>
+          </div>
+
+          {/* Subscription Plans */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Choose a Subscription Plan <span className="text-red-500">*</span></h3>
+            {plansLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-2xl"></div>
+                ))}
+              </div>
+            ) : plans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {plans.map((plan) => (
+                  <div
+                    key={plan._id}
+                    onClick={() => setFormData(prev => ({ ...prev, selectedPlanId: plan._id }))}
+                    className={`relative p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                      formData.selectedPlanId === plan._id
+                        ? 'border-primary-500 bg-primary-50/30 ring-1 ring-primary-500'
+                        : 'border-gray-100 bg-white hover:border-primary-200'
+                    }`}
+                  >
+                    {plan.isMostPopular && (
+                        <div className="absolute -top-3 right-4 bg-primary-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm z-10 flex items-center gap-1">
+                            <FiCheck className="text-[10px]" /> POPULAR
+                        </div>
+                    )}
+                    {plan.isTrial && (
+                        <div className="absolute -top-3 left-4 bg-gray-800 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm z-10">
+                            TRIAL
+                        </div>
+                    )}
+                    
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-bold text-gray-800">{plan.name}</h4>
+                      {formData.selectedPlanId === plan._id && (
+                        <div className="bg-primary-500 rounded-full p-1">
+                          <FiCheck className="text-white text-xs" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mb-4">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-gray-900">{plan.price}</span>
+                        <span className="text-gray-500 font-semibold text-sm">{plan.currency || 'AED'}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">{plan.durationDays} days</p>
+                    </div>
+                    
+                    {plan.features?.length > 0 && (
+                      <ul className="space-y-1.5">
+                        {plan.features.slice(0, 3).map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
+                            <FiCheck className="text-primary-500 mt-0.5 flex-shrink-0" />
+                            <span className="truncate">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                <p className="text-sm text-amber-800">No plans available at the moment. Please contact support.</p>
+              </div>
+            )}
           </div>
 
           {/* Address Information */}
@@ -329,8 +461,25 @@ const VendorRegister = () => {
             </div>
           </div>
 
+          {/* T&C Agreement */}
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="agreedToTerms"
+              name="agreedToTerms"
+              checked={formData.agreedToTerms}
+              onChange={handleChange}
+              className="mt-1.5 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+              required
+            />
+            <label htmlFor="agreedToTerms" className="text-sm text-gray-600 cursor-pointer">
+              I agree to the <Link to="/pages/terms" className="text-primary-600 hover:underline font-medium">Terms & Conditions</Link> and <Link to="/pages/privacy" className="text-primary-600 hover:underline font-medium">Privacy Policy</Link> of DwellMart. <span className="text-red-500">*</span>
+            </label>
+          </div>
+
           {/* Info Message */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+            <FiInfo className="text-blue-500 text-lg flex-shrink-0 mt-0.5" />
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> You must verify your email first, then your registration will be reviewed by admin.
               You will receive an email when your account is approved or rejected.

@@ -6,12 +6,14 @@ import {
   FiShoppingBag,
   FiTrendingUp,
   FiArrowRight,
+  FiCheck,
 } from "react-icons/fi";
 import { MdCurrencyRupee } from "react-icons/md";
 import { useVendorAuthStore } from "../store/vendorAuthStore";
 import { useVendorProductStore } from "../store/vendorProductStore";
-import { getVendorOrders, getVendorEarnings } from "../services/vendorService";
+import { getVendorOrders, getVendorEarnings, getPublicSubscriptionPlans } from "../services/vendorService";
 import { formatPrice } from "../../../shared/utils/helpers";
+import toast from "react-hot-toast";
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
@@ -28,7 +30,9 @@ const VendorDashboard = () => {
   });
 
   const [recentOrders, setRecentOrders] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   const vendorId = vendor?.id;
 
@@ -44,17 +48,19 @@ const VendorDashboard = () => {
       setIsLoading(true);
       try {
         // Fetch orders and earnings in parallel
-        const [ordersRes, earningsRes, pendingRes, processingRes] = await Promise.all([
+        const [ordersRes, earningsRes, pendingRes, processingRes, plansRes] = await Promise.all([
           getVendorOrders({ page: 1, limit: 5 }),
           getVendorEarnings(),
           getVendorOrders({ page: 1, limit: 1, status: "pending" }),
           getVendorOrders({ page: 1, limit: 1, status: "processing" }),
+          getPublicSubscriptionPlans(),
         ]);
 
         const ordersData = ordersRes?.data ?? ordersRes;
         const earningsData = earningsRes?.data ?? earningsRes;
         const pendingData = pendingRes?.data ?? pendingRes;
         const processingData = processingRes?.data ?? processingRes;
+        const plansData = plansRes?.data ?? plansRes;
 
         const orders = ordersData?.orders ?? [];
         const summary = earningsData?.summary ?? {};
@@ -70,10 +76,12 @@ const VendorDashboard = () => {
         }));
 
         setRecentOrders(orders);
-      } catch {
-        // errors handled by api.js toast
+        setPlans(Array.isArray(plansData) ? plansData : []);
+      } catch (err) {
+        console.error("Dashboard error:", err);
       } finally {
         setIsLoading(false);
+        setPlansLoading(false);
       }
     };
 
@@ -337,6 +345,81 @@ const VendorDashboard = () => {
             <p className="text-gray-500 text-center py-8">No products yet</p>
           )}
         </div>
+      </div>
+
+      {/* Subscription Plans Section */}
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-gray-800">Membership Plans</h2>
+          <button
+            onClick={() => navigate("/vendor/subscription/renew")}
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            Manage Subscription
+          </button>
+        </div>
+
+        {plansLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-gray-100 animate-pulse rounded-2xl"></div>
+            ))}
+          </div>
+        ) : plans.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.map((plan) => (
+              <div
+                key={plan._id}
+                className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
+                  plan.isMostPopular
+                    ? 'border-primary-500 bg-primary-50/10'
+                    : 'border-gray-100 bg-white hover:border-primary-100'
+                }`}
+              >
+                {plan.isMostPopular && (
+                  <div className="absolute -top-3 right-6 bg-primary-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm z-10 flex items-center gap-1">
+                    <FiCheck className="text-[10px]" /> POPULAR
+                  </div>
+                )}
+                {plan.isTrial && (
+                  <div className="absolute -top-3 left-6 bg-gray-800 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm z-10">
+                    TRIAL
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <h3 className="text-base font-bold text-gray-800 mb-1">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-gray-900">{plan.price}</span>
+                    <span className="text-gray-500 font-semibold text-sm">{plan.currency || 'AED'}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">{plan.durationDays} days</p>
+                </div>
+
+                {plan.features?.length > 0 && (
+                  <ul className="space-y-2 mb-4">
+                    {plan.features.slice(0, 4).map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
+                        <FiCheck className="text-primary-500 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="flex items-center gap-2 mt-auto">
+                    <span className={`w-2 h-2 rounded-full ${plan.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                        {plan.isActive ? 'Active Plan' : 'Inactive'}
+                    </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <p className="text-gray-500 text-sm">No membership plans found.</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

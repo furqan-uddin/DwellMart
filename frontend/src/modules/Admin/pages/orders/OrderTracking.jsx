@@ -94,12 +94,6 @@ const OrderTracking = () => {
 
   const columns = [
     {
-      key: "id",
-      label: "Order ID",
-      sortable: true,
-      render: (value) => <span className="font-semibold">{value}</span>,
-    },
-    {
       key: "customer",
       label: "Customer",
       sortable: true,
@@ -187,12 +181,6 @@ const OrderTracking = () => {
               Tracking Details
             </h3>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Order ID</p>
-                <p className="font-semibold text-gray-800">
-                  {selectedOrder.id}
-                </p>
-              </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Customer</p>
                 <p className="font-semibold text-gray-800">

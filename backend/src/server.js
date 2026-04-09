@@ -1,7 +1,10 @@
 import "dotenv/config";
+import dns from "node:dns";
 import app from "./app.js";
 import connectDB from "./config/db.js";
 import { validateEnv } from "./config/env.js";
+
+dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
 const PORT = process.env.PORT || 5000;
 

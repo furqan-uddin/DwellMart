@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { FiSearch, FiEye, FiCheckCircle, FiXCircle } from "react-icons/fi";
 import { motion } from "framer-motion";
 import DataTable from "../../components/DataTable";
-import Badge from "../../../../shared/components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
 import { useVendorStore } from "../../store/vendorStore";
 import toast from "react-hot-toast";
@@ -21,6 +20,7 @@ const PendingApprovals = () => {
     type: null, // 'approve', 'reject'
     vendorId: null,
     vendorName: null,
+    tradeLicenseUrl: null,
   });
   const [rejectReason, setRejectReason] = useState("");
 
@@ -117,6 +117,7 @@ const PendingApprovals = () => {
                 type: "approve",
                 vendorId: row.id,
                 vendorName: row.storeName || row.name,
+                tradeLicenseUrl: row.documents?.tradeLicense?.url,
               });
             }}
             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -131,6 +132,7 @@ const PendingApprovals = () => {
                 type: "reject",
                 vendorId: row.id,
                 vendorName: row.storeName || row.name,
+                tradeLicenseUrl: row.documents?.tradeLicense?.url,
               });
             }}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -195,6 +197,11 @@ const PendingApprovals = () => {
         confirmText: "Approve",
         onConfirm: handleApprove,
         type: "success",
+        customContent: (
+          <div className="mt-4">
+            {renderDocumentLink()}
+          </div>
+        )
       };
     } else if (actionModal.type === "reject") {
         return {

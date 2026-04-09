@@ -29,6 +29,10 @@ const vendorSubscriptionSchema = new mongoose.Schema(
         paymentDetails: {
             method: { type: String },
             transactionId: { type: String },
+            razorpayOrderId: { type: String },
+            razorpayPaymentId: { type: String },
+            razorpaySignature: { type: String },
+            stripeSessionId: { type: String },
             confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
             confirmedAt: { type: Date },
             notes: { type: String },

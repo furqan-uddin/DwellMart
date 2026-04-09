@@ -4,9 +4,17 @@ import api from '../../../shared/utils/api';
 
 /**
  * Register a new vendor (pending approval + OTP email sent)
- * @param {{ name, email, password, phone, storeName, storeDescription }} data
+ * @param {FormData} formData - Contains name, email, password, phone, storeName, storeDescription, address, selectedPlanId, agreedToTerms, tradeLicense
  */
-export const registerVendor = (data) => api.post('/vendor/auth/register', data);
+export const registerVendor = (formData) =>
+  api.post('/vendor/auth/register', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+/**
+ * Get active subscription plans for public display (e.g. during signup)
+ */
+export const getPublicSubscriptionPlans = () => api.get('/subscription-plans');
 
 /**
  * Verify email OTP after registration

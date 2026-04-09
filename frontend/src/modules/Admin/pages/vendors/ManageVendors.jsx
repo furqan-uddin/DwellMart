@@ -109,11 +109,6 @@ const ManageVendors = () => {
 
   const columns = [
     {
-      key: "id",
-      label: "ID",
-      sortable: true,
-    },
-    {
       key: "storeName",
       label: "Store Name",
       sortable: true,
@@ -433,7 +428,6 @@ const ManageVendors = () => {
               <ExportButton
                 data={filteredVendors}
                 headers={[
-                  { label: "ID", accessor: (row) => row.id },
                   {
                     label: "Store Name",
                     accessor: (row) => row.storeName || row.name,
