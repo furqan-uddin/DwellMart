@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiSearch,
-  FiEdit,
   FiEye,
   FiCheckCircle,
   FiXCircle,
@@ -442,7 +441,7 @@ const ManageVendors = () => {
                   {
                     label: "Join Date",
                     accessor: (row) =>
-                      new Date(row.joinDate).toLocaleDateString(),
+                      row.joinDate ? new Date(row.joinDate).toLocaleDateString() : "N/A",
                   },
                 ]}
                 filename="vendors"
