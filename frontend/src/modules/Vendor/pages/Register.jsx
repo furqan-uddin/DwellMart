@@ -244,7 +244,7 @@ const VendorRegister = () => {
           email: formData.email,
           contact: formData.phone,
         },
-        theme: { color: '#4f46e5' },
+        theme: { color: '#ffc101' },
         modal: {
           ondismiss: () => toast.error('Payment cancelled.'),
         },
@@ -340,7 +340,7 @@ const VendorRegister = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#221300] via-[#3a2403] to-[#1a1204] px-4 py-8">
       <div className="mx-auto max-w-5xl">
         <Link
           to="/vendor/login"
@@ -364,9 +364,9 @@ const VendorRegister = () => {
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
                     index < currentStep
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-[#ffc101] text-black'
                       : index === currentStep
-                      ? 'bg-white text-primary-900 ring-4 ring-white/20'
+                      ? 'bg-white text-[#5a3a00] ring-4 ring-[#ffc101]/20'
                       : 'bg-white/10 text-white/60'
                   }`}
                 >
@@ -379,7 +379,7 @@ const VendorRegister = () => {
               {index < STEPS.length - 1 && (
                 <div
                   className={`mx-2 h-1 w-16 rounded-full md:w-24 ${
-                    index < currentStep ? 'bg-emerald-500' : 'bg-white/10'
+                    index < currentStep ? 'bg-[#ffc101]' : 'bg-white/10'
                   }`}
                 />
               )}
@@ -413,12 +413,12 @@ const VendorRegister = () => {
                       key={plan._id}
                       className={`relative rounded-3xl border p-6 text-white shadow-2xl backdrop-blur ${
                         plan.isMostPopular
-                          ? 'border-emerald-400/70 bg-white/10 ring-2 ring-emerald-400/30'
+                          ? 'border-[#ffc101]/70 bg-white/10 ring-2 ring-[#ffc101]/30'
                           : 'border-white/10 bg-white/5'
                       }`}
                     >
                       {plan.isMostPopular && (
-                        <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-2xl bg-emerald-500 px-3 py-1 text-xs font-bold">
+                        <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-2xl bg-[#ffc101] px-3 py-1 text-xs font-bold text-black">
                           <FiStar />
                           MOST POPULAR
                         </div>
@@ -439,7 +439,7 @@ const VendorRegister = () => {
                         <ul className="mt-5 space-y-2">
                           {plan.features.map((feature, index) => (
                             <li key={`${plan._id}-${index}`} className="flex items-start gap-2 text-sm text-white/80">
-                              <FiCheck className="mt-0.5 flex-shrink-0 text-emerald-300" />
+                              <FiCheck className="mt-0.5 flex-shrink-0 text-[#ffd042]" />
                               {feature}
                             </li>
                           ))}
@@ -451,7 +451,7 @@ const VendorRegister = () => {
                         className={`mt-6 w-full rounded-2xl py-3 font-semibold ${
                           plan.isTrial
                             ? 'bg-slate-100 text-slate-900 hover:bg-white'
-                            : 'bg-emerald-500 text-white hover:bg-emerald-400'
+                            : 'bg-[#ffc101] text-black hover:bg-[#ffd042]'
                         }`}
                       >
                         {selectedPlan?._id === plan._id ? 'Selected Plan' : 'Continue with Plan'}
@@ -481,7 +481,7 @@ const VendorRegister = () => {
                   Back to Plans
                 </button>
                 {onboardingEmail && (
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-emerald-200">
+                  <span className="rounded-full bg-[#ffc101]/15 px-3 py-1 text-sm font-semibold text-[#ffd042]">
                     Verified: {onboardingEmail}
                   </span>
                 )}
@@ -489,7 +489,7 @@ const VendorRegister = () => {
 
               <div className="rounded-[28px] border border-white/10 bg-white/95 p-6 text-gray-900 shadow-2xl md:p-8">
                 {selectedPlan && (
-                  <div className="mb-6 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm text-primary-800">
+                  <div className="mb-6 rounded-xl border border-[#ffc101]/30 bg-[#ffc101]/10 p-4 text-sm text-[#5a3a00]">
                     Selected plan: <strong>{selectedPlan.name}</strong>
                     {selectedPlan.price > 0 ? ` (${selectedPlan.price} ${selectedPlan.currency || 'AED'})` : ' (Free)'}
                   </div>
@@ -508,7 +508,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="John Doe"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                       </div>
                     </div>
@@ -526,7 +526,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="vendor@example.com"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                       </div>
                     </div>
@@ -544,7 +544,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="+1234567890"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                       </div>
                     </div>
@@ -561,7 +561,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="My Awesome Store"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                       </div>
                     </div>
@@ -574,7 +574,7 @@ const VendorRegister = () => {
                         onChange={handleChange}
                         rows={3}
                         placeholder="Tell customers about your store..."
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                       />
                     </div>
 
@@ -585,7 +585,7 @@ const VendorRegister = () => {
                       <select
                         value={documentType}
                         onChange={(event) => setDocumentType(event.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                       >
                         <option value="tradeLicense">Trade Licence</option>
                         <option value="gst">GST</option>
@@ -601,7 +601,7 @@ const VendorRegister = () => {
                         accept=".pdf,.doc,.docx,image/*"
                         onChange={(event) => setRegistrationDocument(event.target.files?.[0] || null)}
                         required
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 file:mr-4 file:rounded-full file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 file:mr-4 file:rounded-full file:border-0 file:bg-[#fff4bf] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#8a5a00] hover:file:bg-[#ffe082]"
                       />
                     </div>
 
@@ -614,7 +614,7 @@ const VendorRegister = () => {
                           value={formData.address.street}
                           onChange={handleChange}
                           placeholder="123 Main Street"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                       </div>
                     </div>
@@ -624,28 +624,28 @@ const VendorRegister = () => {
                       value={formData.address.city}
                       onChange={handleChange}
                       placeholder="City"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                     />
                     <input
                       name="address.state"
                       value={formData.address.state}
                       onChange={handleChange}
                       placeholder="State"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                     />
                     <input
                       name="address.zipCode"
                       value={formData.address.zipCode}
                       onChange={handleChange}
                       placeholder="Zip Code"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                     />
                     <input
                       name="address.country"
                       value={formData.address.country}
                       onChange={handleChange}
                       placeholder="Country"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                     />
 
                     <div>
@@ -661,7 +661,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="Min 6 characters"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                         <button
                           type="button"
@@ -686,7 +686,7 @@ const VendorRegister = () => {
                           onChange={handleChange}
                           required
                           placeholder="Re-enter password"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#ffc101] focus:outline-none focus:ring-2 focus:ring-[#ffc101]/20"
                         />
                         <button
                           type="button"
@@ -705,14 +705,14 @@ const VendorRegister = () => {
                         type="checkbox"
                         checked={agreedToTerms}
                         onChange={(event) => setAgreedToTerms(event.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-[#ffc101] focus:ring-[#ffc101]"
                       />
                       <span>
                         I agree to the{' '}
                         <button
                           type="button"
                           onClick={() => setShowTermsModal(true)}
-                          className="font-medium text-primary-600 underline"
+                          className="font-medium text-[#8a5a00] underline"
                         >
                           Terms & Conditions
                         </button>
@@ -724,7 +724,7 @@ const VendorRegister = () => {
                   <button
                     type="submit"
                     disabled={isLoading || !agreedToTerms}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? 'Registering...' : (
                       <>
@@ -739,7 +739,7 @@ const VendorRegister = () => {
                       <button
                         type="button"
                         onClick={() => navigate('/vendor/login')}
-                        className="font-semibold text-primary-600 hover:text-primary-700"
+                        className="font-semibold text-[#8a5a00] hover:text-[#5a3a00]"
                       >
                         Vendor Login
                       </button>
@@ -760,7 +760,7 @@ const VendorRegister = () => {
             >
               <div className="rounded-[28px] border border-white/10 bg-white/95 p-8 text-gray-900 shadow-2xl">
                 <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-3xl text-primary-600">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4bf] text-3xl text-[#b77900]">
                     <FiCreditCard />
                   </div>
                   <h2 className="text-2xl font-bold">
@@ -802,7 +802,7 @@ const VendorRegister = () => {
                         setShowPaymentModal(true);
                       }}
                       disabled={isLoading}
-                      className="w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Choose Payment Method
                     </button>
@@ -811,7 +811,7 @@ const VendorRegister = () => {
                       type="button"
                       onClick={() => completeOnboarding({ plan: selectedPlan })}
                       disabled={isLoading || !selectedPlan}
-                      className="w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isLoading ? 'Completing...' : 'Complete Onboarding'}
                     </button>
@@ -837,7 +837,7 @@ const VendorRegister = () => {
               className="mx-auto max-w-md"
             >
               <div className="rounded-[28px] border border-white/10 bg-white/95 p-8 text-center text-gray-900 shadow-2xl">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4bf] text-3xl text-[#b77900]">
                   <FiCheck />
                 </div>
                 <h2 className="text-2xl font-bold">Registration Successful!</h2>
@@ -852,7 +852,7 @@ const VendorRegister = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/vendor/login')}
-                  className="mt-6 w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700"
+                  className="mt-6 w-full rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042]"
                 >
                   Go to Vendor Login
                 </button>
@@ -943,7 +943,7 @@ const VendorRegister = () => {
             >
               <div className="flex items-center justify-between border-b p-4">
                 <div className="flex items-center gap-2">
-                  <FiFileText className="text-primary-600" />
+                  <FiFileText className="text-[#b77900]" />
                   <h3 className="font-bold">Terms & Conditions</h3>
                 </div>
                 <button
@@ -971,7 +971,7 @@ const VendorRegister = () => {
                     setAgreedToTerms(true);
                     setShowTermsModal(false);
                   }}
-                  className="w-full rounded-xl bg-primary-600 py-2.5 font-semibold text-white hover:bg-primary-700"
+                  className="w-full rounded-xl bg-[#ffc101] py-2.5 font-semibold text-black hover:bg-[#ffd042]"
                 >
                   I Agree
                 </button>

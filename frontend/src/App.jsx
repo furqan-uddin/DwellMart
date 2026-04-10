@@ -25,6 +25,7 @@ import Customers from "./modules/Admin/pages/Customers";
 
 import Campaigns from "./modules/Admin/pages/Campaigns";
 import Banners from "./modules/Admin/pages/Banners";
+import Testimonials from "./modules/Admin/pages/Testimonials";
 import Reviews from "./modules/Admin/pages/Reviews";
 import Analytics from "./modules/Admin/pages/Analytics";
 import Content from "./modules/Admin/pages/Content";
@@ -572,6 +573,7 @@ const AppRoutes = () => {
         <Route path="firebase/authentication" element={<Authentication />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="banners" element={<Banners />} />
+        <Route path="testimonials" element={<Testimonials />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="content" element={<Content />} />
       </Route>

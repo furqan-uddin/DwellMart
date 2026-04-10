@@ -93,6 +93,11 @@
     "children": []
   },
   {
+    "title": "Testimonials",
+    "route": "/admin/testimonials",
+    "children": []
+  },
+  {
     "title": "Promo Codes",
     "route": "/admin/promocodes",
     "children": []

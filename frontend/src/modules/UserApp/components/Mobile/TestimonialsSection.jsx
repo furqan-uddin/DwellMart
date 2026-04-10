@@ -1,0 +1,89 @@
+import { motion } from "framer-motion";
+import { FiStar } from "react-icons/fi";
+
+const normalizeRating = (value) => {
+  const rating = Number(value);
+  if (!Number.isFinite(rating)) return 5;
+  return Math.min(5, Math.max(1, Math.round(rating)));
+};
+
+const TestimonialsSection = ({ testimonials = [] }) => {
+  if (!Array.isArray(testimonials) || testimonials.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="px-4 py-8 sm:py-12">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold tracking-[0.24em] uppercase border border-amber-100">
+            Customer Voices
+          </p>
+          <h2 className="mt-4 text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+            Why shoppers stay with DwellMart
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-gray-600 max-w-2xl mx-auto leading-7">
+            Real feedback from customers who shop with trusted vendors across the marketplace.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {testimonials.map((testimonial, index) => {
+            const rating = normalizeRating(testimonial.rating);
+            const subtitle = [testimonial.designation, testimonial.company]
+              .filter(Boolean)
+              .join(" · ");
+
+            return (
+              <motion.article
+                key={testimonial._id || testimonial.id || `${testimonial.name}-${index}`}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.45, delay: index * 0.08 }}
+                className="relative overflow-hidden rounded-[28px] border border-amber-100 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)]"
+              >
+                <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-100/60 blur-2xl" />
+                <div className="relative flex items-start gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100">
+                    {testimonial.image ? (
+                      <img
+                        src={testimonial.image}
+                        alt={testimonial.name || "Customer"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xl font-bold text-amber-700">
+                        {String(testimonial.name || "D").trim().charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1 text-amber-500">
+                      {Array.from({ length: rating }).map((_, starIndex) => (
+                        <FiStar key={starIndex} className="fill-current" />
+                      ))}
+                    </div>
+                    <h3 className="mt-3 text-lg font-bold text-gray-900 truncate">
+                      {testimonial.name || "Happy Customer"}
+                    </h3>
+                    {subtitle ? (
+                      <p className="text-sm text-gray-500">{subtitle}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <p className="relative mt-5 text-sm sm:text-[15px] leading-7 text-gray-600">
+                  "{testimonial.message}"
+                </p>
+              </motion.article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default TestimonialsSection;

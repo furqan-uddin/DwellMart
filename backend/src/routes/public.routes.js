@@ -9,6 +9,7 @@ import Vendor from '../models/Vendor.model.js';
 import Coupon from '../models/Coupon.model.js';
 import Banner from '../models/Banner.model.js';
 import Campaign from '../models/Campaign.model.js';
+import Testimonial from '../models/Testimonial.model.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.model.js';
 import Settings from '../models/Settings.model.js';
 import { calculateVendorShippingForGroups } from '../services/vendorShipping.service.js';
@@ -559,6 +560,14 @@ router.get('/banners', marketingCache, asyncHandler(async (req, res) => {
     if (type) filter.type = type;
     const banners = await Banner.find(filter).sort({ order: 1 }).lean();
     res.status(200).json(new ApiResponse(200, banners, 'Banners fetched.'));
+}));
+
+// GET /api/testimonials
+router.get('/testimonials', marketingCache, asyncHandler(async (req, res) => {
+    const testimonials = await Testimonial.find({ isActive: true })
+        .sort({ order: 1, createdAt: -1 })
+        .lean();
+    res.status(200).json(new ApiResponse(200, testimonials, 'Testimonials fetched.'));
 }));
 
 // GET /api/campaigns

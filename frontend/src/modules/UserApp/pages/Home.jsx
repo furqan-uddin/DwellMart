@@ -12,6 +12,7 @@ import FeaturedVendorsSection from "../components/Mobile/FeaturedVendorsSection"
 import BrandLogosScroll from "../components/Mobile/BrandLogosScroll";
 import MobileCategoryGrid from "../components/Mobile/MobileCategoryGrid";
 import ConfidenceSection from "../components/Mobile/ConfidenceSection";
+import TestimonialsSection from "../components/Mobile/TestimonialsSection";
 import LazyImage from "../../../shared/components/LazyImage";
 import {
   getMostPopular,
@@ -108,6 +109,20 @@ const normalizeBrand = (raw) => ({
   logo: raw?.logo || "",
 });
 
+const normalizeTestimonial = (raw) => ({
+  ...raw,
+  id: normalizeId(raw?.id || raw?._id),
+  _id: normalizeId(raw?.id || raw?._id),
+  name: raw?.name || "",
+  designation: raw?.designation || "",
+  company: raw?.company || "",
+  message: raw?.message || "",
+  image: raw?.image || "",
+  rating: toNumber(raw?.rating, 5),
+  order: toNumber(raw?.order, 0),
+  isActive: raw?.isActive !== false,
+});
+
 const deriveDailyDeals = (products = []) => {
   const flash = products.filter((p) => p.flashSale);
   const discounted = products.filter(
@@ -197,6 +212,7 @@ const MobileHome = () => {
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [homeVendors, setHomeVendors] = useState([]);
   const [homeBrands, setHomeBrands] = useState([]);
+  const [homeTestimonials, setHomeTestimonials] = useState([]);
 
   const fallbackMostPopular = getMostPopular();
   const fallbackTrending = getTrending();
@@ -266,7 +282,7 @@ const MobileHome = () => {
 
   const fetchHomeData = useCallback(async () => {
     try {
-      const [productsRes, vendorsRes, brandsRes, bannersRes] =
+      const [productsRes, vendorsRes, brandsRes, bannersRes, testimonialsRes] =
         await Promise.allSettled([
           api.get("/products", { params: { page: 1, limit: 120 } }),
           api.get("/vendors/all", {
@@ -274,6 +290,7 @@ const MobileHome = () => {
           }),
           api.get("/brands/all"),
           api.get("/banners"),
+          api.get("/testimonials"),
         ]);
 
       if (productsRes.status === "fulfilled") {
@@ -354,6 +371,19 @@ const MobileHome = () => {
         setSlides(DEFAULT_HERO_SLIDES);
         setPromoBanners([]);
         setSideBanner(null);
+      }
+
+      if (testimonialsRes.status === "fulfilled") {
+        const payload = extractResponseData(testimonialsRes.value);
+        const testimonialsSource = asList(payload);
+        setHomeTestimonials(
+          testimonialsSource
+            .map(normalizeTestimonial)
+            .filter((testimonial) => testimonial.id && testimonial.isActive)
+            .sort((a, b) => toNumber(a.order, 0) - toNumber(b.order, 0))
+        );
+      } else {
+        setHomeTestimonials([]);
       }
       return true;
     } catch {
@@ -756,6 +786,8 @@ const MobileHome = () => {
               </p>
             </motion.div>
           </section>
+
+          <TestimonialsSection testimonials={homeTestimonials} />
 
           {/* Bottom Spacing */}
           <div className="h-4" />
