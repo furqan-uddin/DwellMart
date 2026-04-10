@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   FiShoppingBag,
+  FiMenu,
 } from "react-icons/fi";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import MobileMenu from "./MobileMenu";
 import { useCartStore, useUIStore } from "../../../../shared/store/useStore";
 import { useAuthStore } from "../../../../shared/store/authStore";
 import { appLogo } from "../../../../data/logos";
@@ -23,6 +25,7 @@ const categoryGradients = {
 };
 
 const MobileHeader = ({ hideSellButton = false }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCartAnimation, setShowCartAnimation] = useState(false);
   const [positionsReady, setPositionsReady] = useState(false);
@@ -280,6 +283,15 @@ const MobileHeader = ({ hideSellButton = false }) => {
           style={{
             pointerEvents: isTopRowVisible ? "auto" : "none",
           }}>
+          {/* Hamburger Menu Icon */}
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="p-2 -ml-2 text-gray-200 hover:text-white transition-colors relative z-[10001]"
+            aria-label="Open menu"
+          >
+            <FiMenu className="text-2xl" />
+          </button>
+
           {/* Logo and Marketplace Badge */}
           <div className="flex items-center gap-2 flex-shrink-0 overflow-visible relative z-[10001]">
             <Link
@@ -378,6 +390,7 @@ const MobileHeader = ({ hideSellButton = false }) => {
         createPortal(headerContent, document.body)}
       {typeof document !== "undefined" &&
         createPortal(animationContent, document.body)}
+      <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </>
   );
 };

@@ -139,6 +139,7 @@ import MobileTrackOrder from "./modules/UserApp/pages/TrackOrder";
 import MobileOrderConfirmation from "./modules/UserApp/pages/OrderConfirmation";
 import ComingSoon from "./modules/UserApp/pages/ComingSoon";
 import SellOnDwellmart from "./modules/UserApp/pages/SellOnDwellmart";
+import ShopWithConfidence from "./modules/UserApp/pages/ShopWithConfidence";
 import StaticPage from "./modules/UserApp/pages/StaticPage";
 // Delivery Routes
 import DeliveryLogin from "./modules/Delivery/pages/Login";
@@ -333,6 +334,14 @@ const AppRoutes = () => {
         element={
           <RouteWrapper>
             <SellOnDwellmart />
+          </RouteWrapper>
+        }
+      />
+      <Route
+        path="/shop-with-confidence"
+        element={
+          <RouteWrapper>
+            <ShopWithConfidence />
           </RouteWrapper>
         }
       />

@@ -64,11 +64,7 @@ const MobileOrders = () => {
   const {
     pullDistance,
     isPulling,
-    isRefreshing,
     elementRef,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
   } = usePullToRefresh(handleRefresh);
 
   return (
@@ -124,9 +120,6 @@ const MobileOrders = () => {
             <div
               ref={elementRef}
               className="px-4 py-4"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
               style={{
                 transform: `translateY(${Math.min(pullDistance, 80)}px)`,
                 transition: isPulling ? 'none' : 'transform 0.3s ease-out',

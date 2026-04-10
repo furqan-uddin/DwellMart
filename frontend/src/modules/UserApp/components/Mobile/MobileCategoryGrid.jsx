@@ -16,20 +16,27 @@ const MobileCategoryGrid = () => {
 
   const displayCategories = useMemo(() => {
     const roots = getRootCategories().filter((cat) => cat.isActive !== false);
-    if (!roots.length) return fallbackCategories;
+    let mapped = [];
 
-    return roots.map((cat) => {
-      const fallbackCat = fallbackCategories.find(
-        (fc) =>
-          normalizeId(fc.id) === normalizeId(cat.id) ||
-          fc.name?.toLowerCase() === cat.name?.toLowerCase()
-      );
-      return {
-        ...(fallbackCat || {}),
-        ...cat,
-        image: cat.image || fallbackCat?.image || "",
-      };
-    });
+    if (!roots.length) {
+      mapped = [...fallbackCategories];
+    } else {
+      mapped = roots.map((cat) => {
+        const fallbackCat = fallbackCategories.find(
+          (fc) =>
+            normalizeId(fc.id) === normalizeId(cat.id) ||
+            fc.name?.toLowerCase() === cat.name?.toLowerCase()
+        );
+        return {
+          ...(fallbackCat || {}),
+          ...cat,
+          image: cat.image || fallbackCat?.image || "",
+        };
+      });
+    }
+
+
+    return mapped;
   }, [categories, getRootCategories]);
 
   return (
@@ -46,7 +53,7 @@ const MobileCategoryGrid = () => {
             transition={{ delay: index * 0.05 }}
             className="flex-shrink-0">
             <Link
-              to={`/category/${category.id}`}
+              to={category.path || `/category/${category.id}`}
               className="flex flex-col items-center gap-2 w-20">
               <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 ring-2 ring-gray-200">
                 <LazyImage

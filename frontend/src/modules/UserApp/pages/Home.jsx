@@ -11,6 +11,7 @@ import RecommendedSection from "../components/Mobile/RecommendedSection";
 import FeaturedVendorsSection from "../components/Mobile/FeaturedVendorsSection";
 import BrandLogosScroll from "../components/Mobile/BrandLogosScroll";
 import MobileCategoryGrid from "../components/Mobile/MobileCategoryGrid";
+import ConfidenceSection from "../components/Mobile/ConfidenceSection";
 import LazyImage from "../../../shared/components/LazyImage";
 import {
   getMostPopular,
@@ -481,9 +482,6 @@ const MobileHome = () => {
     pullDistance,
     isPulling,
     elementRef,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
   } = usePullToRefresh(handleRefresh);
 
   return (
@@ -492,9 +490,6 @@ const MobileHome = () => {
         <div
           ref={elementRef}
           className="w-full"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           style={{
             transform: `translateY(${Math.min(pullDistance, 80)}px)`,
             transition: isPulling ? "none" : "transform 0.3s ease-out",
@@ -605,8 +600,11 @@ const MobileHome = () => {
           {/* Categories */}
           <MobileCategoryGrid />
 
-          {/* Featured Vendors Section */}
+          {/* Featured Vendors Section (Best Sellers) */}
           <FeaturedVendorsSection vendors={computedVendors} />
+
+          {/* Shop With Confidence Section */}
+          <ConfidenceSection />
 
           {/* Animated Banner */}
           <AnimatedBanner banners={promoBanners} />
