@@ -721,12 +721,6 @@ const VendorRegister = () => {
                     </label>
                   </div>
 
-                  {selectedPlan && selectedPlan.price > 0 && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                      Your email is verified. Choose a plan next to complete your vendor onboarding.
-                    </div>
-                  )}
-
                   <button
                     type="submit"
                     disabled={isLoading || !agreedToTerms}

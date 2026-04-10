@@ -42,6 +42,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
     { label: "Home", icon: FiHome, path: "/home" },
     { label: "Categories", icon: FiGrid, path: "/categories" },
     { label: "Exclusive Offers", icon: FiTag, path: "/offers" },
+    { label: "Track Order", icon: FiShoppingBag, path: isAuthenticated ? "/orders" : "/login" },
   ];
 
   const personalLinks = [
@@ -170,7 +171,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                     to={link.path}
                     onClick={onClose}
                     className={`flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold lowercase tracking-tight transition-all ${
-                      link.highlight ? "text-primary-400 bg-primary-600/10" : "text-white/70 hover:text-white hover:bg-white/5"
+                      link.highlight ? "bg-[#ffc101]/12 text-[#ffc101]" : "text-white/70 hover:text-white hover:bg-white/5"
                     }`}
                   >
                     <link.icon className="text-xl" />

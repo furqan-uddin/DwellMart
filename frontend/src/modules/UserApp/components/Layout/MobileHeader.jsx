@@ -341,7 +341,7 @@ const MobileHeader = ({ hideSellButton = false }) => {
             {!hideSellButton && (
               <Link
                 to="/sell-on-dwellmart"
-                className="px-3 py-1.5 bg-primary-600/90 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors mr-1"
+                className="mr-1 rounded-lg bg-[#ffc101] px-3 py-1.5 text-xs font-semibold text-black shadow-sm transition-colors hover:bg-[#ffd042]"
               >
                 Sell On DwellMart
               </Link>
