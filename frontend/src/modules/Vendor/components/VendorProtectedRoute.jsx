@@ -42,7 +42,7 @@ const VendorProtectedRoute = ({ children }) => {
         }
       } catch (err) {
         const errorCode = err?.response?.data?.errorCode || err?.errorCode;
-        if (errorCode === 'SUBSCRIPTION_EXPIRED') {
+        if (errorCode === 'SUBSCRIPTION_EXPIRED' || errorCode === 'SUBSCRIPTION_INACTIVE') {
           setSubscriptionStatus('expired');
         } else {
           // For other errors (network, etc.), allow access to avoid lockout

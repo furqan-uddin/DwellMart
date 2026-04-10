@@ -1,185 +1,237 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiCheck, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiArrowLeft, FiCheck, FiCreditCard, FiLoader } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../../../shared/utils/api';
+import StripeSubscriptionForm from '../components/StripeSubscriptionForm';
+import {
+  changeVendorSubscriptionPlan,
+  getVendorSubscription,
+  getVendorSubscriptionPlans,
+} from '../services/vendorService';
+
+const RAZORPAY_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
+let razorpayScriptPromise = null;
+
+const loadRazorpayScript = () => {
+  if (typeof window !== 'undefined' && window.Razorpay) return Promise.resolve(window.Razorpay);
+  if (!razorpayScriptPromise) {
+    razorpayScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = RAZORPAY_SCRIPT;
+      script.async = true;
+      script.onload = () => resolve(window.Razorpay);
+      script.onerror = () => reject(new Error('Failed to load Razorpay checkout.'));
+      document.body.appendChild(script);
+    });
+  }
+  return razorpayScriptPromise;
+};
+
+const formatPrice = (plan) => {
+  const inr = Number(plan?.pricing?.inr ?? plan?.price_inr ?? 0);
+  const usd = Number(plan?.pricing?.usd ?? plan?.price_usd ?? 0);
+  if (inr === 0 && usd === 0) return 'Free';
+  return `Rs. ${inr.toFixed(0)} / ${usd.toFixed(2)}`;
+};
+
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const VendorRenewSubscription = () => {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
-  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStripe, setShowStripe] = useState(false);
+  const [stripeConfig, setStripeConfig] = useState({ clientSecret: '', publishableKey: '' });
 
-  // Guard: if no vendor token, redirect to login (not register)
-  useEffect(() => {
-    const token =
-      localStorage.getItem('vendor-token') ||
-      (() => {
-        try {
-          const stored = localStorage.getItem('vendor-auth-storage');
-          return stored ? JSON.parse(stored)?.state?.token : null;
-        } catch {
-          return null;
-        }
-      })();
-
-    if (!token) {
-      navigate('/vendor/login', { replace: true });
-      return;
+  const refreshSubscription = async (attempt = 0) => {
+    try {
+      const response = await getVendorSubscription();
+      if (response?.data?.isActive) {
+        toast.success('Subscription is active again.');
+        navigate('/vendor/dashboard', { replace: true });
+        return true;
+      }
+    } catch {
+      // ignore while polling
     }
 
-    const fetchPlans = async () => {
+    if (attempt >= 8) {
+      toast.success('Payment submitted. Give the billing webhook a moment, then refresh if needed.');
+      return false;
+    }
+
+    await wait(3000);
+    return refreshSubscription(attempt + 1);
+  };
+
+  useEffect(() => {
+    const bootstrap = async () => {
       try {
-        const res = await api.get('/vendor/subscription/plans');
-        const data = (res?.data || []).filter((p) => !p.isTrial);
-        setPlans(data);
-      } catch {
-        toast.error('Failed to load subscription plans. Please try again.');
+        const response = await getVendorSubscriptionPlans();
+        setPlans(response?.data || []);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPlans();
-  }, [navigate]);
+    bootstrap();
+  }, []);
 
-  const handleRenew = async () => {
+  const openRazorpay = async (checkout, plan) => {
+    const Razorpay = await loadRazorpayScript();
+    const instance = new Razorpay({
+      key: checkout.keyId,
+      subscription_id: checkout.subscriptionId,
+      name: 'DwellMart Vendor Billing',
+      description: `${plan.name} subscription`,
+      theme: { color: '#0f766e' },
+      handler: async () => {
+        toast.success('Authorization received. Waiting for subscription confirmation.');
+        await refreshSubscription();
+      },
+    });
+    instance.open();
+  };
+
+  const handleSubmit = async () => {
     if (!selectedPlanId) {
-      toast.error('Please select a plan to continue.');
+      toast.error('Please select a plan first.');
       return;
     }
+
+    const plan = plans.find((entry) => entry._id === selectedPlanId);
     setIsSubmitting(true);
     try {
-      await api.post('/vendor/subscription/renew', { planId: selectedPlanId });
-      toast.success('Subscription renewed successfully! Redirecting…');
-      // Small delay so toast is visible, then reload to re-check subscription
-      setTimeout(() => {
-        window.location.href = '/vendor/dashboard';
-      }, 1200);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || 'Renewal failed. Please try again.');
+      const response = await changeVendorSubscriptionPlan(selectedPlanId);
+      const data = response?.data || {};
+
+      if (data.subscription?.isActive) {
+        toast.success('Subscription updated successfully.');
+        navigate('/vendor/dashboard', { replace: true });
+        return;
+      }
+
+      if (data.gateway === 'stripe') {
+        if (data.checkout?.clientSecret) {
+          setStripeConfig({
+            clientSecret: data.checkout.clientSecret,
+            publishableKey: data.checkout.publishableKey,
+          });
+          setShowStripe(true);
+        } else {
+          await refreshSubscription();
+        }
+        return;
+      }
+
+      if (data.gateway === 'razorpay' && plan) {
+        await openRazorpay(data.checkout, plan);
+        return;
+      }
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl"
-      >
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FiAlertCircle className="text-amber-500 text-3xl" />
+    <>
+      <div className="min-h-screen bg-slate-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto w-full max-w-4xl py-10"
+        >
+          <div className="mb-10 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <FiAlertCircle size={30} />
+            </div>
+            <h1 className="text-3xl font-black text-slate-900">Update your subscription</h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-500">
+              Choose a plan to renew, upgrade, or downgrade your vendor billing. Stripe changes support proration, while Razorpay transitions safely through a new recurring subscription.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Renew Your Subscription</h1>
-          <p className="text-gray-500 max-w-md mx-auto">
-            Your subscription has expired. Choose a plan below to continue selling on Dwell Mart.
-          </p>
-        </div>
 
-        {/* Plans */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 animate-pulse shadow-sm border border-gray-100">
-                <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-                <div className="h-8 bg-gray-200 rounded w-2/3 mb-4" />
-                <div className="space-y-2">
-                  {[1, 2, 3].map((j) => (
-                    <div key={j} className="h-4 bg-gray-100 rounded w-full" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : plans.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">
-            <p>No subscription plans available at the moment.</p>
-            <p className="text-sm mt-1">Please contact support for assistance.</p>
-          </div>
-        ) : (
-          <div className={`grid grid-cols-1 gap-6 ${plans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-            {plans.map((plan) => {
-              const isSelected = selectedPlanId === plan._id;
-              return (
-                <motion.div
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <FiLoader className="animate-spin text-2xl text-teal-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {plans.map((plan) => (
+                <button
                   key={plan._id}
-                  whileHover={{ y: -4 }}
+                  type="button"
                   onClick={() => setSelectedPlanId(plan._id)}
-                  className={`bg-white rounded-2xl p-6 border-2 cursor-pointer transition-all shadow-sm ${
-                    isSelected
-                      ? 'border-primary-500 shadow-primary-100 shadow-md'
-                      : 'border-gray-100 hover:border-primary-200'
+                  className={`rounded-[28px] border p-6 text-left transition ${
+                    selectedPlanId === plan._id
+                      ? 'border-teal-500 bg-teal-50/80 shadow-lg shadow-teal-100'
+                      : 'border-slate-200 bg-white hover:border-teal-300'
                   }`}
                 >
-                  {/* Plan Name */}
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-gray-800 text-lg">{plan.name}</h3>
-                    {isSelected && (
-                      <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center">
-                        <FiCheck className="text-white text-xs" />
-                      </div>
-                    )}
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
+                      <p className="mt-1 text-sm text-slate-500">per {plan.interval}</p>
+                    </div>
+                    {selectedPlanId === plan._id ? (
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white">
+                        <FiCheck />
+                      </span>
+                    ) : null}
                   </div>
+                  <p className="text-3xl font-black text-slate-900">{formatPrice(plan)}</p>
+                  <ul className="mt-5 space-y-2">
+                    {(plan.featureHighlights || []).map((feature) => (
+                      <li key={`${plan._id}-${feature}`} className="text-sm text-slate-600">
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          )}
 
-                  {/* Price */}
-                  <div className="mb-4">
-                    <span className="text-3xl font-black text-gray-900">
-                      {plan.currency || 'AED'} {plan.price}
-                    </span>
-                    <span className="text-gray-400 text-sm ml-1">/ {plan.durationDays} days</span>
-                  </div>
+          {!isLoading ? (
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!selectedPlanId || isSubmitting}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-10 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60"
+              >
+                {isSubmitting ? <FiLoader className="animate-spin" /> : <FiCreditCard />}
+                {isSubmitting ? 'Preparing checkout...' : 'Continue to billing'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/vendor/login')}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-10 py-3 font-semibold text-slate-600 transition hover:bg-slate-100"
+              >
+                <FiArrowLeft />
+                Back to login
+              </button>
+            </div>
+          ) : null}
+        </motion.div>
+      </div>
 
-                  {/* Features */}
-                  {plan.features && plan.features.length > 0 && (
-                    <ul className="space-y-2">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                          <FiCheck className="text-primary-500 mt-0.5 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Actions */}
-        {!isLoading && plans.length > 0 && (
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={handleRenew}
-              disabled={!selectedPlanId || isSubmitting}
-              className="px-10 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            >
-              {isSubmitting ? 'Processing…' : 'Subscribe & Continue'}
-            </button>
-            <button
-              onClick={() => {
-                localStorage.removeItem('vendor-token');
-                localStorage.removeItem('vendor-refresh-token');
-                localStorage.removeItem('vendor-auth-storage');
-                navigate('/vendor/login');
-              }}
-              className="px-10 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-all"
-            >
-              <span className="flex items-center gap-2">
-                <FiArrowLeft /> Logout
-              </span>
-            </button>
-          </div>
-        )}
-      </motion.div>
-    </div>
+      <StripeSubscriptionForm
+        open={showStripe}
+        clientSecret={stripeConfig.clientSecret}
+        publishableKey={stripeConfig.publishableKey}
+        onClose={() => setShowStripe(false)}
+        onSubmitted={async () => {
+          setShowStripe(false);
+          await refreshSubscription();
+        }}
+      />
+    </>
   );
 };
 
 export default VendorRenewSubscription;
+

@@ -14,13 +14,13 @@ import * as reviewController from '../controllers/review.controller.js';
 import * as shippingController from '../controllers/shipping.controller.js';
 import * as uploadController from '../controllers/upload.controller.js';
 import * as subscriptionController from '../controllers/subscription.controller.js';
+import checkSubscription from '../../../middlewares/checkSubscription.js';
 import { authenticate } from '../../../middlewares/authenticate.js';
 import { authorize, enforceAccountStatus } from '../../../middlewares/authorize.js';
 import { authLimiter } from '../../../middlewares/rateLimiter.js';
 import { validate } from '../../../middlewares/validate.js';
 import {
     registerSchema,
-    completeOnboardingSchema,
     onboardingStatusSchema,
     loginSchema,
     verifyOtpSchema,
@@ -31,6 +31,7 @@ import {
     verifyResetOtpSchema,
     resetPasswordSchema
 } from '../validators/auth.validator.js';
+import { changePlanSchema } from '../validators/subscription.validator.js';
 import {
     createProductSchema,
     updateProductSchema,
@@ -39,8 +40,8 @@ import {
 import { uploadSingle, uploadMultiple, uploadDocumentSingle } from '../../../middlewares/upload.js';
 
 const router = Router();
-const vendorAuth = [authenticate, authorize('vendor'), enforceAccountStatus];
-const vendorAuthOnly = [authenticate, authorize('vendor')];
+const vendorAuth = [authenticate, authorize('vendor'), enforceAccountStatus, checkSubscription];
+const vendorAuthOnly = [authenticate, authorize('vendor'), enforceAccountStatus];
 
 const parseJsonFields = (req, res, next) => {
     try {
@@ -64,7 +65,6 @@ router.post(
     validate(registerSchema),
     authController.register
 );
-router.post('/auth/complete-onboarding', validate(completeOnboardingSchema), authController.completeOnboarding);
 router.post('/auth/onboarding-status', validate(onboardingStatusSchema), authController.getOnboardingStatus);
 router.post('/auth/verify-otp', validate(verifyOtpSchema), authController.verifyOTP);
 router.post('/auth/resend-otp', validate(resendOtpSchema), authController.resendOTP);
@@ -81,7 +81,7 @@ router.put('/auth/bank-details', ...vendorAuth, authController.updateBankDetails
 // Subscription (uses vendorAuthOnly so vendor can access even when expired)
 router.get('/subscription', ...vendorAuthOnly, subscriptionController.getCurrentSubscription);
 router.get('/subscription/plans', ...vendorAuthOnly, subscriptionController.getAvailablePlans);
-router.post('/subscription/renew', ...vendorAuthOnly, subscriptionController.renewSubscription);
+router.post('/subscription/change-plan', ...vendorAuthOnly, validate(changePlanSchema), subscriptionController.changePlan);
 
 // Products
 router.get('/products', ...vendorAuth, productController.getVendorProducts);

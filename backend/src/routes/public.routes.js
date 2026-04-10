@@ -12,9 +12,8 @@ import Campaign from '../models/Campaign.model.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.model.js';
 import Settings from '../models/Settings.model.js';
 import { calculateVendorShippingForGroups } from '../services/vendorShipping.service.js';
+import { serializePlan } from '../services/billing/plan.service.js';
 import { cacheResponse } from '../middlewares/responseCache.js';
-import { createSubscriptionOrder } from '../modules/vendor/controllers/razorpay.controller.js';
-import { createStripeSession } from '../modules/vendor/controllers/stripe.controller.js';
 
 const router = Router();
 const listCache = cacheResponse({ ttlSeconds: 30, maxEntries: 1000 });
@@ -647,8 +646,15 @@ router.get('/orders/track/:id', detailCache, asyncHandler(async (req, res) => {
 // ─── Sell on DwellMart (Public) ───────────────────────────────────────────────
 // GET /api/public/subscription-plans — list active plans for public display
 router.get('/subscription-plans', catalogCache, asyncHandler(async (req, res) => {
+    const country = String(req.query.country || '').trim();
     const plans = await SubscriptionPlan.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
-    res.status(200).json(new ApiResponse(200, plans, 'Subscription plans fetched.'));
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            plans.map((plan) => serializePlan(plan, country)),
+            'Subscription plans fetched.'
+        )
+    );
 }));
 
 // GET /api/public/vendor-terms — get T&C for vendor registration
@@ -661,10 +667,8 @@ router.get('/vendor-terms', catalogCache, asyncHandler(async (req, res) => {
 }));
 
 // Create Razorpay Order for Subscription (Public)
-router.post('/subscription/create-order', createSubscriptionOrder);
 
 // Create Stripe Session for Subscription (Public)
-router.post('/subscription/create-stripe-session', createStripeSession);
 
 // ─── Public Static Pages ──────────────────────────────────────────────────────
 // GET /api/pages/:slug (public — no auth required so user-facing pages can fetch content)

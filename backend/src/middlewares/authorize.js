@@ -3,7 +3,6 @@ import User from '../models/User.model.js';
 import Vendor from '../models/Vendor.model.js';
 import DeliveryBoy from '../models/DeliveryBoy.model.js';
 import Admin from '../models/Admin.model.js';
-import VendorSubscription from '../models/VendorSubscription.model.js';
 
 /**
  * Role-based authorization middleware
@@ -46,19 +45,6 @@ export const enforceAccountStatus = async (req, res, next) => {
             if (!vendor.isVerified) return next(new ApiError(403, 'Please verify your email first.'));
             if (vendor.status !== 'approved') {
                 return next(new ApiError(403, `Vendor account is ${vendor.status}.`));
-            }
-
-            // Check subscription status
-            const subscription = await VendorSubscription.findOne({
-                vendorId: req.user.id,
-                status: 'active',
-                paymentStatus: 'completed',
-                endDate: { $gt: new Date() },
-            }).lean();
-            if (!subscription) {
-                const error = new ApiError(403, 'Your subscription has expired. Please resubscribe to continue.');
-                error.errorCode = 'SUBSCRIPTION_EXPIRED';
-                return next(error);
             }
 
             return next();

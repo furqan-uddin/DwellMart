@@ -7,9 +7,8 @@ export const registerSchema = Joi.object({
     phone: Joi.string().trim().required(),
     storeName: Joi.string().trim().min(2).max(100).required(),
     storeDescription: Joi.string().trim().max(500).allow('').optional(),
-    selectedPlanId: Joi.string().required().messages({
-        'any.required': 'Please select a subscription plan.',
-    }),
+    selectionToken: Joi.string().trim().optional(),
+    selectedPlanId: Joi.string().trim().optional(),
     documentType: Joi.string().valid('tradeLicense', 'gst').required().messages({
         'any.only': 'Please choose Trade License or GST.',
         'any.required': 'Please choose Trade License or GST.',
@@ -25,16 +24,12 @@ export const registerSchema = Joi.object({
         'any.only': 'You must agree to the Terms & Conditions.',
         'any.required': 'You must agree to the Terms & Conditions.',
     }),
-});
+}).or('selectionToken', 'selectedPlanId');
 
-export const completeOnboardingSchema = Joi.object({
+export const initiateOnboardingSubscriptionSchema = Joi.object({
     email: Joi.string().email().lowercase().required(),
+    selectionToken: Joi.string().trim().allow('').optional(),
     selectedPlanId: Joi.string().optional(),
-    payment_method: Joi.string().valid('razorpay', 'stripe').allow(null, '').optional(),
-    razorpay_order_id: Joi.string().allow('').optional(),
-    razorpay_payment_id: Joi.string().allow('').optional(),
-    razorpay_signature: Joi.string().allow('').optional(),
-    stripe_session_id: Joi.string().allow('').optional(),
 });
 
 export const onboardingStatusSchema = Joi.object({

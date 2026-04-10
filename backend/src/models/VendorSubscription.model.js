@@ -2,46 +2,101 @@ import mongoose from 'mongoose';
 
 const vendorSubscriptionSchema = new mongoose.Schema(
     {
-        vendorId: {
+        vendor: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Vendor',
             required: true,
             index: true,
         },
-        planId: {
+        plan: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'SubscriptionPlan',
             required: true,
         },
-        startDate: { type: Date, required: true },
-        endDate: { type: Date, required: true, index: true },
-        status: {
+        gateway: {
             type: String,
-            enum: ['active', 'expired', 'cancelled'],
-            default: 'active',
+            enum: ['stripe', 'razorpay'],
+            required: true,
             index: true,
         },
-        paymentStatus: {
+        gateway_customer_id: {
             type: String,
-            enum: ['pending', 'completed', 'failed'],
+            trim: true,
+            default: null,
+        },
+        gateway_subscription_id: {
+            type: String,
+            trim: true,
+            required: true,
+        },
+        status: {
+            type: String,
+            enum: ['active', 'trialing', 'past_due', 'canceled', 'incomplete'],
+            default: 'incomplete',
+            index: true,
+        },
+        current_period_start: {
+            type: Date,
+            default: null,
+        },
+        current_period_end: {
+            type: Date,
+            default: null,
+            index: true,
+        },
+        cancel_at_period_end: {
+            type: Boolean,
+            default: false,
+        },
+        latest_payment_status: {
+            type: String,
+            enum: ['pending', 'paid', 'failed', 'refunded'],
             default: 'pending',
         },
-        paymentDetails: {
-            method: { type: String },
-            transactionId: { type: String },
-            razorpayOrderId: { type: String },
-            razorpayPaymentId: { type: String },
-            razorpaySignature: { type: String },
-            stripeSessionId: { type: String },
-            confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-            confirmedAt: { type: Date },
-            notes: { type: String },
+        external_status: {
+            type: String,
+            trim: true,
+            default: '',
+        },
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {},
         },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
+    }
 );
 
-vendorSubscriptionSchema.index({ vendorId: 1, status: 1, endDate: -1 });
+vendorSubscriptionSchema.index(
+    { gateway: 1, gateway_subscription_id: 1 },
+    { unique: true, sparse: true }
+);
+vendorSubscriptionSchema.index({ vendor: 1, status: 1, current_period_end: -1 });
+
+vendorSubscriptionSchema.virtual('vendorId').get(function vendorId() {
+    return this.vendor;
+});
+
+vendorSubscriptionSchema.virtual('planId').get(function planId() {
+    return this.plan;
+});
+
+vendorSubscriptionSchema.virtual('startDate').get(function startDate() {
+    return this.current_period_start;
+});
+
+vendorSubscriptionSchema.virtual('endDate').get(function endDate() {
+    return this.current_period_end;
+});
+
+vendorSubscriptionSchema.virtual('paymentStatus').get(function paymentStatus() {
+    if (this.latest_payment_status === 'paid') return 'completed';
+    return this.latest_payment_status;
+});
 
 const VendorSubscription = mongoose.model('VendorSubscription', vendorSubscriptionSchema);
+
 export default VendorSubscription;

@@ -1,92 +1,248 @@
 import asyncHandler from '../../../utils/asyncHandler.js';
-import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
-import VendorSubscription from '../../../models/VendorSubscription.model.js';
+import ApiResponse from '../../../utils/ApiResponse.js';
 import SubscriptionPlan from '../../../models/SubscriptionPlan.model.js';
+import Vendor from '../../../models/Vendor.model.js';
+import { getGatewayForCountry } from '../../../services/billing/gatewaySelector.service.js';
+import { getActivePlanById, serializePlan } from '../../../services/billing/plan.service.js';
+import {
+    cancelRazorpaySubscriptionAtCycleEnd,
+    createRazorpaySubscriptionForPlan,
+} from '../../../services/billing/razorpayBilling.service.js';
+import {
+    createStripeSubscriptionForPlan,
+    updateStripeSubscriptionPlan,
+} from '../../../services/billing/stripeBilling.service.js';
+import {
+    activateInternalSubscription,
+    getCurrentVendorSubscription,
+    mapRazorpaySubscriptionStatus,
+    mapStripeSubscriptionStatus,
+    serializeSubscription,
+    upsertSubscriptionRecord,
+} from '../../../services/billing/subscriptionState.service.js';
 
-// GET /api/vendor/subscription — get current subscription status
+const toDateFromUnix = (value) => (value ? new Date(Number(value) * 1000) : null);
+
+const toChangePlanResponse = async ({ gateway, checkout = null, subscription, message }) => ({
+    gateway,
+    checkout,
+    subscription: await serializeSubscription(subscription),
+    message,
+});
+
 export const getCurrentSubscription = asyncHandler(async (req, res) => {
-    const subscription = await VendorSubscription.findOne({
-        vendorId: req.user.id,
-    })
-        .populate('planId', 'name price durationDays isTrial currency')
-        .sort({ createdAt: -1 })
-        .lean();
+    const subscription = await getCurrentVendorSubscription(req.user.id);
 
     if (!subscription) {
-        return res.status(200).json(new ApiResponse(200, { hasSubscription: false }, 'No subscription found.'));
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                { hasSubscription: false, isActive: false, subscription: null },
+                'No subscription found.'
+            )
+        );
     }
 
-    const isActive = subscription.status === 'active'
-        && subscription.paymentStatus === 'completed'
-        && new Date(subscription.endDate) > new Date();
+    const serialized = await serializeSubscription(subscription);
 
-    res.status(200).json(new ApiResponse(200, {
-        hasSubscription: true,
-        isActive,
-        subscription: {
-            ...subscription,
-            isExpired: !isActive,
-            daysRemaining: isActive ? Math.ceil((new Date(subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0,
-        },
-    }, 'Subscription fetched.'));
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                hasSubscription: true,
+                isActive: serialized.isActive,
+                subscription: serialized,
+            },
+            'Subscription fetched.'
+        )
+    );
 });
 
-// GET /api/vendor/subscription/plans — list available plans for renewal
 export const getAvailablePlans = asyncHandler(async (req, res) => {
-    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
-    res.status(200).json(new ApiResponse(200, plans, 'Plans fetched.'));
+    const vendor = await Vendor.findById(req.user.id).select('country');
+    const plans = await SubscriptionPlan
+        .find({ isActive: true })
+        .sort({ sortOrder: 1, createdAt: -1 });
+
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            plans.map((plan) => serializePlan(plan, vendor?.country || '')),
+            'Plans fetched.'
+        )
+    );
 });
 
-// POST /api/vendor/subscription/renew — purchase a new plan / resubscribe
-export const renewSubscription = asyncHandler(async (req, res) => {
+export const changePlan = asyncHandler(async (req, res) => {
     const { planId } = req.body;
     if (!planId) throw new ApiError(400, 'Please select a plan.');
 
-    const plan = await SubscriptionPlan.findById(planId);
-    if (!plan || !plan.isActive) throw new ApiError(400, 'Selected plan is not available.');
+    const vendor = await Vendor.findById(req.user.id);
+    if (!vendor) throw new ApiError(404, 'Vendor not found.');
 
-    // Check if vendor already has an active subscription
-    const existingActive = await VendorSubscription.findOne({
-        vendorId: req.user.id,
-        status: 'active',
-        paymentStatus: 'completed',
-        endDate: { $gt: new Date() },
-    });
-    if (existingActive) {
-        throw new ApiError(400, 'You already have an active subscription. Please wait until it expires to renew.');
+    const plan = await getActivePlanById(planId);
+    const gateway = getGatewayForCountry(vendor.country || vendor.address?.country || '');
+    const currentSubscription = await getCurrentVendorSubscription(vendor._id);
+
+    vendor.selectedPlan = plan._id;
+    vendor.billing = {
+        ...(vendor.billing || {}),
+        preferredGateway: gateway,
+    };
+    await vendor.save({ validateBeforeSave: false });
+
+    if (currentSubscription?.status === 'active' && String(currentSubscription.plan?._id || currentSubscription.plan) === String(plan._id)) {
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                await toChangePlanResponse({
+                    gateway,
+                    subscription: currentSubscription,
+                    message: 'You are already subscribed to this plan.',
+                }),
+                'You are already subscribed to this plan.'
+            )
+        );
     }
 
-    // Prevent multiple trial uses
-    if (plan.isTrial) {
-        const hadTrial = await VendorSubscription.findOne({
-            vendorId: req.user.id,
-            paymentStatus: 'completed',
-        }).populate('planId').lean();
-        if (hadTrial && hadTrial.planId?.isTrial) {
-            throw new ApiError(400, 'Trial plan can only be used once.');
+    if (Number(plan.price_inr || 0) === 0 && Number(plan.price_usd || 0) === 0) {
+        const subscription = await activateInternalSubscription({ vendor, plan, gateway });
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                await toChangePlanResponse({
+                    gateway,
+                    subscription,
+                    message: 'Free subscription activated.',
+                }),
+                'Free subscription activated.'
+            )
+        );
+    }
+
+    if (gateway === 'stripe') {
+        const shouldCreateNewSubscription = !currentSubscription
+            || currentSubscription.gateway !== 'stripe'
+            || !currentSubscription.gateway_subscription_id
+            || currentSubscription.status === 'canceled'
+            || currentSubscription.gateway_subscription_id.startsWith('internal_');
+
+        if (shouldCreateNewSubscription) {
+            const created = await createStripeSubscriptionForPlan({
+                vendor,
+                plan,
+                metadata: { flow: 'vendor_change' },
+            });
+            const subscription = await upsertSubscriptionRecord({
+                vendorId: vendor._id,
+                planId: plan._id,
+                gateway: 'stripe',
+                gatewayCustomerId: created.customerId,
+                gatewaySubscriptionId: created.subscription.id,
+                status: mapStripeSubscriptionStatus(created.subscription.status),
+                externalStatus: created.subscription.status,
+                currentPeriodStart: toDateFromUnix(created.subscription.current_period_start),
+                currentPeriodEnd: toDateFromUnix(created.subscription.current_period_end),
+                cancelAtPeriodEnd: Boolean(created.subscription.cancel_at_period_end),
+                latestPaymentStatus: 'pending',
+                metadata: { flow: 'vendor_change' },
+            });
+
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    await toChangePlanResponse({
+                        gateway: 'stripe',
+                        checkout: {
+                            clientSecret: created.clientSecret,
+                            publishableKey: created.publishableKey,
+                        },
+                        subscription,
+                        message: 'Stripe subscription created.',
+                    }),
+                    'Stripe subscription created.'
+                )
+            );
         }
+
+        const updated = await updateStripeSubscriptionPlan({
+            subscriptionId: currentSubscription.gateway_subscription_id,
+            plan,
+        });
+        const subscription = await upsertSubscriptionRecord({
+            vendorId: vendor._id,
+            planId: plan._id,
+            gateway: 'stripe',
+            gatewayCustomerId: currentSubscription.gateway_customer_id,
+            gatewaySubscriptionId: updated.subscription.id,
+            status: mapStripeSubscriptionStatus(updated.subscription.status),
+            externalStatus: updated.subscription.status,
+            currentPeriodStart: toDateFromUnix(updated.subscription.current_period_start),
+            currentPeriodEnd: toDateFromUnix(updated.subscription.current_period_end),
+            cancelAtPeriodEnd: Boolean(updated.subscription.cancel_at_period_end),
+            latestPaymentStatus: updated.clientSecret ? 'pending' : 'paid',
+            metadata: { flow: 'vendor_change', previousPlanId: String(currentSubscription.plan?._id || currentSubscription.plan) },
+        });
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                await toChangePlanResponse({
+                    gateway: 'stripe',
+                    checkout: updated.clientSecret
+                        ? {
+                            clientSecret: updated.clientSecret,
+                            publishableKey: updated.publishableKey,
+                        }
+                        : null,
+                    subscription,
+                    message: 'Stripe subscription updated.',
+                }),
+                'Stripe subscription updated.'
+            )
+        );
     }
 
-    const now = new Date();
-    // If they have an existing subscription (even if expired/cancelled), 
-    // we should extend from the latest one if it's still in the future,
-    // but for "renewal" of an expired one, we start from now.
-    const lastSubscription = await VendorSubscription.findOne({ vendorId: req.user.id }).sort({ endDate: -1 });
-    const baseDate = (lastSubscription && new Date(lastSubscription.endDate) > now) 
-        ? new Date(lastSubscription.endDate) 
-        : now;
+    if (currentSubscription?.gateway === 'razorpay' && currentSubscription.status === 'active') {
+        await cancelRazorpaySubscriptionAtCycleEnd(currentSubscription.gateway_subscription_id);
+        currentSubscription.cancel_at_period_end = true;
+        await currentSubscription.save();
+    }
 
-    const endDate = new Date(baseDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-
-    const subscription = await VendorSubscription.create({
-        vendorId: req.user.id,
+    const created = await createRazorpaySubscriptionForPlan({
+        vendor,
+        plan,
+        metadata: { flow: 'vendor_change' },
+    });
+    const subscription = await upsertSubscriptionRecord({
+        vendorId: vendor._id,
         planId: plan._id,
-        startDate: baseDate,
-        endDate,
-        status: 'active',
-        paymentStatus: 'completed', // Renewals are auto-completed for immediate access
+        gateway: 'razorpay',
+        gatewayCustomerId: created.customerId,
+        gatewaySubscriptionId: created.subscription.id,
+        status: mapRazorpaySubscriptionStatus(created.subscription.status),
+        externalStatus: created.subscription.status,
+        currentPeriodStart: toDateFromUnix(created.subscription.current_start || created.subscription.start_at),
+        currentPeriodEnd: toDateFromUnix(created.subscription.current_end || created.subscription.charge_at),
+        cancelAtPeriodEnd: false,
+        latestPaymentStatus: 'pending',
+        metadata: { flow: 'vendor_change' },
     });
 
-    res.status(201).json(new ApiResponse(201, subscription, 'Subscription renewed and activated successfully.'));
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            await toChangePlanResponse({
+                gateway: 'razorpay',
+                checkout: {
+                    keyId: created.keyId,
+                    subscriptionId: created.subscription.id,
+                },
+                subscription,
+                message: 'Razorpay subscription created.',
+            }),
+            'Razorpay subscription created.'
+        )
+    );
 });

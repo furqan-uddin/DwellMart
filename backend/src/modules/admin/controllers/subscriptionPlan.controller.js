@@ -3,102 +3,161 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import SubscriptionPlan from '../../../models/SubscriptionPlan.model.js';
 import VendorSubscription from '../../../models/VendorSubscription.model.js';
+import {
+    buildPlanSlug,
+    normalizePlanFeatures,
+    serializePlan,
+} from '../../../services/billing/plan.service.js';
+import { syncStripePriceForPlan } from '../../../services/billing/stripeBilling.service.js';
+import { syncRazorpayPlanForPlan } from '../../../services/billing/razorpayBilling.service.js';
 
-// GET /api/admin/subscription-plans
+const syncGatewayReferences = async (plan, { forceResync = false } = {}) => {
+    if ((forceResync || !plan.stripe_price_id) && Number(plan.price_usd || 0) > 0) {
+        const priceId = await syncStripePriceForPlan(plan);
+        if (priceId) {
+            plan.stripe_price_id = priceId;
+        }
+    } else if (Number(plan.price_usd || 0) === 0) {
+        plan.stripe_price_id = null;
+    }
+
+    if ((forceResync || !plan.razorpay_plan_id) && Number(plan.price_inr || 0) > 0) {
+        const planId = await syncRazorpayPlanForPlan(plan);
+        if (planId) {
+            plan.razorpay_plan_id = planId;
+        }
+    } else if (Number(plan.price_inr || 0) === 0) {
+        plan.razorpay_plan_id = null;
+    }
+};
+
 export const getAllPlans = asyncHandler(async (req, res) => {
     const plans = await SubscriptionPlan.find().sort({ sortOrder: 1, createdAt: -1 });
-    res.status(200).json(new ApiResponse(200, plans, 'Subscription plans fetched.'));
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            plans.map((plan) => serializePlan(plan)),
+            'Subscription plans fetched.'
+        )
+    );
 });
 
-// GET /api/admin/subscription-plans/:id
 export const getPlanById = asyncHandler(async (req, res) => {
     const plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) throw new ApiError(404, 'Plan not found.');
-    res.status(200).json(new ApiResponse(200, plan, 'Plan fetched.'));
+    res.status(200).json(new ApiResponse(200, serializePlan(plan), 'Plan fetched.'));
 });
 
-// POST /api/admin/subscription-plans
 export const createPlan = asyncHandler(async (req, res) => {
-    const { name, price, durationDays, description, features, isTrial, isMostPopular, isActive, sortOrder, currency } = req.body;
+    const {
+        name,
+        price_inr,
+        price_usd,
+        interval,
+        description,
+        features,
+        isMostPopular,
+        isActive,
+        sortOrder,
+    } = req.body;
+
     const trimmedName = String(name || '').trim();
     if (!trimmedName) throw new ApiError(400, 'Plan name is required.');
-    if (durationDays == null || durationDays < 1) throw new ApiError(400, 'Duration must be at least 1 day.');
-    if (price == null || price < 0) throw new ApiError(400, 'Price must be 0 or above.');
+    if (!['month', 'year'].includes(String(interval || ''))) {
+        throw new ApiError(400, 'Billing interval must be either month or year.');
+    }
 
-    // Generate slug from the name
-    const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = buildPlanSlug(trimmedName);
     const existing = await SubscriptionPlan.findOne({ slug });
     if (existing) throw new ApiError(409, 'A plan with a similar name already exists.');
-
-    // If isTrial, ensure only one trial plan exists
-    if (isTrial) {
-        const existingTrial = await SubscriptionPlan.findOne({ isTrial: true });
-        if (existingTrial) throw new ApiError(409, 'Only one trial plan is allowed. Deactivate or delete the existing one first.');
-    }
 
     const plan = await SubscriptionPlan.create({
         name: trimmedName,
         slug,
-        price: Number(price),
-        currency: currency || 'AED',
-        durationDays: Number(durationDays),
+        price_inr: Number(price_inr ?? 0),
+        price_usd: Number(price_usd ?? 0),
+        interval,
         description: String(description || '').trim(),
-        features: Array.isArray(features) ? features.map(f => String(f).trim()).filter(Boolean) : [],
-        isTrial: !!isTrial,
-        isMostPopular: !!isMostPopular,
+        features: normalizePlanFeatures(features),
+        isMostPopular: Boolean(isMostPopular),
         isActive: isActive !== false,
         sortOrder: Number(sortOrder) || 0,
     });
 
-    res.status(201).json(new ApiResponse(201, plan, 'Subscription plan created.'));
+    await syncGatewayReferences(plan, { forceResync: true });
+    await plan.save();
+
+    res.status(201).json(new ApiResponse(201, serializePlan(plan), 'Subscription plan created.'));
 });
 
-// PUT /api/admin/subscription-plans/:id
 export const updatePlan = asyncHandler(async (req, res) => {
     const plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) throw new ApiError(404, 'Plan not found.');
 
-    const { name, price, durationDays, description, features, isTrial, isMostPopular, isActive, sortOrder, currency } = req.body;
+    const previousSignature = JSON.stringify({
+        name: plan.name,
+        price_inr: plan.price_inr,
+        price_usd: plan.price_usd,
+        interval: plan.interval,
+        description: plan.description,
+    });
+
+    const {
+        name,
+        price_inr,
+        price_usd,
+        interval,
+        description,
+        features,
+        isMostPopular,
+        isActive,
+        sortOrder,
+    } = req.body;
 
     if (name !== undefined) {
         const trimmedName = String(name).trim();
         if (!trimmedName) throw new ApiError(400, 'Plan name is required.');
-        const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const slug = buildPlanSlug(trimmedName);
         const existing = await SubscriptionPlan.findOne({ slug, _id: { $ne: plan._id } });
         if (existing) throw new ApiError(409, 'A plan with a similar name already exists.');
         plan.name = trimmedName;
         plan.slug = slug;
     }
-    if (price !== undefined) plan.price = Number(price);
-    if (currency !== undefined) plan.currency = String(currency).trim();
-    if (durationDays !== undefined) plan.durationDays = Number(durationDays);
-    if (description !== undefined) plan.description = String(description).trim();
-    if (features !== undefined) plan.features = Array.isArray(features) ? features.map(f => String(f).trim()).filter(Boolean) : [];
-    if (isTrial !== undefined) {
-        if (isTrial && !plan.isTrial) {
-            const existingTrial = await SubscriptionPlan.findOne({ isTrial: true, _id: { $ne: plan._id } });
-            if (existingTrial) throw new ApiError(409, 'Only one trial plan is allowed.');
+    if (price_inr !== undefined) plan.price_inr = Number(price_inr);
+    if (price_usd !== undefined) plan.price_usd = Number(price_usd);
+    if (interval !== undefined) {
+        if (!['month', 'year'].includes(String(interval))) {
+            throw new ApiError(400, 'Billing interval must be either month or year.');
         }
-        plan.isTrial = !!isTrial;
+        plan.interval = interval;
     }
-    if (isMostPopular !== undefined) plan.isMostPopular = !!isMostPopular;
-    if (isActive !== undefined) plan.isActive = !!isActive;
+    if (description !== undefined) plan.description = String(description).trim();
+    if (features !== undefined) plan.features = normalizePlanFeatures(features);
+    if (isMostPopular !== undefined) plan.isMostPopular = Boolean(isMostPopular);
+    if (isActive !== undefined) plan.isActive = Boolean(isActive);
     if (sortOrder !== undefined) plan.sortOrder = Number(sortOrder);
 
+    const nextSignature = JSON.stringify({
+        name: plan.name,
+        price_inr: plan.price_inr,
+        price_usd: plan.price_usd,
+        interval: plan.interval,
+        description: plan.description,
+    });
+
+    await syncGatewayReferences(plan, { forceResync: previousSignature !== nextSignature });
     await plan.save();
-    res.status(200).json(new ApiResponse(200, plan, 'Subscription plan updated.'));
+
+    res.status(200).json(new ApiResponse(200, serializePlan(plan), 'Subscription plan updated.'));
 });
 
-// DELETE /api/admin/subscription-plans/:id
 export const deletePlan = asyncHandler(async (req, res) => {
     const plan = await SubscriptionPlan.findById(req.params.id);
     if (!plan) throw new ApiError(404, 'Plan not found.');
 
-    // Check if any active subscriptions use this plan
     const activeSubCount = await VendorSubscription.countDocuments({
-        planId: plan._id,
-        status: 'active',
-        endDate: { $gt: new Date() },
+        plan: plan._id,
+        status: { $in: ['active', 'trialing', 'past_due'] },
     });
     if (activeSubCount > 0) {
         throw new ApiError(400, `Cannot delete: ${activeSubCount} active subscription(s) use this plan. Deactivate it instead.`);
@@ -108,7 +167,6 @@ export const deletePlan = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, null, 'Subscription plan deleted.'));
 });
 
-// GET /api/admin/vendor-subscriptions
 export const getVendorSubscriptions = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status, vendorId } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
@@ -116,40 +174,40 @@ export const getVendorSubscriptions = asyncHandler(async (req, res) => {
 
     const filter = {};
     if (status && status !== 'all') filter.status = status;
-    if (vendorId) filter.vendorId = vendorId;
+    if (vendorId) filter.vendor = vendorId;
 
     const [subscriptions, total] = await Promise.all([
         VendorSubscription.find(filter)
-            .populate('vendorId', 'name email storeName')
-            .populate('planId', 'name price durationDays')
+            .populate('vendor', 'name email storeName country')
+            .populate('plan')
             .sort({ createdAt: -1 })
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber),
         VendorSubscription.countDocuments(filter),
     ]);
 
-    res.status(200).json(new ApiResponse(200, {
-        subscriptions,
-        pagination: { total, page: pageNumber, limit: limitNumber, pages: Math.ceil(total / limitNumber) },
-    }, 'Vendor subscriptions fetched.'));
-});
+    const payload = subscriptions.map((subscription) => {
+        const raw = subscription.toObject({ virtuals: true });
+        return {
+            ...raw,
+            vendor: raw.vendor,
+            plan: serializePlan(raw.plan, raw.vendor?.country || ''),
+        };
+    });
 
-// PATCH /api/admin/vendor-subscriptions/:id/confirm-payment
-export const confirmSubscriptionPayment = asyncHandler(async (req, res) => {
-    const subscription = await VendorSubscription.findById(req.params.id);
-    if (!subscription) throw new ApiError(404, 'Subscription not found.');
-    if (subscription.paymentStatus === 'completed') throw new ApiError(400, 'Payment already confirmed.');
-
-    subscription.paymentStatus = 'completed';
-    subscription.status = 'active';
-    subscription.paymentDetails = {
-        ...subscription.paymentDetails,
-        method: 'admin_confirmation',
-        confirmedBy: req.user.id,
-        confirmedAt: new Date(),
-        notes: String(req.body.notes || '').trim(),
-    };
-
-    await subscription.save();
-    res.status(200).json(new ApiResponse(200, subscription, 'Payment confirmed. Subscription is now active.'));
+    res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                subscriptions: payload,
+                pagination: {
+                    total,
+                    page: pageNumber,
+                    limit: limitNumber,
+                    pages: Math.ceil(total / limitNumber),
+                },
+            },
+            'Vendor subscriptions fetched.'
+        )
+    );
 });

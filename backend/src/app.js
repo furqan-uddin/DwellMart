@@ -9,6 +9,11 @@ import { fileURLToPath } from 'url';
 
 // Route imports
 import publicRoutes from './routes/public.routes.js';
+import {
+    subscriptionRouter,
+    stripeWebhookRouter,
+    razorpayWebhookRouter,
+} from './routes/subscription.routes.js';
 import userRoutes from './modules/user/routes/user.routes.js';
 import adminRoutes from './modules/admin/routes/admin.routes.js';
 import vendorRoutes from './modules/vendor/routes/vendor.routes.js';
@@ -67,6 +72,8 @@ app.use(cors({
 app.use(compression());
 
 // ─── Body Parsing ────────────────────────────────────────────────────────────
+app.use('/api/subscription/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter);
+app.use('/api/subscription/webhooks/razorpay', express.raw({ type: 'application/json' }), razorpayWebhookRouter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -107,6 +114,7 @@ app.use(
     express.static(uploadsRoot)
 );
 app.use('/api', publicRoutes);            // Public: products, categories, brands, coupons, banners
+app.use('/api/subscription', subscriptionRouter);
 app.use('/api/user', userRoutes);         // Customer: auth, addresses, wishlist, reviews, orders
 app.use('/api/admin', adminRoutes);       // Admin: auth, vendors, orders, catalog, analytics
 app.use('/api/vendor', vendorRoutes);     // Vendor: auth, products, orders, earnings

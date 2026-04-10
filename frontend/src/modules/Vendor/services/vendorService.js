@@ -11,10 +11,17 @@ export const registerVendor = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
+export const selectVendorSubscriptionPlan = (planId, country = '') =>
+  api.post('/subscription/select-plan', { planId, country });
+
+export const initiateVendorOnboardingSubscription = (email, payload = {}) =>
+  api.post('/subscription/initiate', { email, ...payload });
+
 /**
  * Get active subscription plans for public display (e.g. during signup)
  */
-export const getPublicSubscriptionPlans = () => api.get('/subscription-plans');
+export const getPublicSubscriptionPlans = (country = '') =>
+  api.get('/subscription-plans', { params: country ? { country } : {} });
 
 /**
  * Verify email OTP after registration
@@ -26,6 +33,13 @@ export const verifyVendorOTP = (email, otp) =>
 
 export const getVendorOnboardingStatus = (email) =>
     api.post('/vendor/auth/onboarding-status', { email });
+
+export const getVendorSubscription = () => api.get('/vendor/subscription');
+
+export const getVendorSubscriptionPlans = () => api.get('/vendor/subscription/plans');
+
+export const changeVendorSubscriptionPlan = (planId) =>
+  api.post('/vendor/subscription/change-plan', { planId });
 
 /**
  * Resend OTP to vendor email (vendor must still be unverified)

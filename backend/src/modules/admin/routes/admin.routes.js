@@ -202,7 +202,6 @@ router.delete('/subscription-plans/:id', ...adminAuth, subscriptionPlanControlle
 
 // ─── Vendor Subscriptions ─────────────────────────────────────────────────────
 router.get('/vendor-subscriptions', ...adminAuth, subscriptionPlanController.getVendorSubscriptions);
-router.patch('/vendor-subscriptions/:id/confirm-payment', ...adminAuth, subscriptionPlanController.confirmSubscriptionPayment);
 
 // ─── Vendor Terms & Conditions ────────────────────────────────────────────────
 router.get('/settings/vendor-terms', ...adminAuth, termsController.getVendorTerms);

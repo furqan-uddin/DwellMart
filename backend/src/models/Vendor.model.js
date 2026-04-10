@@ -7,6 +7,7 @@ const vendorSchema = new mongoose.Schema(
         email: { type: String, required: true, unique: true, lowercase: true, index: true },
         password: { type: String, required: true, select: false },
         phone: { type: String },
+        country: { type: String, trim: true, default: '' },
         storeName: { type: String, required: true },
         storeLogo: { type: String },
         storeDescription: { type: String },
@@ -66,15 +67,28 @@ const vendorSchema = new mongoose.Schema(
         agreedToTermsAt: { type: Date },
         onboardingStatus: {
             type: String,
-            enum: ['registered', 'email_verified', 'plan_completed'],
+            enum: ['registered', 'email_verified', 'plan_selected', 'payment_pending', 'subscription_active'],
             default: 'registered',
         },
         onboardingStartedAt: { type: Date, default: Date.now },
         onboardingCompletedAt: { type: Date },
-        selectedPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
+        selectedPlan: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
+        billing: {
+            stripeCustomerId: { type: String, trim: true, default: null },
+            razorpayCustomerId: { type: String, trim: true, default: null },
+            preferredGateway: {
+                type: String,
+                enum: ['stripe', 'razorpay', null],
+                default: null,
+            },
+        },
         joinDate: { type: Date, default: Date.now },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
+    }
 );
 
 vendorSchema.index({ status: 1, rating: -1, reviewCount: -1, createdAt: -1 });
@@ -86,9 +100,28 @@ vendorSchema.pre('save', async function (next) {
     next();
 });
 
+vendorSchema.pre('save', function syncCountry(next) {
+    if (!this.country && this.address?.country) {
+        this.country = String(this.address.country).trim();
+    }
+    if (!this.address?.country && this.country) {
+        this.address = this.address || {};
+        this.address.country = this.country;
+    }
+    next();
+});
+
 vendorSchema.methods.comparePassword = async function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
+
+vendorSchema.virtual('selectedPlanId')
+    .get(function selectedPlanId() {
+        return this.selectedPlan;
+    })
+    .set(function selectedPlanId(value) {
+        this.selectedPlan = value;
+    });
 
 const Vendor = mongoose.model('Vendor', vendorSchema);
 export { Vendor };

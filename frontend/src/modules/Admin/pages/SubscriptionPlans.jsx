@@ -1,60 +1,91 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiEdit2, FiTrash2, FiStar, FiCheck, FiX } from 'react-icons/fi';
+import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { FiEdit2, FiPlus, FiStar, FiTrash2, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
+
+const emptyForm = {
+  name: '',
+  interval: 'month',
+  price_inr: '',
+  price_usd: '',
+  description: '',
+  featuresText: '{\n  "highlights": []\n}',
+  isMostPopular: false,
+  isActive: true,
+  sortOrder: 0,
+};
 
 const SubscriptionPlans = () => {
   const [plans, setPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '', price: '', currency: 'AED', durationDays: '', description: '',
-    features: [''], isTrial: false, isMostPopular: false, isActive: true, sortOrder: 0,
-  });
+  const [formData, setFormData] = useState(emptyForm);
 
   const fetchPlans = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await api.get('/admin/subscription-plans');
-      setPlans(res?.data || []);
-    } catch { /* error toast handled */ } finally { setIsLoading(false); }
+      const response = await api.get('/admin/subscription-plans');
+      setPlans(response?.data || []);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  useEffect(() => { fetchPlans(); }, [fetchPlans]);
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
-  const resetForm = () => {
-    setFormData({
-      name: '', price: '', currency: 'AED', durationDays: '', description: '',
-      features: [''], isTrial: false, isMostPopular: false, isActive: true, sortOrder: 0,
-    });
+  const openCreate = () => {
     setEditingPlan(null);
+    setFormData(emptyForm);
+    setShowModal(true);
   };
-
-  const openCreate = () => { resetForm(); setShowModal(true); };
 
   const openEdit = (plan) => {
     setEditingPlan(plan);
     setFormData({
-      name: plan.name, price: String(plan.price), currency: plan.currency || 'AED',
-      durationDays: String(plan.durationDays), description: plan.description || '',
-      features: plan.features?.length > 0 ? [...plan.features] : [''],
-      isTrial: !!plan.isTrial, isMostPopular: !!plan.isMostPopular,
-      isActive: plan.isActive !== false, sortOrder: plan.sortOrder || 0,
+      name: plan.name || '',
+      interval: plan.interval || 'month',
+      price_inr: String(plan.pricing?.inr ?? plan.price_inr ?? 0),
+      price_usd: String(plan.pricing?.usd ?? plan.price_usd ?? 0),
+      description: plan.description || '',
+      featuresText: JSON.stringify(plan.features || { highlights: [] }, null, 2),
+      isMostPopular: Boolean(plan.isMostPopular),
+      isActive: plan.isActive !== false,
+      sortOrder: Number(plan.sortOrder || 0),
     });
     setShowModal(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    let features;
+
+    try {
+      features = JSON.parse(formData.featuresText || '{}');
+    } catch {
+      toast.error('Features must be valid JSON.');
+      return;
+    }
+
     const payload = {
-      ...formData,
-      price: Number(formData.price),
-      durationDays: Number(formData.durationDays),
-      sortOrder: Number(formData.sortOrder),
-      features: formData.features.filter((f) => f.trim()),
+      name: formData.name,
+      interval: formData.interval,
+      price_inr: Number(formData.price_inr || 0),
+      price_usd: Number(formData.price_usd || 0),
+      description: formData.description,
+      features,
+      isMostPopular: formData.isMostPopular,
+      isActive: formData.isActive,
+      sortOrder: Number(formData.sortOrder || 0),
     };
+
+    if (!payload.name.trim()) {
+      toast.error('Plan name is required.');
+      return;
+    }
 
     try {
       if (editingPlan) {
@@ -65,206 +96,136 @@ const SubscriptionPlans = () => {
         toast.success('Plan created.');
       }
       setShowModal(false);
-      resetForm();
       fetchPlans();
-    } catch { /* error toast */ }
+    } catch {
+      // toast handled globally
+    }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this plan?')) return;
+    if (!window.confirm('Delete this subscription plan?')) return;
     try {
       await api.delete(`/admin/subscription-plans/${id}`);
       toast.success('Plan deleted.');
       fetchPlans();
-    } catch { /* error toast */ }
+    } catch {
+      // toast handled globally
+    }
   };
 
-  const addFeature = () => setFormData((p) => ({ ...p, features: [...p.features, ''] }));
-  const removeFeature = (i) => setFormData((p) => ({ ...p, features: p.features.filter((_, idx) => idx !== i) }));
-  const updateFeature = (i, val) => setFormData((p) => {
-    const f = [...p.features]; f[i] = val; return { ...p, features: f };
-  });
-
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Subscription Plans</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage vendor membership plans</p>
+          <h1 className="text-2xl font-black text-slate-900">Subscription Plans</h1>
+          <p className="mt-1 text-sm text-slate-500">Manage recurring vendor plans in INR and USD.</p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-all text-sm">
-          <FiPlus /> Add Plan
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-2.5 font-semibold text-white transition hover:bg-teal-700"
+        >
+          <FiPlus />
+          Add plan
         </button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500" />
-        </div>
-      ) : plans.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">No plans yet. Create one to get started.</div>
+        <div className="flex justify-center py-16">Loading plans...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {plans.map((plan) => (
-            <div key={plan._id}
-              className={`bg-white rounded-xl border-2 p-5 relative ${
-                plan.isMostPopular ? 'border-primary-500' : 'border-gray-100'
-              } ${!plan.isActive ? 'opacity-60' : ''}`}>
-              {plan.isMostPopular && (
-                <span className="absolute top-2 right-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <FiStar className="text-[8px]" /> POPULAR
-                </span>
-              )}
-              {plan.isTrial && (
-                <span className="absolute top-2 left-2 bg-gray-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  TRIAL
-                </span>
-              )}
-              <h3 className="font-bold text-gray-800 mb-1 mt-2">{plan.name}</h3>
-              <p className="text-2xl font-extrabold text-gray-900 mb-1">
-                {plan.price === 0 ? 'FREE' : `${plan.price} ${plan.currency}`}
-              </p>
-              <p className="text-xs text-gray-400 mb-3">{plan.durationDays} days</p>
-              {plan.features?.length > 0 && (
-                <ul className="space-y-1 mb-4">
-                  {plan.features.slice(0, 3).map((f, i) => (
-                    <li key={i} className="text-xs text-gray-500 flex items-start gap-1">
-                      <FiCheck className="text-primary-500 mt-0.5 flex-shrink-0" /> {f}
-                    </li>
-                  ))}
-                  {plan.features.length > 3 && (
-                    <li className="text-xs text-gray-400">+{plan.features.length - 3} more</li>
-                  )}
-                </ul>
-              )}
-              <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  plan.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>
+            <div key={plan._id} className={`rounded-[28px] border p-6 ${plan.isMostPopular ? 'border-teal-400 bg-teal-50/70' : 'border-slate-200 bg-white'}`}>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
+                  <p className="text-sm text-slate-500">per {plan.interval}</p>
+                </div>
+                {plan.isMostPopular ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase text-amber-700">
+                    <FiStar size={12} />
+                    Popular
+                  </span>
+                ) : null}
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-black text-slate-900">₹{Number(plan.pricing?.inr ?? 0).toFixed(0)}</p>
+                <p className="text-lg font-bold text-slate-700">${Number(plan.pricing?.usd ?? 0).toFixed(2)}</p>
+              </div>
+              <p className="mt-3 text-sm text-slate-500">{plan.description || 'No description set.'}</p>
+              <ul className="mt-4 space-y-2">
+                {(plan.featureHighlights || []).slice(0, 4).map((feature) => (
+                  <li key={`${plan._id}-${feature}`} className="text-sm text-slate-600">
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                   {plan.isActive ? 'Active' : 'Inactive'}
                 </span>
-                <div className="flex-1" />
-                <button onClick={() => openEdit(plan)}
-                  className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all">
-                  <FiEdit2 className="text-sm" />
-                </button>
-                <button onClick={() => handleDelete(plan._id)}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                  <FiTrash2 className="text-sm" />
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => openEdit(plan)} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                    <FiEdit2 />
+                  </button>
+                  <button type="button" onClick={() => handleDelete(plan._id)} className="rounded-full p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
+                    <FiTrash2 />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Create/Edit Modal */}
       <AnimatePresence>
-        {showModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-            onClick={() => setShowModal(false)}>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6"
-              onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-gray-800">
-                  {editingPlan ? 'Edit Plan' : 'Create Plan'}
-                </h2>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                  <FiX className="text-lg" />
+        {showModal ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">{editingPlan ? 'Edit plan' : 'Create plan'}</h2>
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                  <FiX />
                 </button>
               </div>
-
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Plan Name *</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                    required className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <input value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} placeholder="Plan name" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <select value={formData.interval} onChange={(event) => setFormData((prev) => ({ ...prev, interval: event.target.value }))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500">
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                  <input value={formData.price_inr} onChange={(event) => setFormData((prev) => ({ ...prev, price_inr: event.target.value }))} type="number" min="0" step="0.01" placeholder="Price INR" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input value={formData.price_usd} onChange={(event) => setFormData((prev) => ({ ...prev, price_usd: event.target.value }))} type="number" min="0" step="0.01" placeholder="Price USD" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Price *</label>
-                    <input type="number" min="0" step="0.01" value={formData.price}
-                      onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
-                      required className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Currency</label>
-                    <input type="text" value={formData.currency}
-                      onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
-                  </div>
+                <textarea value={formData.description} onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))} rows={2} placeholder="Description" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                <textarea value={formData.featuresText} onChange={(event) => setFormData((prev) => ({ ...prev, featuresText: event.target.value }))} rows={8} placeholder='{"highlights":[]}' className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm outline-none focus:border-teal-500" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={formData.isMostPopular} onChange={(event) => setFormData((prev) => ({ ...prev, isMostPopular: event.target.checked }))} /> Most popular</label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData((prev) => ({ ...prev, isActive: event.target.checked }))} /> Active</label>
+                  <input value={formData.sortOrder} onChange={(event) => setFormData((prev) => ({ ...prev, sortOrder: event.target.value }))} type="number" placeholder="Sort order" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Duration (days) *</label>
-                  <input type="number" min="1" value={formData.durationDays}
-                    onChange={(e) => setFormData((p) => ({ ...p, durationDays: e.target.value }))}
-                    required className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Description</label>
-                  <textarea value={formData.description} rows={2}
-                    onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400 resize-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Features</label>
-                  {formData.features.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 mb-2">
-                      <input type="text" value={f} onChange={(e) => updateFeature(i, e.target.value)}
-                        placeholder={`Feature ${i + 1}`}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
-                      {formData.features.length > 1 && (
-                        <button type="button" onClick={() => removeFeature(i)} className="text-red-400 hover:text-red-600">
-                          <FiX />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button type="button" onClick={addFeature}
-                    className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                    + Add Feature
-                  </button>
-                </div>
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={formData.isTrial}
-                      onChange={(e) => setFormData((p) => ({ ...p, isTrial: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 rounded" />
-                    Trial Plan
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={formData.isMostPopular}
-                      onChange={(e) => setFormData((p) => ({ ...p, isMostPopular: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 rounded" />
-                    Most Popular
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={formData.isActive}
-                      onChange={(e) => setFormData((p) => ({ ...p, isActive: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 rounded" />
-                    Active
-                  </label>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Sort Order</label>
-                  <input type="number" value={formData.sortOrder}
-                    onChange={(e) => setFormData((p) => ({ ...p, sortOrder: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" />
-                </div>
-                <button type="submit"
-                  className="w-full py-2.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all text-sm">
-                  {editingPlan ? 'Update Plan' : 'Create Plan'}
-                </button>
+                <button type="submit" className="w-full rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700">{editingPlan ? 'Update plan' : 'Create plan'}</button>
               </form>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );
 };
 
 export default SubscriptionPlans;
+
