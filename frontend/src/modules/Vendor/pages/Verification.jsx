@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiMail } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { verifyVendorOTP, resendVendorOTP } from '../services/vendorService';
+import { getVendorOnboardingStatus, verifyVendorOTP, resendVendorOTP } from '../services/vendorService';
 import toast from 'react-hot-toast';
 
 const VendorVerification = () => {
@@ -11,18 +11,60 @@ const VendorVerification = () => {
   const OTP_LENGTH = 6;
   const [codes, setCodes] = useState(Array(OTP_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const inputRefs = useRef([]);
 
   const email = location.state?.email || '';
   const returnTo = location.state?.returnTo || '';
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Focus first input on mount
   useEffect(() => {
-    if (inputRefs.current[0]) {
+    const checkStatus = async () => {
+      if (!email) {
+        setIsCheckingStatus(false);
+        return;
+      }
+
+      try {
+        const response = await getVendorOnboardingStatus(email);
+        const data = response?.data || {};
+
+        if (data.nextStep === 'choose_plan') {
+          if (returnTo) {
+            sessionStorage.setItem(`vendor-onboarding-email:${returnTo}`, email);
+            toast.success('Your email is already verified. Continue with plan selection.');
+            navigate(returnTo, { replace: true });
+            return;
+          }
+          toast.success('Your email is already verified. Please login to continue.');
+          navigate('/vendor/login', { replace: true });
+          return;
+        }
+
+        if (data.nextStep === 'awaiting_admin_approval' || data.nextStep === 'approved') {
+          const message =
+            data.nextStep === 'approved'
+              ? 'Your account is already active. Please login.'
+              : 'Your account is already verified and awaiting admin approval.';
+          toast.success(message);
+          navigate('/vendor/login', { replace: true });
+          return;
+        }
+      } catch {
+        // Let the user continue with manual OTP entry if status lookup fails.
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkStatus();
+  }, [email, navigate, returnTo]);
+
+  useEffect(() => {
+    if (!isCheckingStatus && inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
-  }, []);
+  }, [isCheckingStatus]);
 
   const handleChange = (index, value) => {
     // Only allow single digit
@@ -107,6 +149,10 @@ const VendorVerification = () => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-card rounded-3xl p-8 w-full max-w-md shadow-2xl"
       >
+        {isCheckingStatus ? (
+          <div className="py-16 text-center text-gray-600">Checking your verification status...</div>
+        ) : (
+          <>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 gradient-green rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-green">
@@ -180,6 +226,8 @@ const VendorVerification = () => {
             </Link>
           </div>
         </form>
+          </>
+        )}
       </motion.div>
     </div>
   );

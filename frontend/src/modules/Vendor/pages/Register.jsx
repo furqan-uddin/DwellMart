@@ -694,6 +694,19 @@ const VendorRegister = () => {
                       </>
                     )}
                   </button>
+
+                  <div className="text-center pt-1">
+                    <p className="text-sm text-gray-600">
+                      Already registered?{' '}
+                      <button
+                        type="button"
+                        onClick={() => navigate('/vendor/login')}
+                        className="font-semibold text-primary-600 hover:text-primary-700"
+                      >
+                        Vendor Login
+                      </button>
+                    </p>
+                  </div>
                 </form>
               </div>
             </motion.div>

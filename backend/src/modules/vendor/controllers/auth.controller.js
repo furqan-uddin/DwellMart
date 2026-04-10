@@ -38,15 +38,13 @@ const getVendorOnboardingState = async (vendor) => {
         .sort({ createdAt: -1 })
         .lean();
 
-    const effectiveOnboardingStatus =
-        vendor.onboardingStatus ||
-        (completedSubscription || vendor.selectedPlanId ? 'plan_completed' : 'email_verified');
+    const hasCompletedPlan = Boolean(
+        completedSubscription ||
+        vendor.selectedPlanId ||
+        vendor.onboardingStatus === 'plan_completed'
+    );
 
-    if (effectiveOnboardingStatus === 'registered') {
-        return { onboardingStatus: 'registered', nextStep: 'verify_email' };
-    }
-
-    if (effectiveOnboardingStatus === 'email_verified') {
+    if (!hasCompletedPlan) {
         return { onboardingStatus: 'email_verified', nextStep: 'choose_plan' };
     }
 
