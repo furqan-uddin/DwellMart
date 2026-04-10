@@ -79,22 +79,29 @@ const MobileCategoryIcons = () => {
 
   const categories = useMemo(() => {
     const roots = getRootCategories().filter((cat) => cat.isActive !== false);
-    if (!roots.length) return fallbackCategories;
+    let mapped = [];
 
-    return roots.map((cat) => {
-      const fallback = fallbackCategories.find(
-        (fc) =>
-          String(fc.id) === String(cat.id) ||
-          String(fc.name || "").toLowerCase() ===
+    if (!roots.length) {
+      mapped = [...fallbackCategories];
+    } else {
+      mapped = roots.map((cat) => {
+        const fallback = fallbackCategories.find(
+          (fc) =>
+            String(fc.id) === String(cat.id) ||
+            String(fc.name || "").toLowerCase() ===
             String(cat.name || "").toLowerCase()
-      );
+        );
 
-      return {
-        ...(fallback || {}),
-        ...cat,
-        id: String(cat.id ?? cat._id ?? fallback?.id ?? ""),
-      };
-    });
+        return {
+          ...(fallback || {}),
+          ...cat,
+          id: String(cat.id ?? cat._id ?? fallback?.id ?? ""),
+        };
+      });
+    }
+
+
+    return mapped;
   }, [apiCategories, getRootCategories]);
 
   // Update line position when active category changes or container scrolls
@@ -271,9 +278,9 @@ const MobileCategoryIcons = () => {
                 if (el) categoryRefs.current[category.id] = el;
               }}
               className="flex-shrink-0">
-              <Link
-                to={`/category/${category.id}`}
-                className="flex flex-col items-center gap-1.5 w-16 relative">
+                <Link
+                  to={category.path || `/category/${category.id}`}
+                  className="flex flex-col items-center gap-1.5 w-16 relative">
                 {!isScrolling && (
                   <div>
                     <IconComponent

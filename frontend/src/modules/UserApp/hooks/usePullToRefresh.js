@@ -13,36 +13,58 @@ const usePullToRefresh = (onRefresh, options = {}) => {
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const startY = useRef(0);
-  const currentY = useRef(0);
+  
+  const stateRef = useRef({
+    isPulling,
+    isRefreshing,
+    pullDistance,
+    startY: 0,
+    currentY: 0
+  });
+
+  // Sync ref with state
+  useEffect(() => {
+    stateRef.current.isPulling = isPulling;
+    stateRef.current.isRefreshing = isRefreshing;
+    stateRef.current.pullDistance = pullDistance;
+  }, [isPulling, isRefreshing, pullDistance]);
+
   const elementRef = useRef(null);
 
   const handleTouchStart = useCallback((e) => {
-    if (isRefreshing) return;
+    if (stateRef.current.isRefreshing) return;
     
     const touch = e.touches[0];
-    startY.current = touch.clientY;
-    currentY.current = touch.clientY;
+    stateRef.current.startY = touch.clientY;
+    stateRef.current.currentY = touch.clientY;
     
-    // Only start pull if at the top of the scrollable area
     const element = elementRef.current;
     if (element && element.scrollTop === 0) {
       setIsPulling(true);
     }
-  }, [isRefreshing]);
+  }, []);
 
   const handleTouchMove = useCallback((e) => {
+    const { isPulling, isRefreshing, startY } = stateRef.current;
     if (!isPulling || isRefreshing) return;
     
     const touch = e.touches[0];
-    currentY.current = touch.clientY;
+    const currentY = touch.clientY;
+    stateRef.current.currentY = currentY;
     
     const element = elementRef.current;
     if (element && element.scrollTop === 0) {
-      const deltaY = currentY.current - startY.current;
+      const deltaY = currentY - startY;
       
       if (deltaY > 0) {
-        e.preventDefault(); // Prevent default scroll
+        // Explicitly check for cancelable to avoid console warnings
+        if (e.cancelable) {
+          try {
+            e.preventDefault();
+          } catch (err) {
+            // Silently ignore if preventDefault fails
+          }
+        }
         const distance = Math.min(deltaY / resistance, threshold * 1.5);
         setPullDistance(distance);
       } else {
@@ -50,16 +72,16 @@ const usePullToRefresh = (onRefresh, options = {}) => {
         setIsPulling(false);
       }
     }
-  }, [isPulling, isRefreshing, resistance, threshold]);
+  }, [resistance, threshold]);
 
   const handleTouchEnd = useCallback(() => {
+    const { isPulling, isRefreshing, pullDistance } = stateRef.current;
     if (!isPulling || isRefreshing) return;
     
     if (pullDistance >= threshold) {
       setIsRefreshing(true);
       setPullDistance(threshold);
       
-      // Execute refresh callback
       Promise.resolve(onRefresh()).finally(() => {
         setTimeout(() => {
           setIsRefreshing(false);
@@ -68,16 +90,30 @@ const usePullToRefresh = (onRefresh, options = {}) => {
         }, 300);
       });
     } else {
-      // Spring back
       setPullDistance(0);
       setIsPulling(false);
     }
     
-    startY.current = 0;
-    currentY.current = 0;
-  }, [isPulling, isRefreshing, pullDistance, threshold, onRefresh]);
+    stateRef.current.startY = 0;
+    stateRef.current.currentY = 0;
+  }, [threshold, onRefresh]);
 
-  // Reset on mount
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+
+    const options = { passive: false };
+    element.addEventListener('touchstart', handleTouchStart, options);
+    element.addEventListener('touchmove', handleTouchMove, options);
+    element.addEventListener('touchend', handleTouchEnd, options);
+
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStart, options);
+      element.removeEventListener('touchmove', handleTouchMove, options);
+      element.removeEventListener('touchend', handleTouchEnd, options);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
   useEffect(() => {
     setPullDistance(0);
     setIsPulling(false);
@@ -88,9 +124,6 @@ const usePullToRefresh = (onRefresh, options = {}) => {
     isPulling,
     isRefreshing,
     elementRef,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
   };
 };
 
