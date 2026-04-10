@@ -38,14 +38,12 @@ const getVendorOnboardingState = async (vendor) => {
         .sort({ createdAt: -1 })
         .lean();
 
-    const hasCompletedPlan = Boolean(
-        completedSubscription ||
-        vendor.selectedPlanId ||
-        vendor.onboardingStatus === 'plan_completed'
-    );
-
-    if (!hasCompletedPlan) {
+    if (!vendor.selectedPlanId) {
         return { onboardingStatus: 'email_verified', nextStep: 'choose_plan' };
+    }
+
+    if (!completedSubscription && vendor.onboardingStatus !== 'plan_completed') {
+        return { onboardingStatus: 'plan_selected', nextStep: 'complete_payment' };
     }
 
     if (vendor.status === 'approved') {
@@ -152,7 +150,7 @@ const createVendorOnboardingSubscription = async ({
 export const register = asyncHandler(async (req, res) => {
     const { 
         name, email, password, phone, storeName, storeDescription,
-        address, agreedToTerms,
+        address, agreedToTerms, selectedPlanId, documentType,
     } = req.body;
 
     // Validate T&C agreement
@@ -160,11 +158,20 @@ export const register = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'You must agree to the Terms & Conditions to register.');
     }
 
+    const plan = await SubscriptionPlan.findById(selectedPlanId);
+    if (!plan || !plan.isActive) {
+        throw new ApiError(400, 'Selected subscription plan is not available.');
+    }
+
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const existing = await Vendor.findOne({ email: normalizedEmail });
     if (existing) {
         const onboarding = await getVendorOnboardingState(existing);
-        if (onboarding.nextStep === 'verify_email' || onboarding.nextStep === 'choose_plan') {
+        if (
+            onboarding.nextStep === 'verify_email' ||
+            onboarding.nextStep === 'choose_plan' ||
+            onboarding.nextStep === 'complete_payment'
+        ) {
             return res.status(200).json(
                 new ApiResponse(
                     200,
@@ -176,6 +183,8 @@ export const register = asyncHandler(async (req, res) => {
                     },
                     onboarding.nextStep === 'verify_email'
                         ? 'Account already exists. Please verify your email to continue onboarding.'
+                        : onboarding.nextStep === 'complete_payment'
+                        ? 'Account already exists. Please complete the final step for your selected plan.'
                         : 'Account already exists. Please complete your plan selection.'
                 )
             );
@@ -183,33 +192,42 @@ export const register = asyncHandler(async (req, res) => {
         throw new ApiError(409, 'Email already registered.');
     }
 
-    // ... (rest of the code) ...
     const file = req.file;
     if (!file) {
-        throw new ApiError(400, 'Trade Licence document is required.');
+        throw new ApiError(400, 'Please upload either your Trade Licence or GST document.');
     }
 
-    let tradeLicenseUrl = '';
-    let tradeLicenseType = '';
+    let documentUrl = '';
+    let documentFileType = '';
 
     if (file.mimetype.startsWith('image/')) {
-        tradeLicenseType = 'image';
+        documentFileType = 'image';
         try {
-            const uploaded = await uploadLocalFileToCloudinaryAndCleanup(file.path, 'trade_licenses');
-            tradeLicenseUrl = uploaded.secure_url;
+            const uploaded = await uploadLocalFileToCloudinaryAndCleanup(file.path, 'vendor_documents');
+            documentUrl = uploaded.secure_url;
         } catch (error) {
-            throw new ApiError(500, 'Failed to upload trade licence image.');
+            throw new ApiError(500, `Failed to upload ${documentType === 'gst' ? 'GST' : 'trade licence'} image.`);
         }
     } else {
-        tradeLicenseType = file.mimetype === 'application/pdf' ? 'pdf' : 'word';
-        const docDir = path.resolve(process.cwd(), 'public/uploads/trade_licenses');
+        documentFileType = file.mimetype === 'application/pdf' ? 'pdf' : 'word';
+        const docDir = path.resolve(process.cwd(), 'public/uploads/vendor_documents');
         if (!fs.existsSync(docDir)) {
             fs.mkdirSync(docDir, { recursive: true });
         }
         const fileName = file.filename;
         const destPath = path.join(docDir, fileName);
         fs.renameSync(file.path, destPath);
-        tradeLicenseUrl = `/uploads/trade_licenses/${fileName}`;
+        documentUrl = `/uploads/vendor_documents/${fileName}`;
+    }
+
+    const documents = {};
+    if (documentType === 'gst') {
+        documents.gst = documentUrl;
+    } else {
+        documents.tradeLicense = {
+            url: documentUrl,
+            fileType: documentFileType,
+        };
     }
 
     const vendor = await Vendor.create({
@@ -224,12 +242,8 @@ export const register = asyncHandler(async (req, res) => {
         agreedToTerms: true,
         agreedToTermsAt: new Date(),
         onboardingStatus: 'registered',
-        documents: {
-            tradeLicense: {
-                url: tradeLicenseUrl,
-                fileType: tradeLicenseType
-            }
-        }
+        selectedPlanId: plan._id,
+        documents,
     });
 
     await sendOTP(vendor, 'vendor_verification');
@@ -253,7 +267,8 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     if (!vendor) throw new ApiError(404, 'Vendor not found.');
     if (!vendor.isVerified) throw new ApiError(403, 'Please verify your email first.');
 
-    const plan = await SubscriptionPlan.findById(selectedPlanId);
+    const effectivePlanId = selectedPlanId || vendor.selectedPlanId;
+    const plan = await SubscriptionPlan.findById(effectivePlanId);
     if (!plan || !plan.isActive) {
         throw new ApiError(400, 'Selected subscription plan is not available.');
     }
@@ -315,7 +330,11 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     vendor.otpExpiry = undefined;
     await vendor.save();
 
-    res.status(200).json(new ApiResponse(200, { email: vendor.email }, 'Email verified. Please complete your plan selection.'));
+    const message = vendor.selectedPlanId
+        ? 'Email verified. Please complete the final step for your selected plan.'
+        : 'Email verified. Please complete your plan selection.';
+
+    res.status(200).json(new ApiResponse(200, { email: vendor.email }, message));
 });
 
 // POST /api/vendor/auth/resend-otp
@@ -420,6 +439,9 @@ export const login = asyncHandler(async (req, res) => {
     if (onboarding.nextStep === 'choose_plan') {
         throw new ApiError(403, 'Please complete your vendor onboarding by choosing a subscription plan.');
     }
+    if (onboarding.nextStep === 'complete_payment') {
+        throw new ApiError(403, 'Please complete your vendor onboarding for your selected plan.');
+    }
     if (vendor.status === 'pending') throw new ApiError(403, 'Your account is pending admin approval.');
     if (vendor.status === 'suspended') throw new ApiError(403, `Your account has been suspended. Reason: ${vendor.suspensionReason || 'Contact support.'}`);
     if (vendor.status === 'rejected') throw new ApiError(403, 'Your vendor application was rejected.');
@@ -443,6 +465,9 @@ export const refresh = asyncHandler(async (req, res) => {
     const onboarding = await getVendorOnboardingState(vendor);
     if (onboarding.nextStep === 'choose_plan') {
         throw new ApiError(403, 'Please complete your vendor onboarding by choosing a subscription plan.');
+    }
+    if (onboarding.nextStep === 'complete_payment') {
+        throw new ApiError(403, 'Please complete your vendor onboarding for your selected plan.');
     }
     if (vendor.status === 'pending') throw new ApiError(403, 'Your account is pending admin approval.');
     if (vendor.status === 'suspended') throw new ApiError(403, `Your account has been suspended. Reason: ${vendor.suspensionReason || 'Contact support.'}`);

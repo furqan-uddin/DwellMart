@@ -29,10 +29,14 @@ const VendorVerification = () => {
         const response = await getVendorOnboardingStatus(email);
         const data = response?.data || {};
 
-        if (data.nextStep === 'choose_plan') {
+        if (data.nextStep === 'choose_plan' || data.nextStep === 'complete_payment') {
           if (returnTo) {
             sessionStorage.setItem(`vendor-onboarding-email:${returnTo}`, email);
-            toast.success('Your email is already verified. Continue with plan selection.');
+            toast.success(
+              data.nextStep === 'complete_payment'
+                ? 'Your email is already verified. Continue with the final onboarding step.'
+                : 'Your email is already verified. Continue with plan selection.'
+            );
             navigate(returnTo, { replace: true });
             return;
           }
@@ -111,7 +115,7 @@ const VendorVerification = () => {
       await verifyVendorOTP(email, verificationCode);
       if (returnTo) {
         sessionStorage.setItem(`vendor-onboarding-email:${returnTo}`, email);
-        toast.success('Email verified! Continue with your plan selection.');
+        toast.success('Email verified! Continue with the next onboarding step.');
         navigate(returnTo, { replace: true });
       } else {
         toast.success('Email verified! Your account is pending admin approval.');

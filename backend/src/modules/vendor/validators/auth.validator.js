@@ -7,6 +7,13 @@ export const registerSchema = Joi.object({
     phone: Joi.string().trim().required(),
     storeName: Joi.string().trim().min(2).max(100).required(),
     storeDescription: Joi.string().trim().max(500).allow('').optional(),
+    selectedPlanId: Joi.string().required().messages({
+        'any.required': 'Please select a subscription plan.',
+    }),
+    documentType: Joi.string().valid('tradeLicense', 'gst').required().messages({
+        'any.only': 'Please choose Trade License or GST.',
+        'any.required': 'Please choose Trade License or GST.',
+    }),
     address: Joi.object({
         street: Joi.string().allow('').optional(),
         city: Joi.string().allow('').optional(),
@@ -22,9 +29,7 @@ export const registerSchema = Joi.object({
 
 export const completeOnboardingSchema = Joi.object({
     email: Joi.string().email().lowercase().required(),
-    selectedPlanId: Joi.string().required().messages({
-        'any.required': 'Please select a subscription plan.',
-    }),
+    selectedPlanId: Joi.string().optional(),
     payment_method: Joi.string().valid('razorpay', 'stripe').allow(null, '').optional(),
     razorpay_order_id: Joi.string().allow('').optional(),
     razorpay_payment_id: Joi.string().allow('').optional(),

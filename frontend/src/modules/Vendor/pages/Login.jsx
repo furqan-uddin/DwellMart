@@ -75,6 +75,17 @@ const VendorLogin = () => {
         return;
       }
 
+      if (message.includes('Please complete your vendor onboarding for your selected plan')) {
+        toast.error(message);
+        navigate('/vendor/register', {
+          replace: true,
+          state: {
+            resumeEmail: email,
+          },
+        });
+        return;
+      }
+
       toast.error(message);
     }
   };

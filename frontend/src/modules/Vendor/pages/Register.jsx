@@ -21,7 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
 
-const STEPS = ['Registration', 'Plans', 'Thank You'];
+const STEPS = ['Plans', 'Registration', 'Payment', 'Thank You'];
 const ONBOARDING_STORAGE_KEY = 'vendor-onboarding-email:/vendor/register';
 
 const VendorRegister = () => {
@@ -35,7 +35,8 @@ const VendorRegister = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [tradeLicense, setTradeLicense] = useState(null);
+  const [registrationDocument, setRegistrationDocument] = useState(null);
+  const [documentType, setDocumentType] = useState('tradeLicense');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [razorpayData, setRazorpayData] = useState(null);
@@ -91,13 +92,13 @@ const VendorRegister = () => {
       sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
       setOnboardingEmail('');
       toast.success('Onboarding completed! Please await admin approval.');
-      setCurrentStep(2);
+      setCurrentStep(3);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resumeOnboarding = async (email) => {
+  const resumeOnboarding = async (email, availablePlans = plans) => {
     if (!email) return;
     const response = await api.post('/vendor/auth/onboarding-status', { email });
     const data = response?.data || {};
@@ -113,8 +114,23 @@ const VendorRegister = () => {
     if (data.nextStep === 'choose_plan') {
       sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
       setOnboardingEmail(email);
-      setCurrentStep(1);
+      setSelectedPlan(null);
+      setCurrentStep(0);
       toast.success('Resume your onboarding by choosing a subscription plan.');
+      return;
+    }
+
+    if (data.nextStep === 'complete_payment') {
+      const plan = availablePlans.find((item) => item._id === data.selectedPlanId) || null;
+      sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
+      setOnboardingEmail(email);
+      setSelectedPlan(plan);
+      setCurrentStep(2);
+      toast.success(
+        plan?.price > 0 && !plan?.isTrial
+          ? 'Resume your onboarding by completing payment.'
+          : 'Resume your onboarding by completing the final step.'
+      );
       return;
     }
 
@@ -152,7 +168,6 @@ const VendorRegister = () => {
         const resumeEmail = location.state?.resumeEmail || savedEmail;
         if (resumeEmail) {
           setOnboardingEmail(resumeEmail);
-          setCurrentStep(1);
         }
 
         const queryParams = new URLSearchParams(window.location.search);
@@ -160,7 +175,7 @@ const VendorRegister = () => {
           const sessionId = queryParams.get('session_id');
           const planId = queryParams.get('plan_id');
           const plan = fetchedPlans.find((item) => item._id === planId);
-          if (plan && savedEmail) {
+          if (plan && (savedEmail || resumeEmail)) {
             await completeOnboarding({
               plan,
               method: 'stripe',
@@ -172,7 +187,7 @@ const VendorRegister = () => {
           toast.error('Payment was canceled.');
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (resumeEmail) {
-          await resumeOnboarding(resumeEmail);
+          await resumeOnboarding(resumeEmail, fetchedPlans);
         }
       } catch (error) {
         console.error('Failed to fetch vendor registration data:', error);
@@ -195,12 +210,8 @@ const VendorRegister = () => {
   };
 
   const handleSelectPlan = (plan) => {
-    if (plan.price > 0 && !plan.isTrial) {
-      setTempSelectedPlan(plan);
-      setShowPaymentModal(true);
-      return;
-    }
-    completeOnboarding({ plan });
+    setSelectedPlan(plan);
+    setCurrentStep(1);
   };
 
   const handleRazorpay = async () => {
@@ -272,8 +283,12 @@ const VendorRegister = () => {
       toast.error('Please fill in all required fields.');
       return;
     }
-    if (!tradeLicense) {
-      toast.error('Trade Licence document is required.');
+    if (!selectedPlan?._id) {
+      toast.error('Please select a subscription plan.');
+      return;
+    }
+    if (!registrationDocument) {
+      toast.error(`Please upload your ${documentType === 'gst' ? 'GST' : 'Trade Licence'} document.`);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -298,9 +313,11 @@ const VendorRegister = () => {
       submitData.append('phone', formData.phone.trim());
       submitData.append('storeName', formData.storeName.trim());
       submitData.append('storeDescription', formData.storeDescription.trim());
+      submitData.append('selectedPlanId', selectedPlan._id);
+      submitData.append('documentType', documentType);
       submitData.append('address', JSON.stringify(formData.address));
       submitData.append('agreedToTerms', true);
-      submitData.append('tradeLicense', tradeLicense);
+      submitData.append('document', registrationDocument);
 
       const response = await api.post('/vendor/auth/register', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -336,7 +353,7 @@ const VendorRegister = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-white md:text-4xl">Register As Vendor</h1>
           <p className="mt-2 max-w-2xl text-sm text-white/70">
-            Create your vendor account first, then choose a subscription plan to finish onboarding.
+            Choose your subscription plan first, then register and complete payment to finish onboarding.
           </p>
         </div>
 
@@ -371,7 +388,7 @@ const VendorRegister = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {currentStep === 1 && (
+          {currentStep === 0 && (
             <motion.div
               key="plans"
               initial={{ opacity: 0, x: 20 }}
@@ -437,7 +454,7 @@ const VendorRegister = () => {
                             : 'bg-emerald-500 text-white hover:bg-emerald-400'
                         }`}
                       >
-                        {plan.isTrial ? 'Start Free Trial' : 'Select Plan'}
+                        {selectedPlan?._id === plan._id ? 'Selected Plan' : 'Continue with Plan'}
                       </button>
                     </div>
                   ))}
@@ -446,7 +463,7 @@ const VendorRegister = () => {
             </motion.div>
           )}
 
-          {currentStep === 0 && (
+          {currentStep === 1 && (
             <motion.div
               key="register"
               initial={{ opacity: 0, x: 20 }}
@@ -455,7 +472,14 @@ const VendorRegister = () => {
               className="mx-auto max-w-3xl"
             >
               <div className="mb-6 flex items-center justify-between gap-4">
-                <div />
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(0)}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-white/75 hover:text-white"
+                >
+                  <FiArrowLeft />
+                  Back to Plans
+                </button>
                 {onboardingEmail && (
                   <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-emerald-200">
                     Verified: {onboardingEmail}
@@ -464,6 +488,12 @@ const VendorRegister = () => {
               </div>
 
               <div className="rounded-[28px] border border-white/10 bg-white/95 p-6 text-gray-900 shadow-2xl md:p-8">
+                {selectedPlan && (
+                  <div className="mb-6 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm text-primary-800">
+                    Selected plan: <strong>{selectedPlan.name}</strong>
+                    {selectedPlan.price > 0 ? ` (${selectedPlan.price} ${selectedPlan.currency || 'AED'})` : ' (Free)'}
+                  </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -548,14 +578,28 @@ const VendorRegister = () => {
                       />
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-600">
-                        Trade Licence Document <span className="text-red-500">*</span>
+                        Document Type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={documentType}
+                        onChange={(event) => setDocumentType(event.target.value)}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      >
+                        <option value="tradeLicense">Trade Licence</option>
+                        <option value="gst">GST</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-600">
+                        {documentType === 'gst' ? 'GST Document' : 'Trade Licence Document'} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="file"
                         accept=".pdf,.doc,.docx,image/*"
-                        onChange={(event) => setTradeLicense(event.target.files?.[0] || null)}
+                        onChange={(event) => setRegistrationDocument(event.target.files?.[0] || null)}
                         required
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 file:mr-4 file:rounded-full file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100"
                       />
@@ -713,6 +757,85 @@ const VendorRegister = () => {
           )}
 
           {currentStep === 2 && (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="mx-auto max-w-xl"
+            >
+              <div className="rounded-[28px] border border-white/10 bg-white/95 p-8 text-gray-900 shadow-2xl">
+                <div className="text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-3xl text-primary-600">
+                    <FiCreditCard />
+                  </div>
+                  <h2 className="text-2xl font-bold">
+                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? 'Complete Your Payment' : 'Complete Your Onboarding'}
+                  </h2>
+                  <p className="mt-2 text-gray-500">
+                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial
+                      ? 'Your registration is saved. Pay now to finish onboarding.'
+                      : 'Your registration is saved. Finish onboarding to submit your application.'}
+                  </p>
+                </div>
+
+                {selectedPlan && (
+                  <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Selected Plan</p>
+                        <h3 className="text-xl font-bold text-gray-800">{selectedPlan.name}</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Duration: {selectedPlan.durationDays} day{selectedPlan.durationDays > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-500">Amount</p>
+                        <p className="text-2xl font-extrabold text-gray-900">
+                          {selectedPlan.price > 0 ? `${selectedPlan.price.toFixed(2)} ${selectedPlan.currency || 'AED'}` : 'FREE'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 flex flex-col gap-3">
+                  {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempSelectedPlan(selectedPlan);
+                        setShowPaymentModal(true);
+                      }}
+                      disabled={isLoading}
+                      className="w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Choose Payment Method
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => completeOnboarding({ plan: selectedPlan })}
+                      disabled={isLoading || !selectedPlan}
+                      className="w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isLoading ? 'Completing...' : 'Complete Onboarding'}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="w-full rounded-xl bg-gray-100 py-3 font-medium text-gray-700 hover:bg-gray-200"
+                  >
+                    Back to Registration
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {currentStep === 3 && (
             <motion.div
               key="done"
               initial={{ opacity: 0, scale: 0.96 }}

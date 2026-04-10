@@ -59,7 +59,7 @@ const parseJsonFields = (req, res, next) => {
 router.post(
     '/auth/register',
     authLimiter,
-    uploadDocumentSingle('tradeLicense'),
+    uploadDocumentSingle('document'),
     parseJsonFields,
     validate(registerSchema),
     authController.register

@@ -24,7 +24,7 @@ import DesktopHeader from '../components/Layout/DesktopHeader';
 import MobileHeader from '../components/Layout/MobileHeader';
 import Footer from '../components/Layout/Footer';
 
-const STEPS = ['Registration', 'Plans', 'Thank You'];
+const STEPS = ['Plans', 'Registration', 'Payment', 'Thank You'];
 const ONBOARDING_STORAGE_KEY = 'vendor-onboarding-email:/sell-on-dwellmart';
 
 const SellOnDwellmart = () => {
@@ -38,7 +38,8 @@ const SellOnDwellmart = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [tradeLicense, setTradeLicense] = useState(null);
+  const [registrationDocument, setRegistrationDocument] = useState(null);
+  const [documentType, setDocumentType] = useState('tradeLicense');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [razorpayData, setRazorpayData] = useState(null);
@@ -94,13 +95,13 @@ const SellOnDwellmart = () => {
       sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
       setOnboardingEmail('');
       toast.success('Onboarding completed! Please await admin approval.');
-      setCurrentStep(2);
+      setCurrentStep(3);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resumeOnboarding = async (email) => {
+  const resumeOnboarding = async (email, availablePlans = plans) => {
     if (!email) return;
     const response = await api.post('/vendor/auth/onboarding-status', { email });
     const data = response?.data || {};
@@ -116,8 +117,23 @@ const SellOnDwellmart = () => {
     if (data.nextStep === 'choose_plan') {
       sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
       setOnboardingEmail(email);
-      setCurrentStep(1);
+      setSelectedPlan(null);
+      setCurrentStep(0);
       toast.success('Resume your onboarding by choosing a subscription plan.');
+      return;
+    }
+
+    if (data.nextStep === 'complete_payment') {
+      const plan = availablePlans.find((item) => item._id === data.selectedPlanId) || null;
+      sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
+      setOnboardingEmail(email);
+      setSelectedPlan(plan);
+      setCurrentStep(2);
+      toast.success(
+        plan?.price > 0 && !plan?.isTrial
+          ? 'Resume your onboarding by completing payment.'
+          : 'Resume your onboarding by completing the final step.'
+      );
       return;
     }
 
@@ -156,7 +172,6 @@ const SellOnDwellmart = () => {
         const resumeEmail = location.state?.resumeEmail || savedEmail;
         if (resumeEmail) {
           setOnboardingEmail(resumeEmail);
-          setCurrentStep(1);
         }
 
         // Handle Stripe Success Redirect
@@ -165,7 +180,7 @@ const SellOnDwellmart = () => {
           const sessionId = queryParams.get('session_id');
           const planId = queryParams.get('plan_id');
           const plan = fetchedPlans.find(p => p._id === planId);
-          if (plan && savedEmail) {
+          if (plan && (savedEmail || resumeEmail)) {
             await completeOnboarding({
               plan,
               method: 'stripe',
@@ -179,7 +194,7 @@ const SellOnDwellmart = () => {
           toast.error('Payment was canceled.');
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (resumeEmail) {
-          await resumeOnboarding(resumeEmail);
+          await resumeOnboarding(resumeEmail, fetchedPlans);
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -202,12 +217,8 @@ const SellOnDwellmart = () => {
   };
 
   const handleSelectPlan = (plan) => {
-    if (plan.price > 0 && !plan.isTrial) {
-      setTempSelectedPlan(plan);
-      setShowPaymentModal(true);
-    } else {
-      completeOnboarding({ plan });
-    }
+    setSelectedPlan(plan);
+    setCurrentStep(1);
   };
 
   const handleRazorpay = async () => {
@@ -283,8 +294,12 @@ const SellOnDwellmart = () => {
       toast.error('Please fill in all required fields.');
       return;
     }
-    if (!tradeLicense) {
-      toast.error('Trade Licence document is required.');
+    if (!selectedPlan?._id) {
+      toast.error('Please select a subscription plan.');
+      return;
+    }
+    if (!registrationDocument) {
+      toast.error(`Please upload your ${documentType === 'gst' ? 'GST' : 'Trade Licence'} document.`);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -309,9 +324,11 @@ const SellOnDwellmart = () => {
       submitData.append('phone', formData.phone.trim());
       submitData.append('storeName', formData.storeName.trim());
       submitData.append('storeDescription', formData.storeDescription.trim());
+      submitData.append('selectedPlanId', selectedPlan._id);
+      submitData.append('documentType', documentType);
       submitData.append('address', JSON.stringify(formData.address));
       submitData.append('agreedToTerms', true);
-      submitData.append('tradeLicense', tradeLicense);
+      submitData.append('document', registrationDocument);
 
       const response = await api.post('/vendor/auth/register', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -357,7 +374,7 @@ const SellOnDwellmart = () => {
             transition={{ delay: 0.1 }}
             className="text-gray-300 text-lg max-w-2xl mx-auto"
           >
-            Join our marketplace and reach millions of customers. Register first, then pick the plan that fits your business.
+            Join our marketplace and reach millions of customers. Pick your plan, complete registration, then pay to finish onboarding.
           </motion.p>
         </div>
       </section>
@@ -399,8 +416,8 @@ const SellOnDwellmart = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* Step 2: Plans */}
-          {currentStep === 1 && (
+          {/* Step 1: Plans */}
+          {currentStep === 0 && (
             <motion.div
               key="plans"
               initial={{ opacity: 0, x: 30 }}
@@ -464,7 +481,7 @@ const SellOnDwellmart = () => {
                               : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                         >
-                          {plan.isTrial ? 'Start Free Trial' : 'Select Plan'}
+                          {selectedPlan?._id === plan._id ? 'Selected Plan' : 'Continue with Plan'}
                         </button>
                       </div>
                     </motion.div>
@@ -474,8 +491,8 @@ const SellOnDwellmart = () => {
             </motion.div>
           )}
 
-          {/* Step 1: Registration */}
-          {currentStep === 0 && (
+          {/* Step 2: Registration */}
+          {currentStep === 1 && (
             <motion.div
               key="register"
               initial={{ opacity: 0, x: 30 }}
@@ -485,7 +502,14 @@ const SellOnDwellmart = () => {
             >
               <div className="max-w-2xl mx-auto">
                 <div className="flex items-center justify-between mb-6">
-                  <div />
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(0)}
+                    className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    <FiArrowLeft />
+                    Back to Plans
+                  </button>
                   {onboardingEmail && (
                     <span className="text-sm text-primary-600 font-semibold bg-primary-50 px-3 py-1 rounded-full">
                       Verified: {onboardingEmail}
@@ -501,6 +525,13 @@ const SellOnDwellmart = () => {
                     <h2 className="text-2xl font-bold text-gray-800">Register Your Store</h2>
                     <p className="text-gray-500 text-sm mt-1">Fill in your details to create your vendor account</p>
                   </div>
+
+                  {selectedPlan && (
+                    <div className="mb-6 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm text-primary-800">
+                      Selected plan: <strong>{selectedPlan.name}</strong>
+                      {selectedPlan.price > 0 ? ` (${selectedPlan.price} ${selectedPlan.currency || 'AED'})` : ' (Free)'}
+                    </div>
+                  )}
 
                   <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Personal Info */}
@@ -576,21 +607,34 @@ const SellOnDwellmart = () => {
                         </div>
                       </div>
 
-                      <div className="mt-6">
-                        <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                          Trade Licence Document <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
+                      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                            Document Type <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={documentType}
+                            onChange={(e) => setDocumentType(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 text-gray-800 text-sm"
+                          >
+                            <option value="tradeLicense">Trade Licence</option>
+                            <option value="gst">GST</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                            {documentType === 'gst' ? 'GST Document' : 'Trade Licence Document'} <span className="text-red-500">*</span>
+                          </label>
                           <input
                             type="file"
-                            accept=".pdf, .doc, .docx, image/*"
-                            onChange={(e) => setTradeLicense(e.target.files[0])}
+                            accept=".pdf,.doc,.docx,image/*"
+                            onChange={(e) => setRegistrationDocument(e.target.files?.[0] || null)}
                             required
                             className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 text-gray-800 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                           />
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">Accepted formats: PDF, Word, Images (Max 10MB).</p>
                       </div>
+                      <p className="text-xs text-gray-400 mt-2">Upload either your Trade Licence or GST document. Accepted formats: PDF, Word, Images (Max 10MB).</p>
                     </div>
 
                     {/* Address */}
@@ -743,8 +787,89 @@ const SellOnDwellmart = () => {
             </motion.div>
           )}
 
-          {/* Step 3: Thank You */}
+          {/* Step 3: Payment */}
           {currentStep === 2 && (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FiCreditCard className="text-primary-600 text-3xl" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? 'Complete Your Payment' : 'Complete Your Onboarding'}
+                  </h2>
+                  <p className="text-gray-500">
+                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial
+                      ? 'Your registration is saved. Pay now to finish onboarding.'
+                      : 'Your registration is saved. Finish onboarding to submit your application.'}
+                  </p>
+                </div>
+
+                {selectedPlan && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Selected Plan</p>
+                        <h3 className="text-xl font-bold text-gray-800">{selectedPlan.name}</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Duration: {selectedPlan.durationDays} day{selectedPlan.durationDays > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-500">Amount</p>
+                        <p className="text-2xl font-extrabold text-gray-900">
+                          {selectedPlan.price > 0 ? `${selectedPlan.price.toFixed(2)} ${selectedPlan.currency || 'AED'}` : 'FREE'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 flex flex-col gap-3">
+                  {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempSelectedPlan(selectedPlan);
+                        setShowPaymentModal(true);
+                      }}
+                      disabled={isLoading}
+                      className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Choose Payment Method
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => completeOnboarding({ plan: selectedPlan })}
+                      disabled={isLoading || !selectedPlan}
+                      className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Completing...' : 'Complete Onboarding'}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all"
+                  >
+                    Back to Registration
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Thank You */}
+          {currentStep === 3 && (
             <motion.div
               key="thankyou"
               initial={{ opacity: 0, scale: 0.95 }}
