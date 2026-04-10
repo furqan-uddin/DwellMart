@@ -115,10 +115,15 @@ const DesktopHeader = ({ hideSellButton = false }) => {
             className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
             Offers
           </Link>
+          <Link
+            to={isAuthenticated ? "/orders" : "/login"}
+            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
+            Track Order
+          </Link>
           {!hideSellButton && (
             <Link
               to="/sell-on-dwellmart"
-              className="px-4 py-2 bg-primary-600/10 text-primary-400 hover:bg-primary-600 hover:text-white rounded-lg font-medium text-sm lg:text-base border border-primary-500/30 transition-all ml-2">
+              className="ml-2 rounded-lg border border-[#ffc101]/40 bg-[#ffc101]/12 px-4 py-2 text-sm font-medium text-[#ffc101] transition-all hover:bg-[#ffc101] hover:text-black lg:text-base">
               Sell On DwellMart
             </Link>
           )}

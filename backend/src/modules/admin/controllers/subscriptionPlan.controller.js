@@ -5,26 +5,57 @@ import SubscriptionPlan from '../../../models/SubscriptionPlan.model.js';
 import VendorSubscription from '../../../models/VendorSubscription.model.js';
 import {
     buildPlanSlug,
+    normalizePlanInterval,
     normalizePlanFeatures,
     serializePlan,
 } from '../../../services/billing/plan.service.js';
 import { syncStripePriceForPlan } from '../../../services/billing/stripeBilling.service.js';
 import { syncRazorpayPlanForPlan } from '../../../services/billing/razorpayBilling.service.js';
 
+const getGatewayErrorMessage = (error, fallbackMessage) => (
+    error?.error?.description
+    || error?.description
+    || error?.raw?.message
+    || error?.raw?.error?.message
+    || error?.message
+    || fallbackMessage
+);
+
+const resolveAdminPlanInterval = ({ interval, intervalCount, priceInr }) =>
+    normalizePlanInterval({
+        interval,
+        intervalCount,
+        gateway: Number(priceInr || 0) > 0 ? 'razorpay' : 'stripe',
+    });
+
 const syncGatewayReferences = async (plan, { forceResync = false } = {}) => {
     if ((forceResync || !plan.stripe_price_id) && Number(plan.price_usd || 0) > 0) {
-        const priceId = await syncStripePriceForPlan(plan);
-        if (priceId) {
-            plan.stripe_price_id = priceId;
+        try {
+            const priceId = await syncStripePriceForPlan(plan);
+            if (priceId) {
+                plan.stripe_price_id = priceId;
+            }
+        } catch (error) {
+            throw new ApiError(
+                502,
+                `Stripe plan sync failed: ${getGatewayErrorMessage(error, 'Unknown Stripe error.')}`
+            );
         }
     } else if (Number(plan.price_usd || 0) === 0) {
         plan.stripe_price_id = null;
     }
 
     if ((forceResync || !plan.razorpay_plan_id) && Number(plan.price_inr || 0) > 0) {
-        const planId = await syncRazorpayPlanForPlan(plan);
-        if (planId) {
-            plan.razorpay_plan_id = planId;
+        try {
+            const planId = await syncRazorpayPlanForPlan(plan);
+            if (planId) {
+                plan.razorpay_plan_id = planId;
+            }
+        } catch (error) {
+            throw new ApiError(
+                502,
+                `Razorpay plan sync failed: ${getGatewayErrorMessage(error, 'Unknown Razorpay error.')}`
+            );
         }
     } else if (Number(plan.price_inr || 0) === 0) {
         plan.razorpay_plan_id = null;
@@ -54,6 +85,7 @@ export const createPlan = asyncHandler(async (req, res) => {
         price_inr,
         price_usd,
         interval,
+        interval_count,
         description,
         features,
         isMostPopular,
@@ -63,9 +95,11 @@ export const createPlan = asyncHandler(async (req, res) => {
 
     const trimmedName = String(name || '').trim();
     if (!trimmedName) throw new ApiError(400, 'Plan name is required.');
-    if (!['month', 'year'].includes(String(interval || ''))) {
-        throw new ApiError(400, 'Billing interval must be either month or year.');
-    }
+    const planInterval = resolveAdminPlanInterval({
+        interval,
+        intervalCount: interval_count,
+        priceInr: price_inr,
+    });
 
     const slug = buildPlanSlug(trimmedName);
     const existing = await SubscriptionPlan.findOne({ slug });
@@ -76,7 +110,8 @@ export const createPlan = asyncHandler(async (req, res) => {
         slug,
         price_inr: Number(price_inr ?? 0),
         price_usd: Number(price_usd ?? 0),
-        interval,
+        interval: planInterval.interval,
+        interval_count: planInterval.interval_count,
         description: String(description || '').trim(),
         features: normalizePlanFeatures(features),
         isMostPopular: Boolean(isMostPopular),
@@ -99,6 +134,7 @@ export const updatePlan = asyncHandler(async (req, res) => {
         price_inr: plan.price_inr,
         price_usd: plan.price_usd,
         interval: plan.interval,
+        interval_count: plan.interval_count,
         description: plan.description,
     });
 
@@ -107,6 +143,7 @@ export const updatePlan = asyncHandler(async (req, res) => {
         price_inr,
         price_usd,
         interval,
+        interval_count,
         description,
         features,
         isMostPopular,
@@ -125,11 +162,14 @@ export const updatePlan = asyncHandler(async (req, res) => {
     }
     if (price_inr !== undefined) plan.price_inr = Number(price_inr);
     if (price_usd !== undefined) plan.price_usd = Number(price_usd);
-    if (interval !== undefined) {
-        if (!['month', 'year'].includes(String(interval))) {
-            throw new ApiError(400, 'Billing interval must be either month or year.');
-        }
-        plan.interval = interval;
+    if (interval !== undefined || interval_count !== undefined || price_inr !== undefined) {
+        const planInterval = resolveAdminPlanInterval({
+            interval: interval ?? plan.interval,
+            intervalCount: interval_count ?? plan.interval_count,
+            priceInr: price_inr ?? plan.price_inr,
+        });
+        plan.interval = planInterval.interval;
+        plan.interval_count = planInterval.interval_count;
     }
     if (description !== undefined) plan.description = String(description).trim();
     if (features !== undefined) plan.features = normalizePlanFeatures(features);
@@ -142,6 +182,7 @@ export const updatePlan = asyncHandler(async (req, res) => {
         price_inr: plan.price_inr,
         price_usd: plan.price_usd,
         interval: plan.interval,
+        interval_count: plan.interval_count,
         description: plan.description,
     });
 

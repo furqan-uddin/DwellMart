@@ -7,13 +7,28 @@ import api from '../../../shared/utils/api';
 const emptyForm = {
   name: '',
   interval: 'month',
+  interval_count: 1,
   price_inr: '',
   price_usd: '',
   description: '',
-  featuresText: '{\n  "highlights": []\n}',
+  featureHighlights: [''],
   isMostPopular: false,
   isActive: true,
   sortOrder: 0,
+};
+
+const getIntervalLabel = (plan) => {
+  const count = Number.parseInt(plan?.interval_count, 10) || 1;
+  const interval = plan?.interval || 'month';
+  const unit = count === 1 ? interval : `${interval}s`;
+  return count === 1 ? unit : `${count} ${unit}`;
+};
+
+const getFeatureHighlights = (plan) => {
+  if (Array.isArray(plan?.featureHighlights)) return plan.featureHighlights;
+  if (Array.isArray(plan?.features?.highlights)) return plan.features.highlights;
+  if (Array.isArray(plan?.features)) return plan.features;
+  return [];
 };
 
 const SubscriptionPlans = () => {
@@ -48,10 +63,11 @@ const SubscriptionPlans = () => {
     setFormData({
       name: plan.name || '',
       interval: plan.interval || 'month',
+      interval_count: Number(plan.interval_count || 1),
       price_inr: String(plan.pricing?.inr ?? plan.price_inr ?? 0),
       price_usd: String(plan.pricing?.usd ?? plan.price_usd ?? 0),
       description: plan.description || '',
-      featuresText: JSON.stringify(plan.features || { highlights: [] }, null, 2),
+      featureHighlights: getFeatureHighlights(plan).length ? getFeatureHighlights(plan) : [''],
       isMostPopular: Boolean(plan.isMostPopular),
       isActive: plan.isActive !== false,
       sortOrder: Number(plan.sortOrder || 0),
@@ -61,22 +77,18 @@ const SubscriptionPlans = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    let features;
-
-    try {
-      features = JSON.parse(formData.featuresText || '{}');
-    } catch {
-      toast.error('Features must be valid JSON.');
-      return;
-    }
+    const featureHighlights = formData.featureHighlights
+      .map((feature) => String(feature || '').trim())
+      .filter(Boolean);
 
     const payload = {
       name: formData.name,
       interval: formData.interval,
+      interval_count: Number(formData.interval_count || 1),
       price_inr: Number(formData.price_inr || 0),
       price_usd: Number(formData.price_usd || 0),
       description: formData.description,
-      features,
+      features: { highlights: featureHighlights },
       isMostPopular: formData.isMostPopular,
       isActive: formData.isActive,
       sortOrder: Number(formData.sortOrder || 0),
@@ -84,6 +96,15 @@ const SubscriptionPlans = () => {
 
     if (!payload.name.trim()) {
       toast.error('Plan name is required.');
+      return;
+    }
+    if (payload.interval === 'day' && payload.price_inr > 0 && payload.interval_count < 7) {
+      toast.error('Razorpay daily plans must be at least 7 days.');
+      return;
+    }
+    const stripeMaxIntervalCounts = { day: 1095, week: 156, month: 36, year: 3 };
+    if (payload.price_usd > 0 && payload.interval_count > stripeMaxIntervalCounts[payload.interval]) {
+      toast.error('Stripe recurring plans can be at most 3 years.');
       return;
     }
 
@@ -113,6 +134,31 @@ const SubscriptionPlans = () => {
     }
   };
 
+  const updateFeature = (index, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      featureHighlights: prev.featureHighlights.map((feature, featureIndex) =>
+        featureIndex === index ? value : feature
+      ),
+    }));
+  };
+
+  const addFeature = () => {
+    setFormData((prev) => ({
+      ...prev,
+      featureHighlights: [...prev.featureHighlights, ''],
+    }));
+  };
+
+  const removeFeature = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      featureHighlights: prev.featureHighlights.length === 1
+        ? ['']
+        : prev.featureHighlights.filter((_, featureIndex) => featureIndex !== index),
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -139,7 +185,7 @@ const SubscriptionPlans = () => {
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
-                  <p className="text-sm text-slate-500">per {plan.interval}</p>
+                  <p className="text-sm text-slate-500">per {plan.intervalLabel || getIntervalLabel(plan)}</p>
                 </div>
                 {plan.isMostPopular ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase text-amber-700">
@@ -149,7 +195,7 @@ const SubscriptionPlans = () => {
                 ) : null}
               </div>
               <div className="space-y-1">
-                <p className="text-3xl font-black text-slate-900">₹{Number(plan.pricing?.inr ?? 0).toFixed(0)}</p>
+                <p className="text-3xl font-black text-slate-900">Rs. {Number(plan.pricing?.inr ?? 0).toFixed(0)}</p>
                 <p className="text-lg font-bold text-slate-700">${Number(plan.pricing?.usd ?? 0).toFixed(2)}</p>
               </div>
               <p className="mt-3 text-sm text-slate-500">{plan.description || 'No description set.'}</p>
@@ -204,14 +250,37 @@ const SubscriptionPlans = () => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <input value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} placeholder="Plan name" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                   <select value={formData.interval} onChange={(event) => setFormData((prev) => ({ ...prev, interval: event.target.value }))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500">
+                    <option value="day">Days</option>
+                    <option value="week">Weeks</option>
                     <option value="month">Month</option>
-                    <option value="year">Year</option>
+                    <option value="year">Years</option>
                   </select>
+                  <input value={formData.interval_count} onChange={(event) => setFormData((prev) => ({ ...prev, interval_count: event.target.value }))} type="number" min="1" step="1" placeholder="Billing interval number" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                   <input value={formData.price_inr} onChange={(event) => setFormData((prev) => ({ ...prev, price_inr: event.target.value }))} type="number" min="0" step="0.01" placeholder="Price INR" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                   <input value={formData.price_usd} onChange={(event) => setFormData((prev) => ({ ...prev, price_usd: event.target.value }))} type="number" min="0" step="0.01" placeholder="Price USD" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                 </div>
                 <textarea value={formData.description} onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))} rows={2} placeholder="Description" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                <textarea value={formData.featuresText} onChange={(event) => setFormData((prev) => ({ ...prev, featuresText: event.target.value }))} rows={8} placeholder='{"highlights":[]}' className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm outline-none focus:border-teal-500" />
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">Plan features</p>
+                      <p className="text-xs text-slate-400">Add one feature per row.</p>
+                    </div>
+                    <button type="button" onClick={addFeature} className="rounded-xl bg-teal-100 px-3 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-200">
+                      Add feature
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {formData.featureHighlights.map((feature, index) => (
+                      <div key={`feature-${index}`} className="flex gap-2">
+                        <input value={feature} onChange={(event) => updateFeature(index, event.target.value)} placeholder={`Feature ${index + 1}`} className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                        <button type="button" onClick={() => removeFeature(index)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={formData.isMostPopular} onChange={(event) => setFormData((prev) => ({ ...prev, isMostPopular: event.target.checked }))} /> Most popular</label>
                   <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData((prev) => ({ ...prev, isActive: event.target.checked }))} /> Active</label>
@@ -228,4 +297,5 @@ const SubscriptionPlans = () => {
 };
 
 export default SubscriptionPlans;
+
 

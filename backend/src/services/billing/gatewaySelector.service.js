@@ -4,7 +4,8 @@ export const normalizeCountry = (country = '') =>
     String(country || '')
         .trim()
         .toLowerCase()
-        .replace(/\./g, '');
+        .replace(/\./g, '')
+        .replace(/\s+/g, ' ');
 
 export const getGatewayForCountry = (country = '') =>
     INDIA_ALIASES.has(normalizeCountry(country)) ? 'razorpay' : 'stripe';

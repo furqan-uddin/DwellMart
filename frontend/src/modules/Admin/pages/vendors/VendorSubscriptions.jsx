@@ -56,7 +56,7 @@ const VendorSubscriptions = () => {
         <div>
           <p className="font-semibold text-slate-900">{row.plan?.name || 'Unknown plan'}</p>
           <p className="text-xs text-slate-500">
-            ₹{Number(row.plan?.pricing?.inr ?? 0).toFixed(0)} / ${Number(row.plan?.pricing?.usd ?? 0).toFixed(2)} · {row.plan?.interval}
+            Rs. {Number(row.plan?.pricing?.inr ?? 0).toFixed(0)} / ${Number(row.plan?.pricing?.usd ?? 0).toFixed(2)} | {row.plan?.intervalLabel || row.plan?.interval}
           </p>
         </div>
       ),
@@ -80,8 +80,8 @@ const VendorSubscriptions = () => {
       label: 'Current Period',
       render: (_, row) => (
         <div className="text-sm text-slate-600">
-          <div>{row.current_period_start ? new Date(row.current_period_start).toLocaleDateString() : '—'}</div>
-          <div>{row.current_period_end ? new Date(row.current_period_end).toLocaleDateString() : '—'}</div>
+          <div>{row.current_period_start ? new Date(row.current_period_start).toLocaleDateString() : 'N/A'}</div>
+          <div>{row.current_period_end ? new Date(row.current_period_end).toLocaleDateString() : 'N/A'}</div>
         </div>
       ),
     },
@@ -128,7 +128,7 @@ const VendorSubscriptions = () => {
               <card.icon />
             </div>
             <p className="text-sm text-slate-500">{card.label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{isLoading ? '—' : card.value}</p>
+            <p className="mt-1 text-2xl font-black text-slate-900">{isLoading ? 'N/A' : card.value}</p>
           </div>
         ))}
       </div>
@@ -161,4 +161,5 @@ const VendorSubscriptions = () => {
 };
 
 export default VendorSubscriptions;
+
 

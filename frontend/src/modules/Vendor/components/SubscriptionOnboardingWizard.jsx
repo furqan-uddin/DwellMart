@@ -48,8 +48,15 @@ const formatPrice = (plan) => {
   const inr = Number(plan?.pricing?.inr ?? plan?.price_inr ?? 0);
   const usd = Number(plan?.pricing?.usd ?? plan?.price_usd ?? 0);
   if (inr === 0 && usd === 0) return 'Free';
-  return `Rs. ${inr.toFixed(0)} / ${usd.toFixed(2)}`;
+  return `Rs. ${inr.toFixed(0)} / $${usd.toFixed(2)}`;
 };
+
+const getIntervalLabel = (plan) => plan?.intervalLabel || (() => {
+  const count = Number.parseInt(plan?.interval_count, 10) || 1;
+  const interval = plan?.interval || 'month';
+  const unit = count === 1 ? interval : `${interval}s`;
+  return count === 1 ? unit : `${count} ${unit}`;
+})();
 
 const getHighlights = (plan) => {
   if (Array.isArray(plan?.featureHighlights)) return plan.featureHighlights;
@@ -118,7 +125,7 @@ const SubscriptionOnboardingWizard = ({
     setSelectionToken('');
   };
 
-  const syncFromStatus = async (email, availablePlans = plans) => {
+  const syncFromStatus = async (email, availablePlans = plans, { resetPaymentState = false } = {}) => {
     const response = await getVendorOnboardingStatus(email);
     const data = response?.data || {};
     const matchedPlan = data.selectedPlan || availablePlans.find((plan) => plan._id === data.selectedPlanId) || null;
@@ -131,11 +138,13 @@ const SubscriptionOnboardingWizard = ({
     if (data.nextStep === 'choose_plan') {
       persistEmail(email);
       setStep(0);
+      if (resetPaymentState) setPaymentState('idle');
       return false;
     }
     if (data.nextStep === 'complete_payment') {
       persistEmail(email);
       setStep(2);
+      if (resetPaymentState) setPaymentState('idle');
       return false;
     }
     if (data.nextStep === 'awaiting_admin_approval') {
@@ -195,7 +204,7 @@ const SubscriptionOnboardingWizard = ({
         }
 
         if (resumeEmail) {
-          await syncFromStatus(resumeEmail, fetchedPlans);
+          await syncFromStatus(resumeEmail, fetchedPlans, { resetPaymentState: true });
         }
       } catch {
         toast.error('Unable to load vendor onboarding.');
@@ -274,9 +283,12 @@ const SubscriptionOnboardingWizard = ({
       const responseData = response?.data || {};
       const email = String(responseData.email || formData.email || '').trim().toLowerCase();
       persistEmail(email);
+      if (responseData.selectedPlan) {
+        setSelectedPlan(responseData.selectedPlan);
+      }
 
       if (responseData.resume) {
-        await syncFromStatus(email, plans);
+        await syncFromStatus(email, plans, { resetPaymentState: true });
         return;
       }
 
@@ -292,6 +304,10 @@ const SubscriptionOnboardingWizard = ({
   };
 
   const openRazorpayCheckout = async (checkout) => {
+    if (!checkout?.keyId || !checkout?.subscriptionId) {
+      throw new Error('Razorpay checkout is not configured for this subscription.');
+    }
+
     const Razorpay = await loadRazorpayScript();
     const instance = new Razorpay({
       key: checkout.keyId,
@@ -311,12 +327,12 @@ const SubscriptionOnboardingWizard = ({
       },
       modal: {
         ondismiss: () => {
-          if (paymentState !== 'processing') {
-            toast.error('Payment window was closed.');
-          }
+          setPaymentState('idle');
+          toast.error('Payment window was closed.');
         },
       },
     });
+    setPaymentState('checkout_open');
     instance.open();
   };
 
@@ -345,24 +361,22 @@ const SubscriptionOnboardingWizard = ({
       }
 
       if (data.gateway === 'stripe') {
-        if (data.checkout?.clientSecret) {
-          setStripeConfig({
-            clientSecret: data.checkout.clientSecret,
-            publishableKey: data.checkout.publishableKey,
-          });
-          setShowStripe(true);
-        } else {
-          setPaymentState('processing');
-          await pollStatus(paymentEmail);
+        if (!data.checkout?.clientSecret || !data.checkout?.publishableKey) {
+          throw new Error('Stripe checkout is not configured for this subscription.');
         }
+        setStripeConfig({
+          clientSecret: data.checkout.clientSecret,
+          publishableKey: data.checkout.publishableKey,
+        });
+        setShowStripe(true);
         return;
       }
 
       if (data.gateway === 'razorpay') {
-        setPaymentState('processing');
         await openRazorpayCheckout(data.checkout);
       }
-    } catch {
+    } catch (error) {
+      toast.error(error.message || 'Unable to start payment.');
       setPaymentState('failed');
     } finally {
       setIsLoading(false);
@@ -405,7 +419,7 @@ const SubscriptionOnboardingWizard = ({
                     ) : null}
                     <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
                     <p className="mt-3 text-3xl font-black text-slate-900">{formatPrice(plan)}</p>
-                    <p className="mt-1 text-sm text-slate-500">per {plan.interval}</p>
+                    <p className="mt-1 text-sm text-slate-500">per {getIntervalLabel(plan)}</p>
                     <ul className="mt-5 space-y-2">
                       {getHighlights(plan).map((feature) => (
                         <li key={`${plan._id}-${feature}`} className="flex items-start gap-2 text-sm text-slate-600">
@@ -495,14 +509,14 @@ const SubscriptionOnboardingWizard = ({
                   <h2 className="text-2xl font-bold text-slate-900">Complete your subscription</h2>
                   <p className="mt-2 text-sm text-slate-500">Billing becomes active only after webhook confirmation updates MongoDB.</p>
                 </div>
-                {selectedPlan ? <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-center text-slate-700">{selectedPlan.name} · {formatPrice(selectedPlan)} · per {selectedPlan.interval}</div> : null}
+                {selectedPlan ? <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-center text-slate-700">{selectedPlan.name} | {formatPrice(selectedPlan)} | per {getIntervalLabel(selectedPlan)}</div> : null}
                 {paymentState === 'processing' ? <div className="mt-6 rounded-3xl border border-teal-200 bg-teal-50 px-4 py-4 text-sm text-teal-800">Waiting for billing confirmation. This page will keep checking automatically.</div> : null}
                 {paymentState === 'pending' ? <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">Payment is still pending confirmation. Please give the gateway a moment and retry if needed.</div> : null}
                 {paymentState === 'failed' ? <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">Billing could not be confirmed. Please retry the payment step.</div> : null}
                 <div className="mt-6 flex flex-col gap-3">
                   <button type="button" onClick={handlePayment} disabled={isLoading || paymentState === 'processing'} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
                     {isLoading ? <FiLoader className="animate-spin" /> : <FiCreditCard />}
-                    {paymentState === 'processing' ? 'Checking payment status...' : 'Start secure payment'}
+                    {isLoading ? 'Preparing checkout...' : paymentState === 'processing' ? 'Checking payment status...' : paymentState === 'checkout_open' ? 'Payment window open' : 'Start secure payment'}
                   </button>
                   <button type="button" onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-100">Back to registration</button>
                 </div>
@@ -553,4 +567,5 @@ const SubscriptionOnboardingWizard = ({
 };
 
 export default SubscriptionOnboardingWizard;
+
 

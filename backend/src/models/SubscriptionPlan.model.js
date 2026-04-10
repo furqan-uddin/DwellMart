@@ -13,9 +13,15 @@ const subscriptionPlanSchema = new mongoose.Schema(
         price_usd: { type: Number, required: true, min: 0, default: 0 },
         interval: {
             type: String,
-            enum: ['month', 'year'],
+            enum: ['day', 'week', 'month', 'year'],
             required: true,
             default: 'month',
+        },
+        interval_count: {
+            type: Number,
+            required: true,
+            min: 1,
+            default: 1,
         },
         stripe_price_id: { type: String, trim: true, default: null },
         razorpay_plan_id: { type: String, trim: true, default: null },
@@ -54,7 +60,11 @@ subscriptionPlanSchema.virtual('currency').get(function currency() {
 });
 
 subscriptionPlanSchema.virtual('durationDays').get(function durationDays() {
-    return this.interval === 'year' ? 365 : 30;
+    const count = Number(this.interval_count || 1);
+    if (this.interval === 'year') return 365 * count;
+    if (this.interval === 'month') return 30 * count;
+    if (this.interval === 'week') return 7 * count;
+    return count;
 });
 
 subscriptionPlanSchema.virtual('isTrial').get(function isTrial() {

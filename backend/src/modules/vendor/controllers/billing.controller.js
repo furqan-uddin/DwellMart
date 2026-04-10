@@ -32,6 +32,7 @@ import {
 } from '../../../services/billing/subscriptionState.service.js';
 
 const toDateFromUnix = (value) => (value ? new Date(Number(value) * 1000) : null);
+const getWebhookDebugBody = (body) => (Buffer.isBuffer(body) ? body.toString('utf8') : body);
 
 const rememberSubscribedVendor = async (vendor, planId) => {
     if (!vendor) return;
@@ -247,6 +248,9 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
             plan,
             metadata: { flow: 'onboarding' },
         });
+        if (!stripeResult.clientSecret) {
+            throw new ApiError(502, 'Stripe did not return a checkout client secret for this subscription.');
+        }
 
         const subscriptionRecord = await upsertSubscriptionRecord({
             vendorId: vendor._id,
@@ -316,6 +320,10 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
 });
 
 export const handleStripeWebhook = asyncHandler(async (req, res) => {
+    console.log('🔥 Stripe webhook hit');
+    console.log(req.headers);
+    console.log(getWebhookDebugBody(req.body));
+
     const signature = req.headers['stripe-signature'];
     if (!signature) {
         throw new ApiError(400, 'Missing Stripe signature.');
@@ -394,10 +402,14 @@ export const handleStripeWebhook = asyncHandler(async (req, res) => {
             break;
     }
 
-    res.status(200).json({ received: true });
+    return res.status(200).json({ received: true });
 });
 
 export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
+    console.log('🔥 Razorpay webhook hit');
+    console.log(req.headers);
+    console.log(getWebhookDebugBody(req.body));
+
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
         throw new ApiError(400, 'Missing Razorpay signature.');
@@ -488,5 +500,5 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
             break;
     }
 
-    res.status(200).json({ received: true });
+    return res.status(200).json({ received: true });
 });

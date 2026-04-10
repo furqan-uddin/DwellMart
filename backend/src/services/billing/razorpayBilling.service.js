@@ -1,9 +1,17 @@
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import ApiError from '../../utils/ApiError.js';
-import { resolvePlanAmount } from './plan.service.js';
+import { normalizePlanInterval, resolvePlanAmount } from './plan.service.js';
 
 let razorpayClient = null;
+
+const mapPlanIntervalToRazorpayPeriod = (interval = '') => {
+    if (interval === 'day') return 'daily';
+    if (interval === 'week') return 'weekly';
+    if (interval === 'month') return 'monthly';
+    if (interval === 'year') return 'yearly';
+    return interval;
+};
 
 const getRazorpayClient = () => {
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -28,9 +36,14 @@ export const syncRazorpayPlanForPlan = async (plan) => {
     if (Number(plan.price_inr || 0) <= 0) return null;
 
     const razorpay = getRazorpayClient();
+    const planInterval = normalizePlanInterval({
+        interval: plan.interval,
+        intervalCount: plan.interval_count,
+        gateway: 'razorpay',
+    });
     const createdPlan = await razorpay.plans.create({
-        period: plan.interval,
-        interval: 1,
+        period: mapPlanIntervalToRazorpayPeriod(planInterval.interval),
+        interval: planInterval.interval_count,
         item: {
             name: plan.name,
             description: plan.description || undefined,

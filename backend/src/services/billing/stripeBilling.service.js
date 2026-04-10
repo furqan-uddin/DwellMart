@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import ApiError from '../../utils/ApiError.js';
-import { resolvePlanAmount } from './plan.service.js';
+import { normalizePlanInterval, resolvePlanAmount } from './plan.service.js';
 
 let stripeClient = null;
 
@@ -19,11 +19,36 @@ const getStripeClient = () => {
 export const isStripeConfigured = () =>
     Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY && process.env.STRIPE_WEBHOOK_SECRET);
 
+const shouldFallbackToLegacySubscriptionSecret = (error) => {
+    const message = String(error?.message || error?.raw?.message || '').toLowerCase();
+    return (
+        message.includes('billing_mode')
+        || message.includes('confirmation_secret')
+        || message.includes('unknown parameter')
+        || message.includes('cannot expand')
+    );
+};
+
+const resolveStripeClientSecret = (subscription) => {
+    const invoice = subscription?.latest_invoice;
+    return (
+        invoice?.confirmation_secret?.client_secret
+        || invoice?.payment_intent?.client_secret
+        || subscription?.pending_setup_intent?.client_secret
+        || null
+    );
+};
+
 export const syncStripePriceForPlan = async (plan) => {
     if (!process.env.STRIPE_SECRET_KEY) return null;
     if (Number(plan.price_usd || 0) <= 0) return null;
 
     const stripe = getStripeClient();
+    const planInterval = normalizePlanInterval({
+        interval: plan.interval,
+        intervalCount: plan.interval_count,
+        gateway: 'stripe',
+    });
     const product = await stripe.products.create({
         name: plan.name,
         description: plan.description || undefined,
@@ -38,8 +63,8 @@ export const syncStripePriceForPlan = async (plan) => {
         unit_amount: Math.round(resolvePlanAmount(plan, 'stripe') * 100),
         currency: 'usd',
         recurring: {
-            interval: plan.interval,
-            interval_count: 1,
+            interval: planInterval.interval,
+            interval_count: planInterval.interval_count,
         },
         metadata: {
             planId: String(plan._id),
@@ -83,7 +108,7 @@ export const createStripeSubscriptionForPlan = async ({ vendor, plan, metadata =
     const stripe = getStripeClient();
     const customerId = await ensureStripeCustomer(vendor);
 
-    const subscription = await stripe.subscriptions.create({
+    const subscriptionPayload = {
         customer: customerId,
         items: [{ price: plan.stripe_price_id }],
         payment_behavior: 'default_incomplete',
@@ -91,18 +116,38 @@ export const createStripeSubscriptionForPlan = async ({ vendor, plan, metadata =
             save_default_payment_method: 'on_subscription',
         },
         collection_method: 'charge_automatically',
-        expand: ['latest_invoice.payment_intent'],
+        billing_mode: {
+            type: 'flexible',
+        },
+        expand: ['latest_invoice.confirmation_secret', 'pending_setup_intent'],
         metadata: {
             vendorId: String(vendor._id),
             planId: String(plan._id),
             ...metadata,
         },
-    });
+    };
+
+    let subscription;
+    try {
+        subscription = await stripe.subscriptions.create({
+            ...subscriptionPayload,
+            billing_mode: {
+                type: 'flexible',
+            },
+            expand: ['latest_invoice.confirmation_secret', 'pending_setup_intent'],
+        });
+    } catch (error) {
+        if (!shouldFallbackToLegacySubscriptionSecret(error)) throw error;
+        subscription = await stripe.subscriptions.create({
+            ...subscriptionPayload,
+            expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
+        });
+    }
 
     return {
         customerId,
         subscription,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
+        clientSecret: resolveStripeClientSecret(subscription),
         publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     };
 };
@@ -120,17 +165,30 @@ export const updateStripeSubscriptionPlan = async ({ subscriptionId, plan }) => 
         throw new ApiError(400, 'Stripe subscription items could not be resolved.');
     }
 
-    const updated = await stripe.subscriptions.update(subscriptionId, {
+    const updatePayload = {
         items: [{ id: currentItemId, price: plan.stripe_price_id }],
         proration_behavior: 'always_invoice',
         payment_behavior: 'pending_if_incomplete',
         cancel_at_period_end: false,
-        expand: ['latest_invoice.payment_intent'],
-    });
+    };
+
+    let updated;
+    try {
+        updated = await stripe.subscriptions.update(subscriptionId, {
+            ...updatePayload,
+            expand: ['latest_invoice.confirmation_secret', 'pending_setup_intent'],
+        });
+    } catch (error) {
+        if (!shouldFallbackToLegacySubscriptionSecret(error)) throw error;
+        updated = await stripe.subscriptions.update(subscriptionId, {
+            ...updatePayload,
+            expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
+        });
+    }
 
     return {
         subscription: updated,
-        clientSecret: updated.latest_invoice?.payment_intent?.client_secret || null,
+        clientSecret: resolveStripeClientSecret(updated),
         publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     };
 };

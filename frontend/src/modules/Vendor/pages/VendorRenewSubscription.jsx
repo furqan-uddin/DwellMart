@@ -32,8 +32,15 @@ const formatPrice = (plan) => {
   const inr = Number(plan?.pricing?.inr ?? plan?.price_inr ?? 0);
   const usd = Number(plan?.pricing?.usd ?? plan?.price_usd ?? 0);
   if (inr === 0 && usd === 0) return 'Free';
-  return `Rs. ${inr.toFixed(0)} / ${usd.toFixed(2)}`;
+  return `Rs. ${inr.toFixed(0)} / $${usd.toFixed(2)}`;
 };
+
+const getIntervalLabel = (plan) => plan?.intervalLabel || (() => {
+  const count = Number.parseInt(plan?.interval_count, 10) || 1;
+  const interval = plan?.interval || 'month';
+  const unit = count === 1 ? interval : `${interval}s`;
+  return count === 1 ? unit : `${count} ${unit}`;
+})();
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -174,7 +181,7 @@ const VendorRenewSubscription = () => {
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div>
                       <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
-                      <p className="mt-1 text-sm text-slate-500">per {plan.interval}</p>
+                      <p className="mt-1 text-sm text-slate-500">per {getIntervalLabel(plan)}</p>
                     </div>
                     {selectedPlanId === plan._id ? (
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white">
@@ -234,4 +241,5 @@ const VendorRenewSubscription = () => {
 };
 
 export default VendorRenewSubscription;
+
 

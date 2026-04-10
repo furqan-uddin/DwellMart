@@ -20,9 +20,28 @@ const PendingApprovals = () => {
     type: null, // 'approve', 'reject'
     vendorId: null,
     vendorName: null,
-    tradeLicenseUrl: null,
+    documentLabel: null,
+    documentUrl: null,
   });
   const [rejectReason, setRejectReason] = useState("");
+
+  const getRegistrationDocument = (vendor) => {
+    if (vendor?.documents?.tradeLicense?.url) {
+      return {
+        label: "Trade Licence",
+        url: vendor.documents.tradeLicense.url,
+      };
+    }
+
+    if (vendor?.documents?.gst) {
+      return {
+        label: "GST Document",
+        url: vendor.documents.gst,
+      };
+    }
+
+    return null;
+  };
 
   const pendingVendors = useMemo(() => {
     let filtered = vendors.filter((v) => v.status === "pending");
@@ -112,12 +131,14 @@ const PendingApprovals = () => {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              const document = getRegistrationDocument(row);
               setActionModal({
                 isOpen: true,
                 type: "approve",
                 vendorId: row.id,
                 vendorName: row.storeName || row.name,
-                tradeLicenseUrl: row.documents?.tradeLicense?.url,
+                documentLabel: document?.label || null,
+                documentUrl: document?.url || null,
               });
             }}
             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -127,12 +148,14 @@ const PendingApprovals = () => {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              const document = getRegistrationDocument(row);
               setActionModal({
                 isOpen: true,
                 type: "reject",
                 vendorId: row.id,
                 vendorName: row.storeName || row.name,
-                tradeLicenseUrl: row.documents?.tradeLicense?.url,
+                documentLabel: document?.label || null,
+                documentUrl: document?.url || null,
               });
             }}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -153,6 +176,8 @@ const PendingApprovals = () => {
         type: null,
         vendorId: null,
         vendorName: null,
+        documentLabel: null,
+        documentUrl: null,
       });
     } else {
       toast.error("Failed to approve vendor");
@@ -172,6 +197,8 @@ const PendingApprovals = () => {
         type: null,
         vendorId: null,
         vendorName: null,
+        documentLabel: null,
+        documentUrl: null,
       });
       setRejectReason("");
     } else {
@@ -181,11 +208,11 @@ const PendingApprovals = () => {
 
   const getModalContent = () => {
     const renderDocumentLink = () => {
-      if (!actionModal.tradeLicenseUrl) return null;
-      const url = actionModal.tradeLicenseUrl.startsWith('http') ? actionModal.tradeLicenseUrl : `http://localhost:5000${actionModal.tradeLicenseUrl}`;
+      if (!actionModal.documentUrl) return null;
+      const url = actionModal.documentUrl.startsWith('http') ? actionModal.documentUrl : `http://localhost:5000${actionModal.documentUrl}`;
       return (
         <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
-          <span className="text-sm font-semibold text-gray-800">Trade Licence Provided</span>
+          <span className="text-sm font-semibold text-gray-800">{actionModal.documentLabel || "Document"} Provided</span>
           <a href={url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-primary-600 font-medium hover:bg-primary-50 transition-colors shadow-sm">View Document</a>
         </div>
       );

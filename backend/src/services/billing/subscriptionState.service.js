@@ -3,7 +3,7 @@ import Payment from '../../models/Payment.model.js';
 import SubscriptionPlan from '../../models/SubscriptionPlan.model.js';
 import Vendor from '../../models/Vendor.model.js';
 import VendorSubscription from '../../models/VendorSubscription.model.js';
-import { serializePlan } from './plan.service.js';
+import { addPlanIntervalToDate, serializePlan } from './plan.service.js';
 
 const STATUS_PRIORITY = {
     active: 4,
@@ -146,12 +146,7 @@ export const upsertPaymentRecord = async ({
 
 export const activateInternalSubscription = async ({ vendor, plan, gateway }) => {
     const now = new Date();
-    const currentPeriodEnd = new Date(now);
-    if (plan.interval === 'year') {
-        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
-    } else {
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
-    }
+    const currentPeriodEnd = addPlanIntervalToDate(now, plan);
 
     const subscription = await upsertSubscriptionRecord({
         vendorId: vendor._id,
