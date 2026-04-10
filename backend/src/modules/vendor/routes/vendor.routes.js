@@ -20,6 +20,8 @@ import { authLimiter } from '../../../middlewares/rateLimiter.js';
 import { validate } from '../../../middlewares/validate.js';
 import {
     registerSchema,
+    completeOnboardingSchema,
+    onboardingStatusSchema,
     loginSchema,
     verifyOtpSchema,
     resendOtpSchema,
@@ -62,6 +64,8 @@ router.post(
     validate(registerSchema),
     authController.register
 );
+router.post('/auth/complete-onboarding', validate(completeOnboardingSchema), authController.completeOnboarding);
+router.post('/auth/onboarding-status', validate(onboardingStatusSchema), authController.getOnboardingStatus);
 router.post('/auth/verify-otp', validate(verifyOtpSchema), authController.verifyOTP);
 router.post('/auth/resend-otp', validate(resendOtpSchema), authController.resendOTP);
 router.post('/auth/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);

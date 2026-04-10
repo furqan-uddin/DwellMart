@@ -24,6 +24,9 @@ export const getPublicSubscriptionPlans = () => api.get('/subscription-plans');
 export const verifyVendorOTP = (email, otp) =>
     api.post('/vendor/auth/verify-otp', { email, otp });
 
+export const getVendorOnboardingStatus = (email) =>
+    api.post('/vendor/auth/onboarding-status', { email });
+
 /**
  * Resend OTP to vendor email (vendor must still be unverified)
  * @param {string} email

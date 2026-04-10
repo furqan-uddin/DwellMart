@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiCheck,
@@ -24,12 +24,15 @@ import DesktopHeader from '../components/Layout/DesktopHeader';
 import MobileHeader from '../components/Layout/MobileHeader';
 import Footer from '../components/Layout/Footer';
 
-const STEPS = ['Plans', 'Registration', 'Thank You'];
+const STEPS = ['Registration', 'Plans', 'Thank You'];
+const ONBOARDING_STORAGE_KEY = 'vendor-onboarding-email:/sell-on-dwellmart';
 
 const SellOnDwellmart = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [plans, setPlans] = useState([]);
+  const [onboardingEmail, setOnboardingEmail] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [termsContent, setTermsContent] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -61,6 +64,83 @@ const SellOnDwellmart = () => {
     },
   });
 
+  const completeOnboarding = async ({
+    plan,
+    method = null,
+    razorpayPayload = null,
+    stripePayload = null,
+  }) => {
+    const email = onboardingEmail || sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || '';
+    if (!email) {
+      toast.error('Please verify your email first.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post('/vendor/auth/complete-onboarding', {
+        email,
+        selectedPlanId: plan._id,
+        payment_method: method,
+        razorpay_order_id: razorpayPayload?.razorpay_order_id || '',
+        razorpay_payment_id: razorpayPayload?.razorpay_payment_id || '',
+        razorpay_signature: razorpayPayload?.razorpay_signature || '',
+        stripe_session_id: stripePayload?.stripe_session_id || '',
+      });
+      setSelectedPlan(plan);
+      setPaymentMethod(method);
+      setRazorpayData(razorpayPayload);
+      setStripeData(stripePayload);
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      setOnboardingEmail('');
+      toast.success('Onboarding completed! Please await admin approval.');
+      setCurrentStep(2);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resumeOnboarding = async (email) => {
+    if (!email) return;
+    const response = await api.post('/vendor/auth/onboarding-status', { email });
+    const data = response?.data || {};
+
+    if (data.nextStep === 'verify_email') {
+      navigate('/vendor/verification', {
+        replace: true,
+        state: { email, returnTo: '/sell-on-dwellmart' },
+      });
+      return;
+    }
+
+    if (data.nextStep === 'choose_plan') {
+      sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
+      setOnboardingEmail(email);
+      setCurrentStep(1);
+      toast.success('Resume your onboarding by choosing a subscription plan.');
+      return;
+    }
+
+    if (data.nextStep === 'awaiting_admin_approval') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.success('Your application is already complete and awaiting admin approval.');
+      navigate('/vendor/login', { replace: true });
+      return;
+    }
+
+    if (data.nextStep === 'approved') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.success('Your vendor account is already active. Please login.');
+      navigate('/vendor/login', { replace: true });
+      return;
+    }
+
+    if (data.nextStep === 'rejected' || data.nextStep === 'suspended') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.error('This vendor account cannot continue onboarding. Please contact support.');
+    }
+  };
+
   // Fetch plans and terms
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +152,12 @@ const SellOnDwellmart = () => {
         const fetchedPlans = plansRes?.data || [];
         setPlans(fetchedPlans);
         setTermsContent(termsRes?.data?.content || '');
+        const savedEmail = sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || '';
+        const resumeEmail = location.state?.resumeEmail || savedEmail;
+        if (resumeEmail) {
+          setOnboardingEmail(resumeEmail);
+          setCurrentStep(1);
+        }
 
         // Handle Stripe Success Redirect
         const queryParams = new URLSearchParams(window.location.search);
@@ -79,26 +165,28 @@ const SellOnDwellmart = () => {
           const sessionId = queryParams.get('session_id');
           const planId = queryParams.get('plan_id');
           const plan = fetchedPlans.find(p => p._id === planId);
-          if (plan) {
-            setStripeData({ stripe_session_id: sessionId });
-            setPaymentMethod('stripe');
-            setSelectedPlan(plan);
-            setCurrentStep(1);
-            toast.success('Payment successful! Now complete your registration.');
-            
-            // Cleanup URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+          if (plan && savedEmail) {
+            await completeOnboarding({
+              plan,
+              method: 'stripe',
+              stripePayload: { stripe_session_id: sessionId },
+            });
           }
+          
+          // Cleanup URL
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else if (queryParams.get('canceled') === 'true') {
           toast.error('Payment was canceled.');
           window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (resumeEmail) {
+          await resumeOnboarding(resumeEmail);
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);
       }
     };
     fetchData();
-  }, []);
+  }, [location.state, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -118,9 +206,7 @@ const SellOnDwellmart = () => {
       setTempSelectedPlan(plan);
       setShowPaymentModal(true);
     } else {
-      setSelectedPlan(plan);
-      setPaymentMethod(null);
-      setCurrentStep(1);
+      completeOnboarding({ plan });
     }
   };
 
@@ -138,15 +224,17 @@ const SellOnDwellmart = () => {
         name: "DwellMart",
         description: `Subscription: ${plan.name}`,
         order_id: orderId,
-        handler: function (response) {
-          setRazorpayData({
+        handler: async function (response) {
+          const paymentPayload = {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature
+          };
+          await completeOnboarding({
+            plan,
+            method: 'razorpay',
+            razorpayPayload: paymentPayload,
           });
-          setPaymentMethod('razorpay');
-          setSelectedPlan(plan);
-          setCurrentStep(1);
         },
         prefill: {
           name: formData.name,
@@ -222,24 +310,24 @@ const SellOnDwellmart = () => {
       submitData.append('storeName', formData.storeName.trim());
       submitData.append('storeDescription', formData.storeDescription.trim());
       submitData.append('address', JSON.stringify(formData.address));
-      submitData.append('selectedPlanId', selectedPlan._id);
       submitData.append('agreedToTerms', true);
       submitData.append('tradeLicense', tradeLicense);
-      submitData.append('payment_method', paymentMethod);
 
-      if (paymentMethod === 'razorpay' && razorpayData) {
-        submitData.append('razorpay_order_id', razorpayData.razorpay_order_id);
-        submitData.append('razorpay_payment_id', razorpayData.razorpay_payment_id);
-        submitData.append('razorpay_signature', razorpayData.razorpay_signature);
-      } else if (paymentMethod === 'stripe' && stripeData) {
-        submitData.append('stripe_session_id', stripeData.stripe_session_id);
-      }
-
-      await api.post('/vendor/auth/register', submitData, {
+      const response = await api.post('/vendor/auth/register', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      toast.success('Registration successful! Please verify your email.');
-      setCurrentStep(2);
+      const responseData = response?.data || {};
+      const email = (responseData.email || formData.email).trim().toLowerCase();
+      if (responseData.resume) {
+        await resumeOnboarding(email);
+        return;
+      }
+      navigate('/vendor/verification', {
+        state: {
+          email,
+          returnTo: '/sell-on-dwellmart',
+        },
+      });
     } catch (error) {
       // Error toast is handled by api interceptor
     } finally {
@@ -269,7 +357,7 @@ const SellOnDwellmart = () => {
             transition={{ delay: 0.1 }}
             className="text-gray-300 text-lg max-w-2xl mx-auto"
           >
-            Join our marketplace and reach millions of customers. Choose a plan that fits your business.
+            Join our marketplace and reach millions of customers. Register first, then pick the plan that fits your business.
           </motion.p>
         </div>
       </section>
@@ -311,8 +399,8 @@ const SellOnDwellmart = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* Step 1: Plans */}
-          {currentStep === 0 && (
+          {/* Step 2: Plans */}
+          {currentStep === 1 && (
             <motion.div
               key="plans"
               initial={{ opacity: 0, x: 30 }}
@@ -386,8 +474,8 @@ const SellOnDwellmart = () => {
             </motion.div>
           )}
 
-          {/* Step 2: Registration */}
-          {currentStep === 1 && (
+          {/* Step 1: Registration */}
+          {currentStep === 0 && (
             <motion.div
               key="register"
               initial={{ opacity: 0, x: 30 }}
@@ -397,15 +485,10 @@ const SellOnDwellmart = () => {
             >
               <div className="max-w-2xl mx-auto">
                 <div className="flex items-center justify-between mb-6">
-                  <button
-                    onClick={() => setCurrentStep(0)}
-                    className="flex items-center gap-1 text-gray-500 hover:text-gray-800 text-sm font-medium"
-                  >
-                    <FiArrowLeft /> Back to Plans
-                  </button>
-                  {selectedPlan && (
+                  <div />
+                  {onboardingEmail && (
                     <span className="text-sm text-primary-600 font-semibold bg-primary-50 px-3 py-1 rounded-full">
-                      {selectedPlan.name}
+                      Verified: {onboardingEmail}
                     </span>
                   )}
                 </div>
@@ -416,7 +499,7 @@ const SellOnDwellmart = () => {
                       <FiShoppingBag className="text-primary-600 text-xl" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800">Register Your Store</h2>
-                    <p className="text-gray-500 text-sm mt-1">Fill in your details to start selling</p>
+                    <p className="text-gray-500 text-sm mt-1">Fill in your details to create your vendor account</p>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-5">
@@ -627,17 +710,6 @@ const SellOnDwellmart = () => {
                       </div>
                     </div>
 
-                    {/* Info */}
-                    {selectedPlan && selectedPlan.price > 0 && (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                        <p className="text-sm text-emerald-800">
-                          <strong>Payment Verified:</strong> {paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'} payment of{' '}
-                          <strong>{selectedPlan.price} {selectedPlan.currency || 'AED'}</strong> has been received. 
-                          Complete this form to finish registration.
-                        </p>
-                      </div>
-                    )}
-
                     {/* Submit */}
                     <button
                       type="submit"
@@ -648,7 +720,7 @@ const SellOnDwellmart = () => {
                         'Registering...'
                       ) : (
                         <>
-                          Register & Continue <FiArrowRight />
+                          Register & Verify Email <FiArrowRight />
                         </>
                       )}
                     </button>
@@ -673,22 +745,16 @@ const SellOnDwellmart = () => {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h2>
                 <p className="text-gray-500 mb-6">
-                  We've sent a verification OTP to your email. Please verify your email and await admin approval.
+                  Your account and plan selection are complete. Our team will review your application after verification and payment confirmation.
                 </p>
-                {selectedPlan && selectedPlan.price > 0 && (
+                {selectedPlan && (
                   <p className="text-sm text-gray-500 mb-6 bg-gray-50 rounded-lg p-3">
-                    Your <strong>{selectedPlan.name}</strong> subscription payment will be confirmed by our admin team.
+                    You selected the <strong>{selectedPlan.name}</strong> plan.
                   </p>
                 )}
                 <button
-                  onClick={() => navigate('/vendor/verification', { state: { email: formData.email } })}
-                  className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all"
-                >
-                  Verify Email
-                </button>
-                <button
                   onClick={() => navigate('/vendor/login')}
-                  className="w-full mt-3 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all"
+                  className="w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all"
                 >
                   Go to Vendor Login
                 </button>

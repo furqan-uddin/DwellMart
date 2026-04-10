@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiArrowLeft,
@@ -21,12 +21,15 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
 
-const STEPS = ['Plans', 'Registration', 'Thank You'];
+const STEPS = ['Registration', 'Plans', 'Thank You'];
+const ONBOARDING_STORAGE_KEY = 'vendor-onboarding-email:/vendor/register';
 
 const VendorRegister = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [plans, setPlans] = useState([]);
+  const [onboardingEmail, setOnboardingEmail] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [termsContent, setTermsContent] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -58,6 +61,83 @@ const VendorRegister = () => {
     },
   });
 
+  const completeOnboarding = async ({
+    plan,
+    method = null,
+    razorpayPayload = null,
+    stripePayload = null,
+  }) => {
+    const email = onboardingEmail || sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || '';
+    if (!email) {
+      toast.error('Please verify your email first.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post('/vendor/auth/complete-onboarding', {
+        email,
+        selectedPlanId: plan._id,
+        payment_method: method,
+        razorpay_order_id: razorpayPayload?.razorpay_order_id || '',
+        razorpay_payment_id: razorpayPayload?.razorpay_payment_id || '',
+        razorpay_signature: razorpayPayload?.razorpay_signature || '',
+        stripe_session_id: stripePayload?.stripe_session_id || '',
+      });
+      setSelectedPlan(plan);
+      setPaymentMethod(method);
+      setRazorpayData(razorpayPayload);
+      setStripeData(stripePayload);
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      setOnboardingEmail('');
+      toast.success('Onboarding completed! Please await admin approval.');
+      setCurrentStep(2);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resumeOnboarding = async (email) => {
+    if (!email) return;
+    const response = await api.post('/vendor/auth/onboarding-status', { email });
+    const data = response?.data || {};
+
+    if (data.nextStep === 'verify_email') {
+      navigate('/vendor/verification', {
+        replace: true,
+        state: { email, returnTo: '/vendor/register' },
+      });
+      return;
+    }
+
+    if (data.nextStep === 'choose_plan') {
+      sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
+      setOnboardingEmail(email);
+      setCurrentStep(1);
+      toast.success('Resume your onboarding by choosing a subscription plan.');
+      return;
+    }
+
+    if (data.nextStep === 'awaiting_admin_approval') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.success('Your application is already complete and awaiting admin approval.');
+      navigate('/vendor/login', { replace: true });
+      return;
+    }
+
+    if (data.nextStep === 'approved') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.success('Your vendor account is already active. Please login.');
+      navigate('/vendor/login', { replace: true });
+      return;
+    }
+
+    if (data.nextStep === 'rejected' || data.nextStep === 'suspended') {
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      toast.error('This vendor account cannot continue onboarding. Please contact support.');
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -68,30 +148,38 @@ const VendorRegister = () => {
         const fetchedPlans = plansRes?.data || [];
         setPlans(fetchedPlans);
         setTermsContent(termsRes?.data?.content || '');
+        const savedEmail = sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || '';
+        const resumeEmail = location.state?.resumeEmail || savedEmail;
+        if (resumeEmail) {
+          setOnboardingEmail(resumeEmail);
+          setCurrentStep(1);
+        }
 
         const queryParams = new URLSearchParams(window.location.search);
         if (queryParams.get('success') === 'true' && queryParams.get('session_id')) {
           const sessionId = queryParams.get('session_id');
           const planId = queryParams.get('plan_id');
           const plan = fetchedPlans.find((item) => item._id === planId);
-          if (plan) {
-            setStripeData({ stripe_session_id: sessionId });
-            setPaymentMethod('stripe');
-            setSelectedPlan(plan);
-            setCurrentStep(1);
-            toast.success('Payment successful! Now complete your registration.');
+          if (plan && savedEmail) {
+            await completeOnboarding({
+              plan,
+              method: 'stripe',
+              stripePayload: { stripe_session_id: sessionId },
+            });
           }
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (queryParams.get('canceled') === 'true') {
           toast.error('Payment was canceled.');
           window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (resumeEmail) {
+          await resumeOnboarding(resumeEmail);
         }
       } catch (error) {
         console.error('Failed to fetch vendor registration data:', error);
       }
     };
     fetchData();
-  }, []);
+  }, [location.state, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -112,11 +200,7 @@ const VendorRegister = () => {
       setShowPaymentModal(true);
       return;
     }
-    setSelectedPlan(plan);
-    setPaymentMethod(null);
-    setRazorpayData(null);
-    setStripeData(null);
-    setCurrentStep(1);
+    completeOnboarding({ plan });
   };
 
   const handleRazorpay = async () => {
@@ -132,15 +216,17 @@ const VendorRegister = () => {
         name: 'DwellMart',
         description: `Subscription: ${plan.name}`,
         order_id: orderId,
-        handler: (responseData) => {
-          setRazorpayData({
+        handler: async (responseData) => {
+          const paymentPayload = {
             razorpay_order_id: responseData.razorpay_order_id,
             razorpay_payment_id: responseData.razorpay_payment_id,
             razorpay_signature: responseData.razorpay_signature,
+          };
+          await completeOnboarding({
+            plan,
+            method: 'razorpay',
+            razorpayPayload: paymentPayload,
           });
-          setPaymentMethod('razorpay');
-          setSelectedPlan(plan);
-          setCurrentStep(1);
         },
         prefill: {
           name: formData.name,
@@ -186,10 +272,6 @@ const VendorRegister = () => {
       toast.error('Please fill in all required fields.');
       return;
     }
-    if (!selectedPlan?._id) {
-      toast.error('Please select a subscription plan.');
-      return;
-    }
     if (!tradeLicense) {
       toast.error('Trade Licence document is required.');
       return;
@@ -217,24 +299,24 @@ const VendorRegister = () => {
       submitData.append('storeName', formData.storeName.trim());
       submitData.append('storeDescription', formData.storeDescription.trim());
       submitData.append('address', JSON.stringify(formData.address));
-      submitData.append('selectedPlanId', selectedPlan._id);
       submitData.append('agreedToTerms', true);
       submitData.append('tradeLicense', tradeLicense);
-      submitData.append('payment_method', paymentMethod);
 
-      if (paymentMethod === 'razorpay' && razorpayData) {
-        submitData.append('razorpay_order_id', razorpayData.razorpay_order_id);
-        submitData.append('razorpay_payment_id', razorpayData.razorpay_payment_id);
-        submitData.append('razorpay_signature', razorpayData.razorpay_signature);
-      } else if (paymentMethod === 'stripe' && stripeData) {
-        submitData.append('stripe_session_id', stripeData.stripe_session_id);
-      }
-
-      await api.post('/vendor/auth/register', submitData, {
+      const response = await api.post('/vendor/auth/register', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast.success('Registration successful! Please verify your email.');
-      setCurrentStep(2);
+      const responseData = response?.data || {};
+      const email = (responseData.email || formData.email).trim().toLowerCase();
+      if (responseData.resume) {
+        await resumeOnboarding(email);
+        return;
+      }
+      navigate('/vendor/verification', {
+        state: {
+          email,
+          returnTo: '/vendor/register',
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -254,7 +336,7 @@ const VendorRegister = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-white md:text-4xl">Register As Vendor</h1>
           <p className="mt-2 max-w-2xl text-sm text-white/70">
-            Choose a plan, complete payment if needed, and submit your store registration for review.
+            Create your vendor account first, then choose a subscription plan to finish onboarding.
           </p>
         </div>
 
@@ -289,7 +371,7 @@ const VendorRegister = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {currentStep === 0 && (
+          {currentStep === 1 && (
             <motion.div
               key="plans"
               initial={{ opacity: 0, x: 20 }}
@@ -364,7 +446,7 @@ const VendorRegister = () => {
             </motion.div>
           )}
 
-          {currentStep === 1 && (
+          {currentStep === 0 && (
             <motion.div
               key="register"
               initial={{ opacity: 0, x: 20 }}
@@ -373,17 +455,10 @@ const VendorRegister = () => {
               className="mx-auto max-w-3xl"
             >
               <div className="mb-6 flex items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(0)}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-white/75 hover:text-white"
-                >
-                  <FiArrowLeft />
-                  Back to Plans
-                </button>
-                {selectedPlan && (
+                <div />
+                {onboardingEmail && (
                   <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-emerald-200">
-                    {selectedPlan.name}
+                    Verified: {onboardingEmail}
                   </span>
                 )}
               </div>
@@ -604,11 +679,7 @@ const VendorRegister = () => {
 
                   {selectedPlan && selectedPlan.price > 0 && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                      <strong>Payment Verified:</strong> {paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'} payment of{' '}
-                      <strong>
-                        {selectedPlan.price} {selectedPlan.currency || 'AED'}
-                      </strong>{' '}
-                      has been received.
+                      Your email is verified. Choose a plan next to complete your vendor onboarding.
                     </div>
                   )}
 
@@ -619,7 +690,7 @@ const VendorRegister = () => {
                   >
                     {isLoading ? 'Registering...' : (
                       <>
-                        Register & Continue <FiArrowRight />
+                        Register & Verify Email <FiArrowRight />
                       </>
                     )}
                   </button>
@@ -641,19 +712,17 @@ const VendorRegister = () => {
                 </div>
                 <h2 className="text-2xl font-bold">Registration Successful!</h2>
                 <p className="mt-2 text-gray-500">
-                  We&apos;ve sent a verification OTP to your email. Please verify your email and await admin approval.
+                  Your account and plan selection are complete. Our team will review your application after verification and payment confirmation.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/vendor/verification', { state: { email: formData.email } })}
-                  className="mt-6 w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700"
-                >
-                  Verify Email
-                </button>
+                {selectedPlan && (
+                  <p className="mt-5 rounded-xl bg-gray-50 p-3 text-sm text-gray-500">
+                    You selected the <strong>{selectedPlan.name}</strong> plan.
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => navigate('/vendor/login')}
-                  className="mt-3 w-full rounded-xl bg-gray-100 py-3 font-medium text-gray-700 hover:bg-gray-200"
+                  className="mt-6 w-full rounded-xl bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700"
                 >
                   Go to Vendor Login
                 </button>

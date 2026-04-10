@@ -64,6 +64,13 @@ const vendorSchema = new mongoose.Schema(
         refreshTokenExpiresAt: { type: Date, select: false },
         agreedToTerms: { type: Boolean, default: false },
         agreedToTermsAt: { type: Date },
+        onboardingStatus: {
+            type: String,
+            enum: ['registered', 'email_verified', 'plan_completed'],
+            default: 'registered',
+        },
+        onboardingStartedAt: { type: Date, default: Date.now },
+        onboardingCompletedAt: { type: Date },
         selectedPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
         joinDate: { type: Date, default: Date.now },
     },

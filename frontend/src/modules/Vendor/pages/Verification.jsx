@@ -14,6 +14,7 @@ const VendorVerification = () => {
   const inputRefs = useRef([]);
 
   const email = location.state?.email || '';
+  const returnTo = location.state?.returnTo || '';
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Focus first input on mount
@@ -66,8 +67,14 @@ const VendorVerification = () => {
     setIsLoading(true);
     try {
       await verifyVendorOTP(email, verificationCode);
-      toast.success('Email verified! Your account is pending admin approval.');
-      navigate('/vendor/login');
+      if (returnTo) {
+        sessionStorage.setItem(`vendor-onboarding-email:${returnTo}`, email);
+        toast.success('Email verified! Continue with your plan selection.');
+        navigate(returnTo, { replace: true });
+      } else {
+        toast.success('Email verified! Your account is pending admin approval.');
+        navigate('/vendor/login');
+      }
     } catch {
       // Error toast is shown by api.js interceptor
     } finally {

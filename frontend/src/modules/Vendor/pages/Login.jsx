@@ -46,7 +46,36 @@ const VendorLogin = () => {
       const from = location.state?.from?.pathname || '/vendor/dashboard';
       navigate(from, { replace: true });
     } catch (error) {
-      toast.error(error.message || 'Invalid credentials');
+      const email = formData.email.trim().toLowerCase();
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Invalid credentials';
+
+      if (message.includes('Please verify your email first')) {
+        toast.error(message);
+        navigate('/vendor/verification', {
+          replace: true,
+          state: {
+            email,
+            returnTo: '/vendor/register',
+          },
+        });
+        return;
+      }
+
+      if (message.includes('Please complete your vendor onboarding by choosing a subscription plan')) {
+        toast.error(message);
+        navigate('/vendor/register', {
+          replace: true,
+          state: {
+            resumeEmail: email,
+          },
+        });
+        return;
+      }
+
+      toast.error(message);
     }
   };
 

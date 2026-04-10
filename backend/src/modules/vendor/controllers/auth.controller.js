@@ -22,30 +22,58 @@ import { uploadLocalFileToCloudinaryAndCleanup } from '../../../services/upload.
 import { verifySubscriptionPayment } from './razorpay.controller.js';
 import { verifyStripePayment } from './stripe.controller.js';
 
-// POST /api/vendor/auth/register
-export const register = asyncHandler(async (req, res) => {
-    const { 
-        name, email, password, phone, storeName, storeDescription, 
-        address, selectedPlanId, agreedToTerms,
-        razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        stripe_session_id, payment_method
-    } = req.body;
-
-    // Validate T&C agreement
-    if (!agreedToTerms) {
-        throw new ApiError(400, 'You must agree to the Terms & Conditions to register.');
+const getVendorOnboardingState = async (vendor) => {
+    if (!vendor) {
+        return { onboardingStatus: 'not_found', nextStep: 'register' };
     }
 
-    // Validate plan selection
-    if (!selectedPlanId) {
-        throw new ApiError(400, 'Please select a subscription plan.');
-    }
-    const plan = await SubscriptionPlan.findById(selectedPlanId);
-    if (!plan || !plan.isActive) {
-        throw new ApiError(400, 'Selected subscription plan is not available.');
+    if (!vendor.isVerified) {
+        return { onboardingStatus: 'registered', nextStep: 'verify_email' };
     }
 
-    // Payment Validation for Paid Plans (not trial or free)
+    const completedSubscription = await VendorSubscription.findOne({
+        vendorId: vendor._id,
+        paymentStatus: 'completed',
+    })
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const effectiveOnboardingStatus =
+        vendor.onboardingStatus ||
+        (completedSubscription || vendor.selectedPlanId ? 'plan_completed' : 'email_verified');
+
+    if (effectiveOnboardingStatus === 'registered') {
+        return { onboardingStatus: 'registered', nextStep: 'verify_email' };
+    }
+
+    if (effectiveOnboardingStatus === 'email_verified') {
+        return { onboardingStatus: 'email_verified', nextStep: 'choose_plan' };
+    }
+
+    if (vendor.status === 'approved') {
+        return { onboardingStatus: 'plan_completed', nextStep: 'approved' };
+    }
+
+    if (vendor.status === 'rejected') {
+        return { onboardingStatus: 'plan_completed', nextStep: 'rejected' };
+    }
+
+    if (vendor.status === 'suspended') {
+        return { onboardingStatus: 'plan_completed', nextStep: 'suspended' };
+    }
+
+    return { onboardingStatus: 'plan_completed', nextStep: 'awaiting_admin_approval' };
+};
+
+const createVendorOnboardingSubscription = async ({
+    vendor,
+    plan,
+    payment_method,
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    stripe_session_id,
+}) => {
     if (plan.price > 0 && !plan.isTrial) {
         if (payment_method === 'razorpay') {
             if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -64,9 +92,98 @@ export const register = asyncHandler(async (req, res) => {
         }
     }
 
+    const existingActiveSubscription = await VendorSubscription.findOne({
+        vendorId: vendor._id,
+        status: 'active',
+        paymentStatus: 'completed',
+        endDate: { $gt: new Date() },
+    });
+    if (existingActiveSubscription) {
+        return existingActiveSubscription;
+    }
+
+    const now = new Date();
+    const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    const isPaidPlan = plan.price > 0 && !plan.isTrial;
+
+    vendor.selectedPlanId = plan._id;
+    vendor.onboardingStatus = 'plan_completed';
+    vendor.onboardingCompletedAt = new Date();
+    await vendor.save();
+
+    const subscription = await VendorSubscription.create({
+        vendorId: vendor._id,
+        planId: plan._id,
+        startDate: now,
+        endDate,
+        status: 'active',
+        paymentStatus: 'completed',
+        paymentDetails: {
+            method: isPaidPlan ? (payment_method || 'manual') : 'free',
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            stripeSessionId: stripe_session_id,
+            confirmedAt: isPaidPlan ? new Date() : undefined,
+        },
+    });
+
+    const admins = await Admin.find({ isActive: true }).select('_id');
+    await Promise.all(
+        admins.map((admin) =>
+            createNotification({
+                recipientId: admin._id,
+                recipientType: 'admin',
+                title: 'New Vendor Registration',
+                message: `${vendor.storeName || vendor.name} has completed onboarding with the "${plan.name}" plan and is awaiting review.`,
+                type: 'system',
+                data: {
+                    vendorId: String(vendor._id),
+                    vendorEmail: vendor.email,
+                    status: vendor.status,
+                    planName: plan.name,
+                },
+            })
+        )
+    );
+
+    return subscription;
+};
+
+// POST /api/vendor/auth/register
+export const register = asyncHandler(async (req, res) => {
+    const { 
+        name, email, password, phone, storeName, storeDescription,
+        address, agreedToTerms,
+    } = req.body;
+
+    // Validate T&C agreement
+    if (!agreedToTerms) {
+        throw new ApiError(400, 'You must agree to the Terms & Conditions to register.');
+    }
+
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const existing = await Vendor.findOne({ email: normalizedEmail });
-    if (existing) throw new ApiError(409, 'Email already registered.');
+    if (existing) {
+        const onboarding = await getVendorOnboardingState(existing);
+        if (onboarding.nextStep === 'verify_email' || onboarding.nextStep === 'choose_plan') {
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    {
+                        email: existing.email,
+                        resume: true,
+                        onboardingStatus: onboarding.onboardingStatus,
+                        nextStep: onboarding.nextStep,
+                    },
+                    onboarding.nextStep === 'verify_email'
+                        ? 'Account already exists. Please verify your email to continue onboarding.'
+                        : 'Account already exists. Please complete your plan selection.'
+                )
+            );
+        }
+        throw new ApiError(409, 'Email already registered.');
+    }
 
     // ... (rest of the code) ...
     const file = req.file;
@@ -108,7 +225,7 @@ export const register = asyncHandler(async (req, res) => {
         status: 'pending',
         agreedToTerms: true,
         agreedToTermsAt: new Date(),
-        selectedPlanId: plan._id,
+        onboardingStatus: 'registered',
         documents: {
             tradeLicense: {
                 url: tradeLicenseUrl,
@@ -117,53 +234,72 @@ export const register = asyncHandler(async (req, res) => {
         }
     });
 
-    // Create subscription record
-    const now = new Date();
-    const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-    
-    // Status depends on payment. Paid plans with valid payment are active immediately.
-    const isPaidPlan = plan.price > 0 && !plan.isTrial;
-    
-    await VendorSubscription.create({
-        vendorId: vendor._id,
-        planId: plan._id,
-        startDate: now,
-        endDate,
-        status: 'active',
-        paymentStatus: 'completed',
-        paymentDetails: {
-            method: isPaidPlan ? (payment_method || 'manual') : 'free',
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
-            stripeSessionId: stripe_session_id,
-            confirmedAt: isPaidPlan ? new Date() : undefined
-        }
-    });
-
     await sendOTP(vendor, 'vendor_verification');
 
-    // Notify all active admins about a new vendor registration request.
-    const admins = await Admin.find({ isActive: true }).select('_id');
-    await Promise.all(
-        admins.map((admin) =>
-            createNotification({
-                recipientId: admin._id,
-                recipientType: 'admin',
-                title: 'New Vendor Registration',
-                message: `${vendor.storeName || vendor.name} has registered with the "${plan.name}" plan and is awaiting review.`,
-                type: 'system',
-                data: {
-                    vendorId: String(vendor._id),
-                    vendorEmail: vendor.email,
-                    status: vendor.status,
-                    planName: plan.name,
-                },
-            })
+    res.status(201).json(new ApiResponse(201, { email: vendor.email }, 'Registration submitted. Please verify your email to continue onboarding.'));
+});
+
+export const completeOnboarding = asyncHandler(async (req, res) => {
+    const {
+        email,
+        selectedPlanId,
+        payment_method,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        stripe_session_id,
+    } = req.body;
+
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const vendor = await Vendor.findOne({ email: normalizedEmail });
+    if (!vendor) throw new ApiError(404, 'Vendor not found.');
+    if (!vendor.isVerified) throw new ApiError(403, 'Please verify your email first.');
+
+    const plan = await SubscriptionPlan.findById(selectedPlanId);
+    if (!plan || !plan.isActive) {
+        throw new ApiError(400, 'Selected subscription plan is not available.');
+    }
+
+    await createVendorOnboardingSubscription({
+        vendor,
+        plan,
+        payment_method,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        stripe_session_id,
+    });
+
+    res.status(200).json(
+        new ApiResponse(200, { email: vendor.email, selectedPlanId: String(plan._id) }, 'Onboarding completed. Awaiting admin approval.')
+    );
+});
+
+export const getOnboardingStatus = asyncHandler(async (req, res) => {
+    const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
+    const vendor = await Vendor.findOne({ email: normalizedEmail });
+
+    if (!vendor) {
+        return res.status(200).json(
+            new ApiResponse(200, { email: normalizedEmail, onboardingStatus: 'not_found', nextStep: 'register' }, 'No onboarding found.')
+        );
+    }
+
+    const onboarding = await getVendorOnboardingState(vendor);
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                email: vendor.email,
+                onboardingStatus: onboarding.onboardingStatus,
+                nextStep: onboarding.nextStep,
+                isVerified: vendor.isVerified,
+                status: vendor.status,
+                selectedPlanId: vendor.selectedPlanId ? String(vendor.selectedPlanId) : null,
+            },
+            'Onboarding status fetched.'
         )
     );
-
-    res.status(201).json(new ApiResponse(201, { email: vendor.email }, 'Registration submitted. Please verify your email and await admin approval.'));
 });
 
 // POST /api/vendor/auth/verify-otp
@@ -176,11 +312,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     if (vendor.otpExpiry < Date.now()) throw new ApiError(400, 'OTP has expired.');
 
     vendor.isVerified = true;
+    vendor.onboardingStatus = 'email_verified';
     vendor.otp = undefined;
     vendor.otpExpiry = undefined;
     await vendor.save();
 
-    res.status(200).json(new ApiResponse(200, null, 'Email verified. Awaiting admin approval.'));
+    res.status(200).json(new ApiResponse(200, { email: vendor.email }, 'Email verified. Please complete your plan selection.'));
 });
 
 // POST /api/vendor/auth/resend-otp
@@ -281,6 +418,10 @@ export const login = asyncHandler(async (req, res) => {
     const vendor = await Vendor.findOne({ email }).select('+password');
     if (!vendor) throw new ApiError(401, 'Invalid credentials.');
     if (!vendor.isVerified) throw new ApiError(403, 'Please verify your email first.');
+    const onboarding = await getVendorOnboardingState(vendor);
+    if (onboarding.nextStep === 'choose_plan') {
+        throw new ApiError(403, 'Please complete your vendor onboarding by choosing a subscription plan.');
+    }
     if (vendor.status === 'pending') throw new ApiError(403, 'Your account is pending admin approval.');
     if (vendor.status === 'suspended') throw new ApiError(403, `Your account has been suspended. Reason: ${vendor.suspensionReason || 'Contact support.'}`);
     if (vendor.status === 'rejected') throw new ApiError(403, 'Your vendor application was rejected.');
@@ -301,6 +442,10 @@ export const refresh = asyncHandler(async (req, res) => {
 
     if (!vendor) throw new ApiError(401, 'Invalid refresh token.');
     if (!vendor.isVerified) throw new ApiError(403, 'Please verify your email first.');
+    const onboarding = await getVendorOnboardingState(vendor);
+    if (onboarding.nextStep === 'choose_plan') {
+        throw new ApiError(403, 'Please complete your vendor onboarding by choosing a subscription plan.');
+    }
     if (vendor.status === 'pending') throw new ApiError(403, 'Your account is pending admin approval.');
     if (vendor.status === 'suspended') throw new ApiError(403, `Your account has been suspended. Reason: ${vendor.suspensionReason || 'Contact support.'}`);
     if (vendor.status === 'rejected') throw new ApiError(403, 'Your vendor application was rejected.');

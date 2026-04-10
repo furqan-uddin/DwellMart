@@ -14,18 +14,26 @@ export const registerSchema = Joi.object({
         zipCode: Joi.string().allow('').optional(),
         country: Joi.string().allow('').optional(),
     }).optional(),
-    selectedPlanId: Joi.string().required().messages({
-        'any.required': 'Please select a subscription plan.',
-    }),
-    payment_method: Joi.string().valid('razorpay', 'stripe').optional(),
-    razorpay_order_id: Joi.string().allow('').optional(),
-    razorpay_payment_id: Joi.string().allow('').optional(),
-    razorpay_signature: Joi.string().allow('').optional(),
-    stripe_session_id: Joi.string().allow('').optional(),
     agreedToTerms: Joi.boolean().valid(true).required().messages({
         'any.only': 'You must agree to the Terms & Conditions.',
         'any.required': 'You must agree to the Terms & Conditions.',
     }),
+});
+
+export const completeOnboardingSchema = Joi.object({
+    email: Joi.string().email().lowercase().required(),
+    selectedPlanId: Joi.string().required().messages({
+        'any.required': 'Please select a subscription plan.',
+    }),
+    payment_method: Joi.string().valid('razorpay', 'stripe').allow(null, '').optional(),
+    razorpay_order_id: Joi.string().allow('').optional(),
+    razorpay_payment_id: Joi.string().allow('').optional(),
+    razorpay_signature: Joi.string().allow('').optional(),
+    stripe_session_id: Joi.string().allow('').optional(),
+});
+
+export const onboardingStatusSchema = Joi.object({
+    email: Joi.string().email().lowercase().required(),
 });
 
 export const loginSchema = Joi.object({
