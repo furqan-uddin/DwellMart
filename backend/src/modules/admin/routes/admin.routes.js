@@ -178,6 +178,12 @@ router.patch('/marketing/banners/reorder', ...adminAuth, marketingController.reo
 router.put('/marketing/banners/:id', ...adminAuth, validate(marketingIdParamSchema, 'params'), marketingController.updateBanner);
 router.delete('/marketing/banners/:id', ...adminAuth, validate(marketingIdParamSchema, 'params'), marketingController.deleteBanner);
 
+// Testimonials
+router.get('/marketing/testimonials', ...adminAuth, marketingController.getAllTestimonials);
+router.post('/marketing/testimonials', ...adminAuth, marketingController.createTestimonial);
+router.put('/marketing/testimonials/:id', ...adminAuth, validate(marketingIdParamSchema, 'params'), marketingController.updateTestimonial);
+router.delete('/marketing/testimonials/:id', ...adminAuth, validate(marketingIdParamSchema, 'params'), marketingController.deleteTestimonial);
+
 // Campaigns
 router.get('/marketing/campaigns', ...adminAuth, validate(campaignListQuerySchema, 'query'), marketingController.getAllCampaigns);
 router.post('/marketing/campaigns', ...adminAuth, marketingController.createCampaign);

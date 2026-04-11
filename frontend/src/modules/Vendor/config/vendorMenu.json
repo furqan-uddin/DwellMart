@@ -51,6 +51,13 @@
                      ]
     },
     {
+        "title":  "Subscriptions",
+        "route":  "/vendor/subscription",
+        "children":  [
+
+                     ]
+    },
+    {
         "title":  "Chat",
         "route":  "/vendor/chat",
         "children":  [

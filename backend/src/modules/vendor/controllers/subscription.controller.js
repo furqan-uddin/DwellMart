@@ -11,10 +11,12 @@ import {
 } from '../../../services/billing/razorpayBilling.service.js';
 import {
     createStripeSubscriptionForPlan,
+    retrieveStripeSubscription,
     updateStripeSubscriptionPlan,
 } from '../../../services/billing/stripeBilling.service.js';
 import {
     activateInternalSubscription,
+    findPlanByGatewayReference,
     getCurrentVendorSubscription,
     mapRazorpaySubscriptionStatus,
     mapStripeSubscriptionStatus,
@@ -24,6 +26,66 @@ import {
 
 const toDateFromUnix = (value) => (value ? new Date(Number(value) * 1000) : null);
 
+const isSubscriptionActive = (subscription) => Boolean(
+    subscription
+    && (subscription.status === 'active' || subscription.status === 'trialing')
+    && subscription.current_period_end
+    && new Date(subscription.current_period_end) > new Date()
+);
+
+const getStripePeriodDate = (stripeSubscription, key) => (
+    stripeSubscription?.[key] || stripeSubscription?.items?.data?.[0]?.[key] || null
+);
+
+const syncStripeSubscriptionIfPossible = async (vendor, subscription) => {
+    const subscriptionId = String(subscription?.gateway_subscription_id || '');
+    if (
+        !vendor
+        || !subscription
+        || subscription.gateway !== 'stripe'
+        || !subscriptionId
+        || subscriptionId.startsWith('internal_')
+    ) {
+        return subscription;
+    }
+
+    const stripeSubscription = await retrieveStripeSubscription(subscriptionId);
+    const priceId = stripeSubscription.items?.data?.[0]?.price?.id || null;
+    const stripePlan = await findPlanByGatewayReference({ gateway: 'stripe', referenceId: priceId });
+    const planId = stripePlan?._id || subscription.plan?._id || subscription.plan;
+    const status = mapStripeSubscriptionStatus(stripeSubscription.status);
+
+    const synced = await upsertSubscriptionRecord({
+        vendorId: vendor._id,
+        planId,
+        gateway: 'stripe',
+        gatewayCustomerId: String(stripeSubscription.customer || subscription.gateway_customer_id || ''),
+        gatewaySubscriptionId: stripeSubscription.id,
+        status,
+        externalStatus: stripeSubscription.status,
+        currentPeriodStart: toDateFromUnix(getStripePeriodDate(stripeSubscription, 'current_period_start')),
+        currentPeriodEnd: toDateFromUnix(getStripePeriodDate(stripeSubscription, 'current_period_end')),
+        cancelAtPeriodEnd: Boolean(stripeSubscription.cancel_at_period_end),
+        latestPaymentStatus: status === 'active' || status === 'trialing'
+            ? 'paid'
+            : subscription.latest_payment_status || 'pending',
+        metadata: {
+            ...(subscription.metadata || {}),
+            source: 'stripe_sync',
+            latestInvoiceId: stripeSubscription.latest_invoice || null,
+        },
+    });
+
+    if (status === 'active' || status === 'trialing') {
+        vendor.selectedPlan = planId;
+        vendor.onboardingStatus = 'subscription_active';
+        vendor.onboardingCompletedAt = vendor.onboardingCompletedAt || new Date();
+        await vendor.save({ validateBeforeSave: false });
+    }
+
+    return synced;
+};
+
 const toChangePlanResponse = async ({ gateway, checkout = null, subscription, message }) => ({
     gateway,
     checkout,
@@ -32,7 +94,9 @@ const toChangePlanResponse = async ({ gateway, checkout = null, subscription, me
 });
 
 export const getCurrentSubscription = asyncHandler(async (req, res) => {
-    const subscription = await getCurrentVendorSubscription(req.user.id);
+    const vendor = await Vendor.findById(req.user.id);
+    const currentSubscription = await getCurrentVendorSubscription(req.user.id);
+    const subscription = await syncStripeSubscriptionIfPossible(vendor, currentSubscription);
 
     if (!subscription) {
         return res.status(200).json(
@@ -83,7 +147,10 @@ export const changePlan = asyncHandler(async (req, res) => {
 
     const plan = await getActivePlanById(planId);
     const gateway = getGatewayForCountry(vendor.country || vendor.address?.country || '');
-    const currentSubscription = await getCurrentVendorSubscription(vendor._id);
+    const currentSubscription = await syncStripeSubscriptionIfPossible(
+        vendor,
+        await getCurrentVendorSubscription(vendor._id)
+    );
 
     vendor.selectedPlan = plan._id;
     vendor.billing = {
@@ -92,7 +159,7 @@ export const changePlan = asyncHandler(async (req, res) => {
     };
     await vendor.save({ validateBeforeSave: false });
 
-    if (currentSubscription?.status === 'active' && String(currentSubscription.plan?._id || currentSubscription.plan) === String(plan._id)) {
+    if (isSubscriptionActive(currentSubscription) && String(currentSubscription.plan?._id || currentSubscription.plan) === String(plan._id)) {
         return res.status(200).json(
             new ApiResponse(
                 200,

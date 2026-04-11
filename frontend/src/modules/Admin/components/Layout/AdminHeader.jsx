@@ -44,6 +44,7 @@ const AdminHeader = ({ onMenuClick }) => {
       inventory: 'Inventory',
       campaigns: 'Campaigns',
       banners: 'Banners',
+      testimonials: 'Testimonials',
       reviews: 'Reviews',
       analytics: 'Analytics',
       content: 'Content',

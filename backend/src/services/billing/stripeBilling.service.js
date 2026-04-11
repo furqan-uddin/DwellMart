@@ -169,7 +169,6 @@ export const updateStripeSubscriptionPlan = async ({ subscriptionId, plan }) => 
         items: [{ id: currentItemId, price: plan.stripe_price_id }],
         proration_behavior: 'always_invoice',
         payment_behavior: 'pending_if_incomplete',
-        cancel_at_period_end: false,
     };
 
     let updated;

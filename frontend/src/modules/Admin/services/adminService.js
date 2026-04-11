@@ -260,6 +260,12 @@ export const reorderBanners = (items) => api.patch('/admin/marketing/banners/reo
 export const updateBanner = (id, data) => api.put(`/admin/marketing/banners/${id}`, data);
 export const deleteBanner = (id) => api.delete(`/admin/marketing/banners/${id}`);
 
+// Testimonials
+export const getAllTestimonials = () => api.get('/admin/marketing/testimonials');
+export const createTestimonial = (data) => api.post('/admin/marketing/testimonials', data);
+export const updateTestimonial = (id, data) => api.put(`/admin/marketing/testimonials/${id}`, data);
+export const deleteTestimonial = (id) => api.delete(`/admin/marketing/testimonials/${id}`);
+
 // Campaigns
 export const getAllCampaigns = (params) => api.get('/admin/marketing/campaigns', { params });
 export const createCampaign = (data) => api.post('/admin/marketing/campaigns', data);

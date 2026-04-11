@@ -38,6 +38,7 @@ const iconMap = {
   "Product Reviews": FiStar,
   "Stock Management": FiTrendingDown,
   "Wallet History": FiCreditCard,
+  Subscriptions: FiCreditCard,
   "Pickup Locations": FiMapPin,
   Chat: FiMessageCircle,
   Promotions: FiTag,

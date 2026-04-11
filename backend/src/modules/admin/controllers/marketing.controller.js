@@ -4,6 +4,7 @@ import { ApiResponse } from '../../../utils/ApiResponse.js';
 import Coupon from '../../../models/Coupon.model.js';
 import Banner from '../../../models/Banner.model.js';
 import Campaign from '../../../models/Campaign.model.js';
+import Testimonial from '../../../models/Testimonial.model.js';
 import { slugify } from '../../../utils/slugify.js';
 
 const COUPON_TYPES = new Set(['percentage', 'fixed', 'freeship']);
@@ -336,6 +337,74 @@ const validateCouponBusinessRules = ({ type, value }) => {
     }
 };
 
+const normalizeTestimonialPayload = (payload = {}, { partial = false } = {}) => {
+    const normalized = {};
+
+    if (payload.name !== undefined) {
+        const name = String(payload.name || '').trim();
+        if (!name) throw new ApiError(400, 'Name is required');
+        normalized.name = name;
+    } else if (!partial) {
+        throw new ApiError(400, 'Name is required');
+    }
+
+    if (payload.message !== undefined) {
+        const message = String(payload.message || '').trim();
+        if (!message) throw new ApiError(400, 'Message is required');
+        normalized.message = message;
+    } else if (!partial) {
+        throw new ApiError(400, 'Message is required');
+    }
+
+    if (payload.designation !== undefined) {
+        normalized.designation = String(payload.designation || '').trim();
+    } else if (!partial) {
+        normalized.designation = '';
+    }
+
+    if (payload.company !== undefined) {
+        normalized.company = String(payload.company || '').trim();
+    } else if (!partial) {
+        normalized.company = '';
+    }
+
+    if (payload.image !== undefined) {
+        normalized.image = String(payload.image || '').trim();
+    } else if (!partial) {
+        normalized.image = '';
+    }
+
+    if (payload.rating !== undefined) {
+        const rating = Number(payload.rating);
+        if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+            throw new ApiError(400, 'Rating must be between 1 and 5');
+        }
+        normalized.rating = rating;
+    } else if (!partial) {
+        normalized.rating = 5;
+    }
+
+    if (payload.order !== undefined) {
+        const order = Number(payload.order);
+        if (!Number.isFinite(order) || order < 0) {
+            throw new ApiError(400, 'Display order must be a non-negative number');
+        }
+        normalized.order = order;
+    } else if (!partial) {
+        normalized.order = 0;
+    }
+
+    if (payload.isActive !== undefined) {
+        const isActive = toBooleanOrNull(payload.isActive);
+        if (isActive === null) throw new ApiError(400, 'isActive must be a boolean');
+        normalized.isActive = isActive;
+    } else if (!partial) {
+        normalized.isActive = true;
+    }
+
+    return normalized;
+};
+
 // ─── Coupons (Promo Codes) ──────────────────────────────────────────────────
 export const getAllCoupons = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
@@ -484,6 +553,33 @@ export const deleteBanner = asyncHandler(async (req, res) => {
     const banner = await Banner.findByIdAndDelete(req.params.id);
     if (!banner) throw new ApiError(404, 'Banner not found');
     return res.status(200).json(new ApiResponse(200, null, 'Banner deleted successfully'));
+});
+
+// Testimonials
+export const getAllTestimonials = asyncHandler(async (req, res) => {
+    const testimonials = await Testimonial.find().sort({ order: 1, createdAt: -1 });
+    return res.status(200).json(new ApiResponse(200, testimonials, 'Testimonials fetched successfully'));
+});
+
+export const createTestimonial = asyncHandler(async (req, res) => {
+    const testimonial = await Testimonial.create(normalizeTestimonialPayload(req.body));
+    return res.status(201).json(new ApiResponse(201, testimonial, 'Testimonial created successfully'));
+});
+
+export const updateTestimonial = asyncHandler(async (req, res) => {
+    const testimonial = await Testimonial.findByIdAndUpdate(
+        req.params.id,
+        normalizeTestimonialPayload(req.body, { partial: true }),
+        { new: true }
+    );
+    if (!testimonial) throw new ApiError(404, 'Testimonial not found');
+    return res.status(200).json(new ApiResponse(200, testimonial, 'Testimonial updated successfully'));
+});
+
+export const deleteTestimonial = asyncHandler(async (req, res) => {
+    const testimonial = await Testimonial.findByIdAndDelete(req.params.id);
+    if (!testimonial) throw new ApiError(404, 'Testimonial not found');
+    return res.status(200).json(new ApiResponse(200, null, 'Testimonial deleted successfully'));
 });
 
 // ─── Campaigns ───────────────────────────────────────────────────────────────

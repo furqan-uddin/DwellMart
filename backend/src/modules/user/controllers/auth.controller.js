@@ -3,7 +3,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import User from '../../../models/User.model.js';
 import { generateTokens } from '../../../utils/generateToken.js';
-import { sendOTP } from '../../../services/otp.service.js';
+import { isMockOTP, isOTPMatch, sendOTP } from '../../../services/otp.service.js';
 import { sendEmail } from '../../../services/email.service.js';
 import {
     uploadLocalFileToCloudinaryAndCleanup,
@@ -58,8 +58,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email: normalizedEmail }).select('+otp +otpExpiry');
     if (!user) throw new ApiError(404, 'User not found.');
-    if (user.otp !== otp) throw new ApiError(400, 'Invalid OTP.');
-    if (user.otpExpiry < Date.now()) throw new ApiError(400, 'OTP has expired. Please request a new one.');
+    if (!isOTPMatch(user.otp, otp)) throw new ApiError(400, 'Invalid OTP.');
+    if (!isMockOTP(otp) && user.otpExpiry < Date.now()) throw new ApiError(400, 'OTP has expired. Please request a new one.');
 
     user.isVerified = true;
     user.otp = undefined;

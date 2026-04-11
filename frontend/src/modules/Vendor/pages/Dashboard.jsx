@@ -352,7 +352,7 @@ const VendorDashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-800">Membership Plans</h2>
           <button
-            onClick={() => navigate("/vendor/subscription/renew")}
+            onClick={() => navigate("/vendor/subscription")}
             className="text-sm text-primary-600 hover:text-primary-700 font-medium">
             Manage Subscription
           </button>

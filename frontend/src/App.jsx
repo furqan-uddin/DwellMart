@@ -25,6 +25,7 @@ import Customers from "./modules/Admin/pages/Customers";
 
 import Campaigns from "./modules/Admin/pages/Campaigns";
 import Banners from "./modules/Admin/pages/Banners";
+import Testimonials from "./modules/Admin/pages/Testimonials";
 import Reviews from "./modules/Admin/pages/Reviews";
 import Analytics from "./modules/Admin/pages/Analytics";
 import Content from "./modules/Admin/pages/Content";
@@ -191,6 +192,7 @@ import VendorSupportTickets from "./modules/Vendor/pages/SupportTickets";
 import VendorPickupLocations from "./modules/Vendor/pages/PickupLocations";
 import VendorReports from "./modules/Vendor/pages/Reports";
 import VendorLanguageSettings from "./modules/Vendor/pages/LanguageSettings";
+import VendorSubscriptionManagement from "./modules/Vendor/pages/SubscriptionManagement";
 
 // Inner component that has access to useLocation
 const AppRoutes = () => {
@@ -572,6 +574,7 @@ const AppRoutes = () => {
         <Route path="firebase/authentication" element={<Authentication />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="banners" element={<Banners />} />
+        <Route path="testimonials" element={<Testimonials />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="content" element={<Content />} />
       </Route>
@@ -645,6 +648,8 @@ const AppRoutes = () => {
         />
         <Route path="stock-management" element={<VendorStockManagement />} />
         <Route path="wallet-history" element={<VendorWalletHistory />} />
+        <Route path="subscription" element={<VendorSubscriptionManagement />} />
+        <Route path="subscriptions" element={<VendorSubscriptionManagement />} />
         <Route path="chat" element={<VendorChat />} />
         <Route path="notifications" element={<VendorNotifications />} />
         <Route path="return-requests" element={<VendorReturnRequests />} />

@@ -5,7 +5,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import Vendor from '../../../models/Vendor.model.js';
 import { generateTokens } from '../../../utils/generateToken.js';
-import { sendOTP } from '../../../services/otp.service.js';
+import { isMockOTP, isOTPMatch, sendOTP } from '../../../services/otp.service.js';
 import { sendEmail } from '../../../services/email.service.js';
 import {
     clearRefreshSession,
@@ -235,8 +235,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     const vendor = await Vendor.findOne({ email }).select('+otp +otpExpiry');
     if (!vendor) throw new ApiError(404, 'Vendor not found.');
-    if (vendor.otp !== otp) throw new ApiError(400, 'Invalid OTP.');
-    if (vendor.otpExpiry < Date.now()) throw new ApiError(400, 'OTP has expired.');
+    if (!isOTPMatch(vendor.otp, otp)) throw new ApiError(400, 'Invalid OTP.');
+    if (!isMockOTP(otp) && vendor.otpExpiry < Date.now()) throw new ApiError(400, 'OTP has expired.');
 
     vendor.isVerified = true;
     vendor.onboardingStatus = vendor.selectedPlan ? 'plan_selected' : 'email_verified';
