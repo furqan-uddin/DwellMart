@@ -54,93 +54,76 @@ const DesktopHeader = ({ hideSellButton = false }) => {
 
   return (
     <header className="hidden md:block sticky top-0 z-[999] bg-black shadow-lg border-b border-gray-800">
-      <div className="max-w-[1920px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between gap-4 lg:gap-8">
+      <div className="max-w-[1920px] mx-auto px-4 md:px-5 lg:px-8 xl:px-12 h-20 flex items-center gap-3 lg:gap-4 xl:gap-6">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{
               opacity: 1,
-              scale: [1, 1.05, 1],
               y: 0,
-              filter: [
-                "drop-shadow(0 0 0px rgba(74, 222, 128, 0))",
-                "drop-shadow(0 0 8px rgba(74, 222, 128, 0.4))",
-                "drop-shadow(0 0 0px rgba(74, 222, 128, 0))"
-              ]
             }}
             transition={{
               opacity: { duration: 0.6 },
-              scale: {
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              },
-              filter: {
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              },
               y: { duration: 0.6, type: "spring", stiffness: 100 }
             }}
-            whileHover={{ scale: 1.12, filter: "drop-shadow(0 0 12px rgba(74, 222, 128, 0.6))" }}
             className="flex items-center overflow-visible"
           >
             {appLogo.src ? (
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-28 lg:h-32 xl:h-36 w-auto max-w-[250px] lg:max-w-[280px] xl:max-w-[320px] object-contain transition-all drop-shadow-md"
+                className="h-16 lg:h-20 xl:h-24 w-auto max-w-[160px] lg:max-w-[190px] xl:max-w-[220px] object-contain transition-all drop-shadow-md"
               />
             ) : (
-              <span className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>
+              <span className="text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>
             )}
           </motion.div>
         </Link>
 
         {/* Navigation Links */}
-        <nav className="flex items-center gap-4 xl:gap-6 whitespace-nowrap">
+        <nav className="flex min-w-0 items-center gap-2 lg:gap-3 xl:gap-4 whitespace-nowrap">
           <Link
             to="/home"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
+            className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
             Home
           </Link>
           <Link
             to="/categories"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base flex items-center gap-1 transition-colors">
+            className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] flex items-center gap-1 transition-colors">
             <FiGrid /> Categories
           </Link>
           <Link
             to="/offers"
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
+            className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
             Offers
           </Link>
           <Link
             to={isAuthenticated ? "/orders" : "/login"}
-            className="text-gray-300 hover:text-primary-400 font-medium text-sm lg:text-base transition-colors">
+            className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
             Track Order
           </Link>
           {!hideSellButton && (
             <Link
               to="/sell-on-dwellmart"
-              className="ml-2 rounded-lg border border-[#ffc101]/40 bg-[#ffc101]/12 px-4 py-2 text-sm font-medium text-[#ffc101] transition-all hover:bg-[#ffc101] hover:text-black lg:text-base">
+              className="ml-1 rounded-lg border border-[#ffc101]/40 bg-[#ffc101]/12 px-2.5 lg:px-3 xl:px-4 py-2 text-[11px] lg:text-xs xl:text-sm font-semibold text-[#ffc101] transition-all hover:bg-[#ffc101] hover:text-black">
               Sell On DwellMart
             </Link>
           )}
         </nav>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-2xl min-w-[200px]">
+        <div className="min-w-0 flex-1 max-w-[180px] lg:max-w-[230px] xl:max-w-[300px] 2xl:max-w-[360px] ml-auto">
           <SearchBar />
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-5">
+        <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3">
           {/* Wishlist */}
           <Link
             to="/wishlist"
             className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
-            <FiHeart className="text-2xl" />
+            <FiHeart className="text-lg lg:text-xl xl:text-2xl" />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                 {wishlistCount > 9 ? "9+" : wishlistCount}
@@ -152,7 +135,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           <button
             onClick={toggleCart}
             className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
-            <FiShoppingBag className="text-2xl" />
+            <FiShoppingBag className="text-lg lg:text-xl xl:text-2xl" />
             {itemCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">
                 {itemCount > 9 ? "9+" : itemCount}
@@ -164,7 +147,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           <Link
             to={isAuthenticated ? "/notifications" : "/login"}
             className="relative p-2 text-gray-300 hover:text-primary-400 transition-colors">
-            <FiBell className="text-2xl" />
+            <FiBell className="text-lg lg:text-xl xl:text-2xl" />
             {isAuthenticated && unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -185,9 +168,9 @@ const DesktopHeader = ({ hideSellButton = false }) => {
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 ) : (
-                  <HiOutlineUserCircle className="text-gray-300 text-3xl" />
+                  <HiOutlineUserCircle className="text-gray-300 text-[26px] lg:text-[28px] xl:text-3xl" />
                 )}
-                <span className="hidden lg:block text-sm font-medium text-gray-200 max-w-[100px] truncate">
+                <span className="text-xs lg:text-sm font-medium text-gray-200 max-w-[72px] lg:max-w-[84px] xl:max-w-[96px] truncate">
                   {user?.name || "User"}
                 </span>
               </button>
@@ -234,7 +217,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           ) : (
             <Link
               to="/login"
-              className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm shadow-primary-200">
+              className="px-3 lg:px-3.5 xl:px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm shadow-primary-200 text-xs lg:text-sm xl:text-base whitespace-nowrap">
               Login
             </Link>
           )}
