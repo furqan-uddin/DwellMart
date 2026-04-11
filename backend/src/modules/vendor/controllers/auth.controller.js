@@ -79,13 +79,13 @@ const uploadVendorDocument = async ({ file, documentType }) => {
         documentFileType = 'image';
         try {
             const uploaded = await uploadLocalFileToCloudinaryAndCleanup(file.path, 'vendor_documents');
-            documentUrl = uploaded.secure_url;
+            documentUrl = uploaded.url;
         } catch {
             throw new ApiError(500, `Failed to upload ${documentType === 'gst' ? 'GST' : 'trade licence'} image.`);
         }
     } else {
         documentFileType = file.mimetype === 'application/pdf' ? 'pdf' : 'word';
-        const docDir = path.resolve(process.cwd(), 'public/uploads/vendor_documents');
+        const docDir = path.resolve(process.cwd(), 'uploads/vendor_documents');
         if (!fs.existsSync(docDir)) {
             fs.mkdirSync(docDir, { recursive: true });
         }

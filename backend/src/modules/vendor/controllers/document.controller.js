@@ -8,6 +8,8 @@ import {
     cleanupLocalFiles,
 } from '../../../services/upload.service.js';
 import { createNotification } from '../../../services/notification.service.js';
+import { Admin } from '../../../models/Admin.model.js';
+import Vendor from '../../../models/Vendor.model.js';
 
 const ALLOWED_CATEGORIES = new Set([
     'License',
@@ -74,6 +76,26 @@ export const createVendorDocument = asyncHandler(async (req, res) => {
             },
         });
 
+        // Notify Admins
+        const vendor = await Vendor.findById(req.user.id).select('storeName name');
+        const admins = await Admin.find({ isActive: true }).select('_id').lean();
+        await Promise.all(
+            admins.map((admin) =>
+                createNotification({
+                    recipientId: admin._id,
+                    recipientType: 'admin',
+                    title: 'New Vendor Document',
+                    message: `Vendor ${vendor?.storeName || vendor?.name} has uploaded a new document: ${name}.`,
+                    type: 'system',
+                    data: {
+                        documentId: String(document._id),
+                        vendorId: String(req.user.id),
+                        category: String(category),
+                    },
+                })
+            )
+        );
+
         res.status(201).json(new ApiResponse(201, document, 'Document uploaded.'));
     } catch (error) {
         if (!uploaded) {
@@ -98,4 +120,37 @@ export const deleteVendorDocument = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json(new ApiResponse(200, null, 'Document deleted.'));
+});
+
+// Admin Controllers
+export const adminUpdateDocumentStatus = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { status, adminRemarks } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+        throw new ApiError(400, 'Invalid status. Must be approved or rejected.');
+    }
+
+    const document = await VendorDocument.findById(id);
+    if (!document) throw new ApiError(404, 'Document not found.');
+
+    document.status = status;
+    document.adminRemarks = adminRemarks || '';
+    document.reviewedAt = new Date();
+    await document.save();
+
+    // Notify Vendor
+    await createNotification({
+        recipientId: document.vendorId,
+        recipientType: 'vendor',
+        title: `Document ${status}`,
+        message: `Your document "${document.name}" has been ${status}. ${adminRemarks ? `Remarks: ${adminRemarks}` : ''}`,
+        type: 'system',
+        data: {
+            documentId: String(document._id),
+            status,
+        },
+    });
+
+    res.status(200).json(new ApiResponse(200, document, `Document ${status} successfully.`));
 });
