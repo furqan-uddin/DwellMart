@@ -132,6 +132,9 @@ export const updateCommissionRate = (id, commissionRate) =>
 export const getVendorCommissions = (id, params = {}) =>
     api.get(`/admin/vendors/${id}/commissions`, { params });
 
+export const getVendorDocuments = (id) =>
+    api.get(`/admin/vendors/${id}/documents`);
+
 // ─── Customers ────────────────────────────────────────────────────────────────
 export const getAllCustomers = (params = {}) =>
     api.get('/admin/customers', { params });

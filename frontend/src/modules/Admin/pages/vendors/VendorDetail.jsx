@@ -18,7 +18,7 @@ import {
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { useVendorStore } from "../../store/vendorStore";
-import { getAllOrders, getVendorCommissions } from "../../services/adminService";
+import { getAllOrders, getVendorCommissions, getVendorDocuments } from "../../services/adminService";
 import Badge from "../../../../shared/components/Badge";
 import DataTable from "../../components/DataTable";
 import { formatPrice } from "../../../../shared/utils/helpers";
@@ -36,6 +36,7 @@ const VendorDetail = () => {
   const [vendor, setVendor] = useState(null);
   const [vendorOrders, setVendorOrders] = useState([]);
   const [commissions, setCommissions] = useState([]);
+  const [additionalDocuments, setAdditionalDocuments] = useState([]);
   const [earningsSummary, setEarningsSummary] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditingCommission, setIsEditingCommission] = useState(false);
@@ -98,6 +99,16 @@ const VendorDetail = () => {
         } catch {
           setCommissions([]);
         }
+
+        // 4. Fetch Additional Vendor Documents
+        try {
+          const docsRes = await getVendorDocuments(id);
+          const docs = docsRes?.data ?? docsRes ?? [];
+          setAdditionalDocuments(Array.isArray(docs) ? docs : []);
+        } catch (error) {
+          console.error("Failed to fetch additional documents:", error);
+          setAdditionalDocuments([]);
+        }
       } else {
         toast.error("Vendor not found");
         navigate("/admin/vendors");
@@ -122,16 +133,26 @@ const VendorDetail = () => {
     setEarningsSummary(summary);
   }, [vendor, commissions]);
 
+  const backendBaseUrl = window.location.origin.includes('localhost') 
+    ? 'http://localhost:5000' 
+    : window.location.origin.replace('://admin.', '://api.'); // Heuristic for production
+
+  const getFullUrl = (url) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    return `${backendBaseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
   const registrationDocument = vendor?.documents?.tradeLicense?.url
     ? {
         label: "Trade Licence",
-        url: vendor.documents.tradeLicense.url,
+        url: getFullUrl(vendor.documents.tradeLicense.url),
         fileType: vendor.documents.tradeLicense.fileType || "document",
       }
     : vendor?.documents?.gst
     ? {
         label: "GST Document",
-        url: vendor.documents.gst,
+        url: getFullUrl(vendor.documents.gst),
         fileType: "document",
       }
     : null;
@@ -413,7 +434,7 @@ const VendorDetail = () => {
 
                   {registrationDocument?.url && (
                     <div className="mt-8 pt-6 border-t border-gray-100">
-                      <h3 className="text-sm font-bold text-gray-800 mb-3">Documents</h3>
+                      <h3 className="text-sm font-bold text-gray-800 mb-3">Registration Documents</h3>
                       <div className="flex justify-between items-center bg-gray-50/80 p-3 rounded-xl border border-gray-200/60">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm text-primary-500">
@@ -425,13 +446,42 @@ const VendorDetail = () => {
                           </div>
                         </div>
                         <a 
-                          href={registrationDocument.url.startsWith('http') ? registrationDocument.url : `http://localhost:5000${registrationDocument.url}`}
+                          href={registrationDocument.url}
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:ring-2 focus:ring-primary-500/20 transition-all shadow-sm"
                         >
                           View File
                         </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {additionalDocuments.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-800 mb-3">Additional Uploads</h3>
+                      <div className="space-y-3">
+                        {additionalDocuments.map((doc) => (
+                          <div key={doc._id} className="flex justify-between items-center bg-gray-50/80 p-3 rounded-xl border border-gray-200/60">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm text-primary-500">
+                                <FiFileText className="text-lg" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">{doc.title || "Vendor Document"}</p>
+                                <p className="text-xs text-gray-500 uppercase">{doc.fileType || "document"}</p>
+                              </div>
+                            </div>
+                            <a 
+                              href={getFullUrl(doc.fileUrl)}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:ring-2 focus:ring-primary-500/20 transition-all shadow-sm"
+                            >
+                              View File
+                            </a>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

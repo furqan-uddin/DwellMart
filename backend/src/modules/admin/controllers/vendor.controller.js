@@ -2,6 +2,7 @@ import asyncHandler from '../../../utils/asyncHandler.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import Vendor from '../../../models/Vendor.model.js';
+import VendorDocument from '../../../models/VendorDocument.model.js';
 import Commission from '../../../models/Commission.model.js';
 import { sendEmail } from '../../../services/email.service.js';
 import { createNotification } from '../../../services/notification.service.js';
@@ -164,4 +165,14 @@ export const getVendorCommissions = asyncHandler(async (req, res) => {
             'Vendor commissions fetched.'
         )
     );
+});
+
+// GET /api/admin/vendors/:id/documents
+export const getVendorDocuments = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const vendor = await Vendor.findById(id).select('_id');
+    if (!vendor) throw new ApiError(404, 'Vendor not found.');
+
+    const documents = await VendorDocument.find({ vendorId: id }).sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, documents, 'Vendor documents fetched.'));
 });
