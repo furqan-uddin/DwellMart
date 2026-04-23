@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import SearchBar from "../../../../shared/components/SearchBar";
 import MobileCategoryIcons from "../Mobile/MobileCategoryIcons";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 // Category gradient mapping - Very subtle pastel colors
 const categoryGradients = {
@@ -52,6 +53,7 @@ const MobileHeader = ({ hideSellButton = false }) => {
     (state) => state.cartAnimationTrigger
   );
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { getTranslatedText: t } = usePageTranslation(["Sell On DwellMart", "Home", "Shop", "Categories", "Offers", "Track Order", "Search"]);
 
   // Get current category from URL (supports both /category/:id and legacy /app/category/:id)
   const getCurrentCategoryId = () => {
@@ -343,7 +345,7 @@ const MobileHeader = ({ hideSellButton = false }) => {
                 to="/sell-on-dwellmart"
                 className="mr-1 rounded-lg bg-[#ffc101] px-3 py-1.5 text-xs font-semibold text-black shadow-sm transition-colors hover:bg-[#ffd042]"
               >
-                Sell On DwellMart
+                {t("Sell On DwellMart")}
               </Link>
             )}
 

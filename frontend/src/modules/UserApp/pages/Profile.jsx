@@ -11,8 +11,60 @@ import toast from 'react-hot-toast';
 import PageTransition from '../../../shared/components/PageTransition';
 import PasswordStrengthMeter from '../components/Mobile/PasswordStrengthMeter';
 import { useUserNotificationStore } from '../store/userNotificationStore';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const MobileProfile = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'My Profile',
+    'Manage your personal information and security settings',
+    'My Account',
+    'Personal Info',
+    'Security',
+    'Password',
+    'View Profile',
+    'Personal Information',
+    'My Orders',
+    'My Addresses',
+    'Notifications',
+    'Change Password',
+    'Sign Out',
+    'Profile Picture',
+    'JPG, PNG or GIF. Max size 5MB',
+    'Full Name',
+    'Your full name',
+    'Name is required',
+    'Name must be at least 2 characters',
+    'Email Address',
+    'your.email@example.com',
+    'Email is required',
+    'Please enter a valid email',
+    'Email cannot be changed from profile settings.',
+    'Phone Number',
+    '1234567890',
+    'Please enter a valid phone number',
+    'Saving...',
+    'Save Changes',
+    'Current Password',
+    'Current password is required',
+    'New Password',
+    'New password is required',
+    'Password must be at least 6 characters',
+    'Confirm New Password',
+    'Please confirm your password',
+    'Passwords do not match',
+    'Changing Password...',
+    'Profile updated successfully!',
+    'Failed to update profile',
+    'Password changed successfully!',
+    'Failed to change password',
+    'Logged out successfully',
+    'Only JPEG, PNG, WEBP and GIF images are allowed.',
+    'Image size must be 5MB or less.',
+    'Profile picture updated successfully!',
+    'Failed to upload profile picture',
+    'Account Settings',
+    'Confirm Password'
+  ]);
   const navigate = useNavigate();
   const { user, updateProfile, uploadProfileAvatar, changePassword, logout, isLoading } = useAuthStore();
   const avatarInputRef = useRef(null);
@@ -81,26 +133,26 @@ const MobileProfile = () => {
         name: data?.name,
         phone: data?.phone,
       });
-      toast.success('Profile updated successfully!');
+      toast.success(t('Profile updated successfully!'));
     } catch (error) {
-      toast.error(error.message || 'Failed to update profile');
+      toast.error(error.message || t('Failed to update profile'));
     }
   };
 
   const onPasswordSubmit = async (data) => {
     try {
       await changePassword(data.currentPassword, data.newPassword);
-      toast.success('Password changed successfully!');
+      toast.success(t('Password changed successfully!'));
       resetPassword();
     } catch (error) {
-      toast.error(error.message || 'Failed to change password');
+      toast.error(error.message || t('Failed to change password'));
     }
   };
 
   const handleLogout = () => {
     logout();
     navigate('/home');
-    toast.success('Logged out successfully');
+    toast.success(t('Logged out successfully'));
   };
 
   const handleAvatarPick = () => {
@@ -113,40 +165,40 @@ const MobileProfile = () => {
 
     const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
     if (!isValidType) {
-      toast.error('Only JPEG, PNG, WEBP and GIF images are allowed.');
+      toast.error(t('Only JPEG, PNG, WEBP and GIF images are allowed.'));
       event.target.value = '';
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be 5MB or less.');
+      toast.error(t('Image size must be 5MB or less.'));
       event.target.value = '';
       return;
     }
 
     try {
       await uploadProfileAvatar(file);
-      toast.success('Profile picture updated successfully!');
+      toast.success(t('Profile picture updated successfully!'));
     } catch (error) {
-      toast.error(error?.message || 'Failed to upload profile picture');
+      toast.error(error?.message || t('Failed to upload profile picture'));
     } finally {
       event.target.value = '';
     }
   };
 
   const menuOptions = [
-    { id: 'personal', label: 'Personal Information', icon: FiUser, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 'orders', label: 'My Orders', icon: FiPackage, color: 'text-orange-600', bg: 'bg-orange-50', link: '/orders' },
-    { id: 'addresses', label: 'My Addresses', icon: FiMapPin, color: 'text-green-600', bg: 'bg-green-50', link: '/addresses' },
+    { id: 'personal', label: t('Personal Information'), icon: FiUser, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'orders', label: t('My Orders'), icon: FiPackage, color: 'text-orange-600', bg: 'bg-orange-50', link: '/orders' },
+    { id: 'addresses', label: t('My Addresses'), icon: FiMapPin, color: 'text-green-600', bg: 'bg-green-50', link: '/addresses' },
     {
       id: 'notifications',
-      label: 'Notifications',
+      label: t('Notifications'),
       icon: FiBell,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50',
       link: '/notifications',
       badge: unreadNotificationCount > 0 ? unreadNotificationCount : null,
     },
-    { id: 'password', label: 'Change Password', icon: FiLock, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { id: 'password', label: t('Change Password'), icon: FiLock, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   return (
@@ -163,8 +215,8 @@ const MobileProfile = () => {
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
-                  <p className="text-gray-500 mt-1">Manage your personal information and security settings</p>
+                  <h1 className="text-3xl font-bold text-gray-800">{t('My Profile')}</h1>
+                  <p className="text-gray-500 mt-1">{t('Manage your personal information and security settings')}</p>
                 </div>
               </div>
             </div>
@@ -178,7 +230,7 @@ const MobileProfile = () => {
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
                 <h1 className="text-xl font-bold text-gray-800">
-                  {activeTab === 'menu' ? 'My Account' : activeTab === 'personal' ? 'Personal Info' : 'Security'}
+                  {activeTab === 'menu' ? t('My Account') : activeTab === 'personal' ? t('Personal Info') : t('Security')}
                 </h1>
               </div>
             </div>
@@ -196,7 +248,7 @@ const MobileProfile = () => {
                         }`}
                     >
                       <FiUser className="text-lg" />
-                      Personal Info
+                      {t('Personal Info')}
                     </button>
                     <button
                       onClick={() => setActiveTab('password')}
@@ -206,7 +258,7 @@ const MobileProfile = () => {
                         }`}
                     >
                       <FiLock className="text-lg" />
-                      Password
+                      {t('Password')}
                     </button>
                   </div>
                 </div>
@@ -241,14 +293,14 @@ const MobileProfile = () => {
                           onClick={() => setActiveTab('personal')}
                           className="flex-1 py-3 rounded-xl bg-primary-50 text-primary-600 font-bold text-sm border border-primary-100"
                         >
-                          View Profile
+                          {t('View Profile')}
                         </button>
                       </div>
                     </div>
 
                     {/* Menu Options */}
                     <div className="space-y-3">
-                      <p className="px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Account Settings</p>
+                      <p className="px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('Account Settings')}</p>
                       <div className="glass-card rounded-2xl overflow-hidden divide-y divide-gray-50 shadow-sm border border-gray-100">
                         {menuOptions.map((option) => (
                           option.link ? (
@@ -305,7 +357,7 @@ const MobileProfile = () => {
                         className="w-full flex items-center justify-center gap-3 p-4 glass-card rounded-2xl text-red-600 font-bold text-sm shadow-sm border border-red-50 hover:bg-red-50 transition-colors bg-white"
                       >
                         <FiLogOut className="text-lg" />
-                        <span>Sign Out</span>
+                        <span>{t('Sign Out')}</span>
                       </button>
                     </div>
                   </motion.div>
@@ -349,32 +401,32 @@ const MobileProfile = () => {
                         </button>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-sm mb-1">Profile Picture</p>
-                        <p className="text-xs text-gray-500">JPG, PNG or GIF. Max size 5MB</p>
+                        <p className="text-gray-600 text-sm mb-1">{t('Profile Picture')}</p>
+                        <p className="text-xs text-gray-500">{t('JPG, PNG or GIF. Max size 5MB')}</p>
                       </div>
                     </div>
 
                     <form onSubmit={handleSubmitPersonal(onPersonalSubmit)} className="space-y-4">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Full Name
+                          {t('Full Name')}
                         </label>
                         <div className="relative">
                           <FiUser className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                           <input
                             type="text"
                             {...registerPersonal('name', {
-                              required: 'Name is required',
+                              required: t('Name is required'),
                               minLength: {
                                 value: 2,
-                                message: 'Name must be at least 2 characters',
+                                message: t('Name must be at least 2 characters'),
                               },
                             })}
                             className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${personalErrors.name
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-base`}
-                            placeholder="Your full name"
+                            placeholder={t('Your full name')}
                           />
                         </div>
                         <AnimatePresence>
@@ -393,27 +445,27 @@ const MobileProfile = () => {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Email Address
+                          {t('Email Address')}
                         </label>
                         <div className="relative">
                           <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                           <input
                             type="email"
                             {...registerPersonal('email', {
-                              required: 'Email is required',
+                              required: t('Email is required'),
                               validate: (value) =>
-                                isValidEmail(value) || 'Please enter a valid email',
+                                isValidEmail(value) || t('Please enter a valid email'),
                             })}
                             readOnly
                             className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${personalErrors.email
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-base bg-gray-50 text-gray-500 cursor-not-allowed`}
-                            placeholder="your.email@example.com"
+                            placeholder={t('your.email@example.com')}
                           />
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
-                          Email cannot be changed from profile settings.
+                          {t('Email cannot be changed from profile settings.')}
                         </p>
                         <AnimatePresence>
                           {personalErrors.email && (
@@ -431,7 +483,7 @@ const MobileProfile = () => {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Phone Number
+                          {t('Phone Number')}
                         </label>
                         <div className="relative">
                           <FiPhone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -439,13 +491,13 @@ const MobileProfile = () => {
                             type="tel"
                             {...registerPersonal('phone', {
                               validate: (value) =>
-                                !value || isValidPhone(value) || 'Please enter a valid phone number',
+                                !value || isValidPhone(value) || t('Please enter a valid phone number'),
                             })}
                             className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${personalErrors.phone
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-base`}
-                            placeholder="1234567890"
+                            placeholder={t('1234567890')}
                           />
                         </div>
                         <AnimatePresence>
@@ -468,7 +520,7 @@ const MobileProfile = () => {
                         className="w-full gradient-green text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-glow-green transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiSave />
-                        {isLoading ? 'Saving...' : 'Save Changes'}
+                        {isLoading ? t('Saving...') : t('Save Changes')}
                       </button>
                     </form>
                   </motion.div>
@@ -481,25 +533,25 @@ const MobileProfile = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="glass-card rounded-2xl p-4 lg:p-8"
                   >
-                    <h2 className="text-lg font-bold text-gray-800 mb-4">Change Password</h2>
+                    <h2 className="text-lg font-bold text-gray-800 mb-4">{t('Change Password')}</h2>
 
                     <form onSubmit={handleSubmitPassword(onPasswordSubmit)} className="space-y-4">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Current Password
+                          {t('Current Password')}
                         </label>
                         <div className="relative">
                           <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                           <input
                             type={showCurrentPassword ? 'text' : 'password'}
                             {...registerPassword('currentPassword', {
-                              required: 'Current password is required',
+                              required: t('Current password is required'),
                             })}
                             className={`w-full pl-12 pr-12 py-3 rounded-xl border-2 ${passwordErrors.currentPassword
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-sm sm:text-base`}
-                            placeholder="Current Password"
+                            placeholder={t('Current Password')}
                           />
                           <button
                             type="button"
@@ -518,24 +570,24 @@ const MobileProfile = () => {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          New Password
+                          {t('New Password')}
                         </label>
                         <div className="relative">
                           <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                           <input
                             type={showNewPassword ? 'text' : 'password'}
                             {...registerPassword('newPassword', {
-                              required: 'New password is required',
+                              required: t('New password is required'),
                               minLength: {
                                 value: 6,
-                                message: 'Password must be at least 6 characters',
+                                message: t('Password must be at least 6 characters'),
                               },
                             })}
                             className={`w-full pl-12 pr-12 py-3 rounded-xl border-2 ${passwordErrors.newPassword
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-sm sm:text-base`}
-                            placeholder="New Password"
+                            placeholder={t('New Password')}
                           />
                           <button
                             type="button"
@@ -559,22 +611,22 @@ const MobileProfile = () => {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Confirm New Password
+                          {t('Confirm New Password')}
                         </label>
                         <div className="relative">
                           <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                           <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             {...registerPassword('confirmPassword', {
-                              required: 'Please confirm your password',
+                              required: t('Please confirm your password'),
                               validate: (value) =>
-                                value === newPassword || 'Passwords do not match',
+                                value === newPassword || t('Passwords do not match'),
                             })}
                             className={`w-full pl-12 pr-12 py-3 rounded-xl border-2 ${passwordErrors.confirmPassword
                               ? 'border-red-300 focus:border-red-500'
                               : 'border-gray-200 focus:border-primary-500'
                               } focus:outline-none transition-colors text-sm sm:text-base`}
-                            placeholder="Confirm Password"
+                            placeholder={t('Confirm Password')}
                           />
                           <button
                             type="button"
@@ -597,7 +649,7 @@ const MobileProfile = () => {
                         className="w-full gradient-green text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-glow-green transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiSave />
-                        {isLoading ? 'Changing Password...' : 'Change Password'}
+                        {isLoading ? t('Changing Password...') : t('Change Password')}
                       </button>
                     </form>
                   </motion.div>

@@ -4,8 +4,10 @@ import { Link } from "react-router-dom";
 import { FiThumbsUp, FiArrowRight } from "react-icons/fi";
 import ProductCard from "../../../../shared/components/ProductCard";
 import { getRecommendedProducts } from "../../data/catalogData";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const RecommendedSection = ({ products = null }) => {
+  const { getTranslatedText: t } = usePageTranslation(["Recommended for You", "Curated just for you", "See All"]);
   const recommended = useMemo(() => {
     if (Array.isArray(products) && products.length > 0) {
       return products.slice(0, 6);
@@ -26,15 +28,15 @@ const RecommendedSection = ({ products = null }) => {
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-800 leading-tight">
-              Recommended for You
+              {t("Recommended for You")}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Curated just for you</p>
+            <p className="text-xs text-gray-500 mt-0.5">{t("Curated just for you")}</p>
           </div>
         </div>
         <Link
           to="/search"
           className="flex items-center gap-1 text-sm text-primary-600 font-semibold hover:text-primary-700 transition-colors active:scale-95">
-          <span>See All</span>
+          <span>{t("See All")}</span>
           <FiArrowRight className="text-sm" />
         </Link>
       </div>

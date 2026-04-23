@@ -4,8 +4,18 @@ import { Link } from "react-router-dom";
 import { FiClock, FiZap } from "react-icons/fi";
 import ProductCard from "../../../../shared/components/ProductCard";
 import { getDailyDeals } from "../../data/catalogData";
-
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
+ 
 const DailyDealsSection = ({ products = null }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Daily Deals",
+    "Limited time offers - Up to 70% OFF",
+    "See All",
+    "Deal ends in",
+    "Hrs",
+    "Min",
+    "Sec"
+  ]);
   const fallback = getDailyDeals().slice(0, 5);
   const dailyDeals = Array.isArray(products) && products.length > 0
     ? products.slice(0, 5)
@@ -69,17 +79,17 @@ const DailyDealsSection = ({ products = null }) => {
               </div>
               <div>
                 <h2 className="text-xl md:text-3xl font-extrabold text-white drop-shadow-lg uppercase tracking-tight">
-                  Daily Deals
+                  {t("Daily Deals")}
                 </h2>
                 <p className="text-xs md:text-sm text-white/90 font-medium">
-                  Limited time offers - Up to 70% OFF
+                  {t("Limited time offers - Up to 70% OFF")}
                 </p>
               </div>
             </div>
             <Link
               to="/daily-deals"
               className="bg-white/20 backdrop-blur-sm text-white text-sm font-bold px-3 py-1.5 rounded-lg hover:bg-white/30 transition-all">
-              See All
+              {t("See All")}
             </Link>
           </div>
 
@@ -90,7 +100,7 @@ const DailyDealsSection = ({ products = null }) => {
             className="bg-white rounded-xl p-4 shadow-2xl border-2 border-white/50">
             <div className="mb-2">
               <p className="text-xs font-semibold text-gray-700 mb-2 ml-11">
-                Deal ends in
+                {t("Deal ends in")}
               </p>
               <div className="flex items-center gap-3">
                 <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-md p-1.5 shadow-md transform translate-y-[2px]">
@@ -101,21 +111,21 @@ const DailyDealsSection = ({ products = null }) => {
                     <div className="text-base font-extrabold leading-tight">
                       {formatTime(timeLeft.hours)}
                     </div>
-                    <div className="text-[8px] opacity-90 font-medium uppercase">Hrs</div>
+                    <div className="text-[8px] opacity-90 font-medium uppercase">{t("Hrs")}</div>
                   </div>
                   <span className="text-red-500 font-bold text-lg">:</span>
                   <div className="bg-gradient-to-br from-red-500 to-orange-500 text-white rounded-lg px-2.5 py-1.5 min-w-[2.8rem] text-center shadow-lg border border-white/20">
                     <div className="text-base font-extrabold leading-tight">
                       {formatTime(timeLeft.minutes)}
                     </div>
-                    <div className="text-[8px] opacity-90 font-medium uppercase">Min</div>
+                    <div className="text-[8px] opacity-90 font-medium uppercase">{t("Min")}</div>
                   </div>
                   <span className="text-red-500 font-bold text-lg">:</span>
                   <div className="bg-gradient-to-br from-red-500 to-orange-500 text-white rounded-lg px-2.5 py-1.5 min-w-[2.8rem] text-center shadow-lg border border-white/20 animate-pulse">
                     <div className="text-base font-extrabold leading-tight">
                       {formatTime(timeLeft.seconds)}
                     </div>
-                    <div className="text-[8px] opacity-90 font-medium uppercase">Sec</div>
+                    <div className="text-[8px] opacity-90 font-medium uppercase">{t("Sec")}</div>
                   </div>
                 </div>
               </div>

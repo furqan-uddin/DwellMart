@@ -11,8 +11,13 @@ import {
 import toast from "react-hot-toast";
 import LazyImage from "../../../../shared/components/LazyImage";
 import useSwipeGesture from "../../hooks/useSwipeGesture";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const SwipeableWishlistItem = ({ item, index, onMoveToCart, onRemove }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Removed from cart!", "Removed from wishlist", "Undo", "Item restored",
+    "Remove", "Add to Cart"
+  ]);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDeleted, setIsDeleted] = useState(false);
   const deletedItemRef = useRef(null);
@@ -23,23 +28,23 @@ const SwipeableWishlistItem = ({ item, index, onMoveToCart, onRemove }) => {
   const handleRemoveFromCart = (e) => {
     if (e) e.stopPropagation();
     removeFromCart(item.id);
-    toast.success("Removed from cart!");
+    toast.success(t("Removed from cart!"));
   };
 
   const handleSwipeRight = () => {
     setIsDeleted(true);
     deletedItemRef.current = { ...item };
     onRemove(item.id);
-    toast.success("Removed from wishlist", {
+    toast.success(t("Removed from wishlist"), {
       duration: 3000,
       action: {
-        label: "Undo",
+        label: t("Undo"),
         onClick: () => {
           if (deletedItemRef.current) {
             addToWishlist(deletedItemRef.current);
             setIsDeleted(false);
             deletedItemRef.current = null;
-            toast.success("Item restored");
+            toast.success(t("Item restored"));
           }
         },
       },
@@ -120,14 +125,14 @@ const SwipeableWishlistItem = ({ item, index, onMoveToCart, onRemove }) => {
                 onClick={handleRemoveFromCart}
                 className="flex-1 py-2 sm:py-2.5 bg-red-50 text-red-600 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap border border-red-100 transition-all">
                 <FiTrash2 className="text-sm sm:text-base" />
-                Remove
+                {t('Remove')}
               </button>
             ) : (
               <button
                 onClick={() => onMoveToCart(item)}
                 className="flex-1 py-2 sm:py-2.5 gradient-green text-white rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap hover:shadow-glow-green transition-all">
                 <FiShoppingBag className="text-sm sm:text-base" />
-                Add to Cart
+                {t('Add to Cart')}
               </button>
             )}
             <button

@@ -12,6 +12,8 @@ import api from "../../../shared/utils/api";
 import { formatPrice } from "../../../shared/utils/helpers";
 import toast from "react-hot-toast";
 import { useCategoryStore } from "../../../shared/store/categoryStore";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeProduct = (raw) => {
   const vendorObj =
@@ -48,6 +50,33 @@ const getDiscountPercent = (product) => {
 };
 
 const MobileOffers = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Special Offers",
+    "offer",
+    "offers",
+    "live now • Extra savings",
+    "Filters",
+    "Category",
+    "All Categories",
+    "Price Range",
+    "Min Price",
+    "Max Price",
+    "Minimum Rating",
+    "Stars",
+    "Clear All",
+    "Apply Filters",
+    "Available Coupons",
+    "OFF",
+    "Free Shipping",
+    "Min order:",
+    "No offers found",
+    "Try adjusting your filters",
+    "Loading more products...",
+    "Loading...",
+    "Load More"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const navigate = useNavigate();
   const { categories: storeCategories, initialize: initializeCategories } = useCategoryStore();
   const [liveOffers, setLiveOffers] = useState([]);
@@ -112,7 +141,9 @@ const MobileOffers = () => {
           });
 
         if (!cancelled) {
-          setLiveOffers(Array.from(productsById.values()));
+          const productList = Array.from(productsById.values());
+          const translatedProducts = await translateArray(productList, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+          setLiveOffers(translatedProducts);
         }
       } catch {
         if (!cancelled) setLiveOffers([]);
@@ -124,7 +155,8 @@ const MobileOffers = () => {
         const response = await api.get("/coupons/available");
         const payload = response?.data ?? response;
         if (!cancelled) {
-          setAvailableCoupons(Array.isArray(payload) ? payload : []);
+          const couponList = Array.isArray(payload) ? payload : [];
+          setAvailableCoupons(couponList);
         }
       } catch {
         if (!cancelled) setAvailableCoupons([]);
@@ -137,7 +169,7 @@ const MobileOffers = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [translateArray]);
 
   const offersWithDiscount = useMemo(() => {
     return liveOffers
@@ -235,10 +267,10 @@ const MobileOffers = () => {
               </button>
               <div className="flex-1">
                 <h1 className="text-2xl font-black text-gray-800 tracking-tight uppercase">
-                  Special Offers
+                  {t('Special Offers')}
                 </h1>
                 <p className="text-sm font-medium text-red-600">
-                  {filteredProducts.length} {filteredProducts.length === 1 ? "offer" : "offers"} live now • Extra savings
+                  {filteredProducts.length} {filteredProducts.length === 1 ? t("offer") : t("offers")} {t('live now • Extra savings')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -298,7 +330,7 @@ const MobileOffers = () => {
                             <div className="flex items-center gap-1.5">
                               <FiFilter className="text-sm text-gray-700" />
                               <h3 className="text-sm font-bold text-gray-800">
-                                Filters
+                                {t('Filters')}
                               </h3>
                             </div>
                             <button
@@ -312,7 +344,7 @@ const MobileOffers = () => {
                             <div className="p-2 space-y-2">
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Category
+                                  {t('Category')}
                                 </h4>
                                 <select
                                   value={filters.category}
@@ -321,7 +353,7 @@ const MobileOffers = () => {
                                   }
                                   className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 text-xs"
                                 >
-                                  <option value="">All Categories</option>
+                                  <option value="">{t('All Categories')}</option>
                                   {categories.map((cat) => (
                                     <option key={cat.id} value={String(cat.id)}>
                                       {cat.name}
@@ -332,12 +364,12 @@ const MobileOffers = () => {
 
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Price Range
+                                  {t('Price Range')}
                                 </h4>
                                 <div className="space-y-1.5">
                                   <input
                                     type="number"
-                                    placeholder="Min Price"
+                                    placeholder={t("Min Price")}
                                     value={filters.minPrice}
                                     onChange={(e) =>
                                       handleFilterChange("minPrice", e.target.value)
@@ -346,7 +378,7 @@ const MobileOffers = () => {
                                   />
                                   <input
                                     type="number"
-                                    placeholder="Max Price"
+                                    placeholder={t("Max Price")}
                                     value={filters.maxPrice}
                                     onChange={(e) =>
                                       handleFilterChange("maxPrice", e.target.value)
@@ -358,7 +390,7 @@ const MobileOffers = () => {
 
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Minimum Rating
+                                  {t('Minimum Rating')}
                                 </h4>
                                 <div className="space-y-0.5">
                                   {[4, 3, 2, 1].map((rating) => (
@@ -382,7 +414,7 @@ const MobileOffers = () => {
                                         }}
                                       />
                                       <span className="text-xs text-gray-700">
-                                        {rating}+ Stars
+                                        {rating}+ {t('Stars')}
                                       </span>
                                     </label>
                                   ))}
@@ -395,12 +427,12 @@ const MobileOffers = () => {
                             <button
                               onClick={clearFilters}
                               className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                              Clear All
+                              {t('Clear All')}
                             </button>
                             <button
                               onClick={() => setShowFilters(false)}
                               className="w-full py-1.5 gradient-red text-white rounded-md font-semibold text-xs hover:shadow-glow-red transition-all">
-                              Apply Filters
+                              {t('Apply Filters')}
                             </button>
                           </div>
                         </motion.div>
@@ -417,7 +449,7 @@ const MobileOffers = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-3">
                 <h3 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
                   <FiTag className="text-red-600" />
-                  Available Coupons
+                  {t('Available Coupons')}
                 </h3>
                 <div className="space-y-2">
                   {availableCoupons.slice(0, 4).map((coupon) => (
@@ -430,14 +462,14 @@ const MobileOffers = () => {
                         <p className="text-sm font-semibold text-gray-800">{coupon.code}</p>
                         <p className="text-xs text-red-600 font-semibold">
                           {coupon.type === "percentage"
-                            ? `${coupon.value}% OFF`
+                            ? `${coupon.value}% ${t('OFF')}`
                             : coupon.type === "fixed"
-                              ? `${formatPrice(coupon.value)} OFF`
-                              : "Free Shipping"}
+                               ? `${formatPrice(coupon.value)} ${t('OFF')}`
+                               : t("Free Shipping")}
                         </p>
                       </div>
                       <p className="text-xs text-gray-600">
-                        Min order: {formatPrice(coupon.minOrderValue || 0)}
+                        {t('Min order:')} {formatPrice(coupon.minOrderValue || 0)}
                       </p>
                     </button>
                   ))}
@@ -451,9 +483,9 @@ const MobileOffers = () => {
               <div className="text-center py-12">
                 <div className="text-6xl text-gray-300 mx-auto mb-4">[ ]</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  No offers found
+                  {t('No offers found')}
                 </h3>
-                <p className="text-gray-600">Try adjusting your filters</p>
+                <p className="text-gray-600">{t('Try adjusting your filters')}</p>
               </div>
             ) : viewMode === "grid" ? (
               <>
@@ -485,7 +517,7 @@ const MobileOffers = () => {
                           className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full"
                         />
                         <span className="text-sm">
-                          Loading more products...
+                          {t('Loading more products...')}
                         </span>
                       </div>
                     )}
@@ -493,7 +525,7 @@ const MobileOffers = () => {
                       onClick={loadMore}
                       disabled={isLoading}
                       className="px-6 py-3 gradient-red text-white rounded-xl font-semibold hover:shadow-glow-red transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isLoading ? "Loading..." : "Load More"}
+                      {isLoading ? t("Loading...") : t("Load More")}
                     </button>
                   </div>
                 )}
@@ -527,7 +559,7 @@ const MobileOffers = () => {
                           className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full"
                         />
                         <span className="text-sm">
-                          Loading more products...
+                          {t('Loading more products...')}
                         </span>
                       </div>
                     )}
@@ -535,7 +567,7 @@ const MobileOffers = () => {
                       onClick={loadMore}
                       disabled={isLoading}
                       className="px-6 py-3 gradient-red text-white rounded-xl font-semibold hover:shadow-glow-red transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isLoading ? "Loading..." : "Load More"}
+                      {isLoading ? t("Loading...") : t("Load More")}
                     </button>
                   </div>
                 )}
@@ -549,3 +581,4 @@ const MobileOffers = () => {
 };
 
 export default MobileOffers;
+

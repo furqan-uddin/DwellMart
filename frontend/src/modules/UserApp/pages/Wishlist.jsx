@@ -10,6 +10,8 @@ import { useCartStore } from "../../../shared/store/useStore";
 import { useAuthStore } from "../../../shared/store/authStore";
 import toast from "react-hot-toast";
 import PageTransition from '../../../shared/components/PageTransition';
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const MobileWishlist = () => {
   const navigate = useNavigate();
@@ -18,11 +20,28 @@ const MobileWishlist = () => {
   const { addItem } = useCartStore();
   const [viewMode, setViewMode] = useState("list"); // 'list' or 'grid'
 
+  const { getTranslatedText: t } = usePageTranslation([
+    "My Wishlist", "item", "items", "saved", "Clear All", "Loading wishlist...",
+    "Your wishlist is empty", "Start adding items you love!", "Continue Shopping",
+    "Moved to cart!", "Removed from wishlist", "Wishlist cleared",
+    "Are you sure you want to clear your wishlist?", "Undo", "Item restored"
+  ]);
+  const { translateArray } = useDynamicTranslation();
+  const [translatedItems, setTranslatedItems] = useState([]);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchWishlist().catch(() => null);
     }
   }, [isAuthenticated, fetchWishlist]);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setTranslatedItems([]);
+      return;
+    }
+    translateArray(items, ['name', 'description', 'unit']).then(setTranslatedItems);
+  }, [items, translateArray]);
 
   const handleMoveToCart = (item) => {
     const wishlistItem = moveToCart(item.id);
@@ -31,19 +50,19 @@ const MobileWishlist = () => {
         ...wishlistItem,
         quantity: 1,
       });
-      toast.success("Moved to cart!");
+      toast.success(t("Moved to cart!"));
     }
   };
 
   const handleRemove = (id) => {
     removeItem(id);
-    toast.success("Removed from wishlist");
+    toast.success(t("Removed from wishlist"));
   };
 
   const handleClearAll = () => {
-    if (window.confirm("Are you sure you want to clear your wishlist?")) {
+    if (window.confirm(t("Are you sure you want to clear your wishlist?"))) {
       clearWishlist();
-      toast.success("Wishlist cleared");
+      toast.success(t("Wishlist cleared"));
     }
   };
 
@@ -61,10 +80,10 @@ const MobileWishlist = () => {
                 </button>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-bold text-gray-800 truncate">
-                    My Wishlist
+                    {t('My Wishlist')}
                   </h1>
                   <p className="text-xs text-gray-600">
-                    {items.length} {items.length === 1 ? "item" : "items"} saved
+                    {items.length} {items.length === 1 ? t("item") : t("items")} {t('saved')}
                   </p>
                 </div>
                 {items.length > 0 && (
@@ -91,7 +110,7 @@ const MobileWishlist = () => {
                     <button
                       onClick={handleClearAll}
                       className="text-xs text-red-600 font-semibold px-2 py-1 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0">
-                      Clear All
+                      {t('Clear All')}
                     </button>
                   </div>
                 )}
@@ -102,13 +121,13 @@ const MobileWishlist = () => {
             <div className="px-4 py-4">
               {isLoading ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">Loading wishlist...</p>
+                  <p className="text-gray-600">{t('Loading wishlist...')}</p>
                 </div>
               ) : items.length === 0 ? (
-                <EmptyWishlistState />
+                <EmptyWishlistState t={t} />
               ) : (
                 <WishlistItems
-                  items={items}
+                  items={translatedItems.length > 0 ? translatedItems : items}
                   viewMode={viewMode}
                   onMoveToCart={handleMoveToCart}
                   onRemove={handleRemove}
@@ -122,17 +141,17 @@ const MobileWishlist = () => {
 };
 
 // Empty State Component
-const EmptyWishlistState = () => (
+const EmptyWishlistState = ({ t }) => (
   <div className="text-center py-12">
     <FiHeart className="text-6xl text-gray-300 mx-auto mb-4" />
     <h3 className="text-xl font-bold text-gray-800 mb-2">
-      Your wishlist is empty
+      {t('Your wishlist is empty')}
     </h3>
-    <p className="text-gray-600 mb-6">Start adding items you love!</p>
+    <p className="text-gray-600 mb-6">{t('Start adding items you love!')}</p>
     <Link
       to="/home"
       className="gradient-green text-white px-6 py-3 rounded-xl font-semibold inline-block">
-      Continue Shopping
+      {t('Continue Shopping')}
     </Link>
   </div>
 );

@@ -16,7 +16,6 @@ import {
 } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../../../shared/utils/api';
 import {
   getPublicSubscriptionPlans,
   getVendorOnboardingStatus,
@@ -24,8 +23,11 @@ import {
   selectVendorSubscriptionPlan,
 } from '../services/vendorService';
 import StripeSubscriptionForm from './StripeSubscriptionForm';
+import api from '../../../shared/utils/api';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
+import { useDynamicTranslation } from '../../../hooks/useDynamicTranslation';
 
-const STEPS = ['Plans', 'Registration', 'Payment', 'Done'];
+const STEPS_KEYS = ['Plans', 'Registration', 'Payment', 'Done'];
 const RAZORPAY_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 let razorpayScriptPromise = null;
 
@@ -44,19 +46,19 @@ const loadRazorpayScript = () => {
   return razorpayScriptPromise;
 };
 
-const formatPrice = (plan) => {
+const formatPrice = (plan, t) => {
   const inr = Number(plan?.pricing?.inr ?? plan?.price_inr ?? 0);
   const usd = Number(plan?.pricing?.usd ?? plan?.price_usd ?? 0);
-  if (inr === 0 && usd === 0) return 'Free';
-  return `Rs. ${inr.toFixed(0)} / $${usd.toFixed(2)}`;
+  if (inr === 0 && usd === 0) return t('Free');
+  return `${t('Rs.')} ${inr.toFixed(0)} / ${t('$')}${usd.toFixed(2)}`;
 };
 
-const getIntervalLabel = (plan) => plan?.intervalLabel || (() => {
+const getIntervalLabel = (plan, t) => {
   const count = Number.parseInt(plan?.interval_count, 10) || 1;
   const interval = plan?.interval || 'month';
-  const unit = count === 1 ? interval : `${interval}s`;
-  return count === 1 ? unit : `${count} ${unit}`;
-})();
+  if (count === 1) return t(interval);
+  return `${count} ${t(`${interval}s`)}`;
+};
 
 const getHighlights = (plan) => {
   if (Array.isArray(plan?.featureHighlights)) return plan.featureHighlights;
@@ -72,12 +74,41 @@ const SubscriptionOnboardingWizard = ({
   title,
   subtitle,
 }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Plans', 'Registration', 'Payment', 'Done',
+    'Free', 'Popular', 'per', 'Selected', 'Choose Plan',
+    'Back to plans', 'Full name', 'Store name', 'Email', 'Phone',
+    'Store description', 'Street', 'City', 'State', 'Zip code', 'Country',
+    'Password', 'Confirm password', 'Hide', 'Show', 'Trade Licence', 'GST',
+    'I agree to the', 'Terms & Conditions', 'Register and verify email',
+    'Complete your subscription',
+    'Billing becomes active only after webhook confirmation updates MongoDB.',
+    'Waiting for billing confirmation. This page will keep checking automatically.',
+    'Payment is still pending confirmation. Please give the gateway a moment and retry if needed.',
+    'Billing could not be confirmed. Please retry the payment step.',
+    'Preparing checkout...', 'Checking payment status...', 'Payment window open',
+    'Start secure payment', 'Back to registration',
+    'Subscription submitted successfully',
+    'Your billing is synced from the gateway and your vendor account is now awaiting admin approval.',
+    'Go to vendor login', 'DwellMart Vendor Billing', 'No terms are configured yet.',
+    'Please upload your', 'document.', 'Passwords do not match.',
+    'You must agree to the Terms & Conditions.', 'Unable to load vendor onboarding.',
+    'Your vendor account is already active. Please login.',
+    'This onboarding cannot continue. Please contact support.',
+    'Authorization received. Waiting for billing confirmation.',
+    'Payment window was closed.', 'Unable to start payment.',
+    'Please verify your email first.', 'Please select a subscription plan first.'
+  ]);
+
+  const { translateArray, translateText, translateBatch, translateObject } = useDynamicTranslation();
+  const STEPS = STEPS_KEYS.map(key => t(key));
   const location = useLocation();
   const navigate = useNavigate();
   const selectionStorageKey = `${emailStorageKey}:selection-token`;
 
   const [step, setStep] = useState(0);
   const [plans, setPlans] = useState([]);
+  const [translatedPlans, setTranslatedPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectionToken, setSelectionToken] = useState('');
   const [onboardingEmail, setOnboardingEmail] = useState('');
@@ -129,7 +160,11 @@ const SubscriptionOnboardingWizard = ({
     const response = await getVendorOnboardingStatus(email);
     const data = response?.data || {};
     const matchedPlan = data.selectedPlan || availablePlans.find((plan) => plan._id === data.selectedPlanId) || null;
-    if (matchedPlan) setSelectedPlan(matchedPlan);
+    if (matchedPlan) {
+      const translated = await translateObject(matchedPlan, ['name', 'intervalLabel']);
+      const highlights = await translateBatch(getHighlights(translated));
+      setSelectedPlan({ ...translated, featureHighlights: highlights });
+    }
 
     if (data.nextStep === 'verify_email') {
       navigate('/vendor/verification', { replace: true, state: { email, returnTo } });
@@ -154,12 +189,12 @@ const SubscriptionOnboardingWizard = ({
       return true;
     }
     if (data.nextStep === 'approved') {
-      toast.success('Your vendor account is already active. Please login.');
+      toast.success(t('Your vendor account is already active. Please login.'));
       navigate('/vendor/login', { replace: true });
       return true;
     }
     if (data.nextStep === 'rejected' || data.nextStep === 'suspended') {
-      toast.error('This onboarding cannot continue. Please contact support.');
+      toast.error(t('This onboarding cannot continue. Please contact support.'));
       navigate('/vendor/login', { replace: true });
       return true;
     }
@@ -188,8 +223,17 @@ const SubscriptionOnboardingWizard = ({
           getPublicSubscriptionPlans(),
           api.get('/vendor-terms'),
         ]);
-        const fetchedPlans = plansRes?.data || [];
+        const fetchedPlans = plansRes?.data || plansRes || [];
         setPlans(fetchedPlans);
+        
+        // Translate plans
+        const translated = await translateArray(fetchedPlans, ['name', 'intervalLabel']);
+        // Deeply translate highlights
+        const fullyTranslated = await Promise.all(translated.map(async p => {
+          const highlights = await translateBatch(getHighlights(p));
+          return { ...p, featureHighlights: highlights };
+        }));
+        setTranslatedPlans(fullyTranslated);
         setTermsContent(termsRes?.data?.content || '');
         setSelectionToken(savedToken);
 
@@ -203,16 +247,42 @@ const SubscriptionOnboardingWizard = ({
           return;
         }
 
+        if (query.get('payment') === 'processing' || query.get('redirect_status')) {
+          setPaymentState('processing');
+        }
+
         if (resumeEmail) {
           await syncFromStatus(resumeEmail, fetchedPlans, { resetPaymentState: true });
         }
-      } catch {
-        toast.error('Unable to load vendor onboarding.');
+      } catch (error) {
+        toast.error(t('Unable to load vendor onboarding.'));
       }
     };
 
     bootstrap();
-  }, [emailStorageKey, location.state, navigate, returnTo]);
+  }, [emailStorageKey, selectionStorageKey, location.state]);
+
+  // Transalate plans when loaded or language changes
+  useEffect(() => {
+    if (plans.length === 0) return;
+    
+    const translateAll = async () => {
+      const translated = await translateArray(plans, ['name', 'intervalLabel']);
+      const fullyTranslated = await Promise.all(translated.map(async p => {
+        const highlights = await translateBatch(getHighlights(p));
+        return { ...p, featureHighlights: highlights };
+      }));
+      setTranslatedPlans(fullyTranslated);
+      
+      // Also update selectedPlan if it exists
+      if (selectedPlan) {
+        const matched = fullyTranslated.find(p => p._id === selectedPlan._id);
+        if (matched) setSelectedPlan(matched);
+      }
+    };
+    
+    translateAll();
+  }, [plans, translateArray, translateBatch, translateObject]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -244,20 +314,20 @@ const SubscriptionOnboardingWizard = ({
   const handleRegister = async (event) => {
     event.preventDefault();
     if (!selectedPlan?._id || !selectionToken) {
-      toast.error('Please select a subscription plan first.');
+      toast.error(t('Please select a subscription plan first.'));
       setStep(0);
       return;
     }
     if (!documentFile) {
-      toast.error(`Please upload your ${documentType === 'gst' ? 'GST' : 'Trade Licence'} document.`);
+      toast.error(`${t('Please upload your')} ${documentType === 'gst' ? t('GST') : t('Trade Licence')} ${t('document.')}`);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match.');
+      toast.error(t('Passwords do not match.'));
       return;
     }
     if (!agreedToTerms) {
-      toast.error('You must agree to the Terms & Conditions.');
+      toast.error(t('You must agree to the Terms & Conditions.'));
       return;
     }
 
@@ -312,8 +382,8 @@ const SubscriptionOnboardingWizard = ({
     const instance = new Razorpay({
       key: checkout.keyId,
       subscription_id: checkout.subscriptionId,
-      name: 'DwellMart Vendor Billing',
-      description: selectedPlan ? `${selectedPlan.name} subscription` : 'Vendor subscription',
+      name: t('DwellMart Vendor Billing'),
+      description: selectedPlan ? `${selectedPlan.name} ${t('subscription')}` : t('Vendor subscription'),
       prefill: {
         name: formData.name,
         email: paymentEmail,
@@ -322,13 +392,13 @@ const SubscriptionOnboardingWizard = ({
       theme: { color: '#0f766e' },
       handler: async () => {
         setPaymentState('processing');
-        toast.success('Authorization received. Waiting for billing confirmation.');
+        toast.success(t('Authorization received. Waiting for billing confirmation.'));
         await pollStatus(paymentEmail);
       },
       modal: {
         ondismiss: () => {
           setPaymentState('idle');
-          toast.error('Payment window was closed.');
+          toast.error(t('Payment window was closed.'));
         },
       },
     });
@@ -338,7 +408,7 @@ const SubscriptionOnboardingWizard = ({
 
   const handlePayment = async () => {
     if (!paymentEmail) {
-      toast.error('Please verify your email first.');
+      toast.error(t('Please verify your email first.'));
       return;
     }
 
@@ -376,7 +446,7 @@ const SubscriptionOnboardingWizard = ({
         await openRazorpayCheckout(data.checkout);
       }
     } catch (error) {
-      toast.error(error.message || 'Unable to start payment.');
+      toast.error(error.message || t('Unable to start payment.'));
       setPaymentState('failed');
     } finally {
       setIsLoading(false);
@@ -409,17 +479,17 @@ const SubscriptionOnboardingWizard = ({
           {step === 0 ? (
             <motion.div key="plans" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {plans.map((plan) => (
+                {translatedPlans.map((plan) => (
                   <div key={plan._id} className={`relative rounded-[28px] border p-6 ${selectedPlan?._id === plan._id ? 'border-teal-500 bg-teal-50/80 shadow-lg shadow-teal-100' : 'border-slate-200 bg-white'}`}>
                     {plan.isMostPopular ? (
                       <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase text-amber-700">
                         <FiStar size={12} />
-                        Popular
+                        {t('Popular')}
                       </span>
                     ) : null}
                     <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
-                    <p className="mt-3 text-3xl font-black text-slate-900">{formatPrice(plan)}</p>
-                    <p className="mt-1 text-sm text-slate-500">per {getIntervalLabel(plan)}</p>
+                    <p className="mt-3 text-3xl font-black text-slate-900">{formatPrice(plan, t)}</p>
+                    <p className="mt-1 text-sm text-slate-500">{t('per')} {getIntervalLabel(plan, t)}</p>
                     <ul className="mt-5 space-y-2">
                       {getHighlights(plan).map((feature) => (
                         <li key={`${plan._id}-${feature}`} className="flex items-start gap-2 text-sm text-slate-600">
@@ -430,7 +500,7 @@ const SubscriptionOnboardingWizard = ({
                     </ul>
                     <button type="button" onClick={() => handleSelectPlan(plan)} disabled={isLoading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
                       {isLoading && selectedPlan?._id === plan._id ? <FiLoader className="animate-spin" /> : null}
-                      {selectedPlan?._id === plan._id ? 'Selected' : 'Choose Plan'}
+                      {selectedPlan?._id === plan._id ? t('Selected') : t('Choose Plan')}
                     </button>
                   </div>
                 ))}
@@ -443,7 +513,7 @@ const SubscriptionOnboardingWizard = ({
               <div className="mb-4 flex items-center justify-between">
                 <button type="button" onClick={() => setStep(0)} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
                   <FiArrowLeft />
-                  Back to plans
+                  {t('Back to plans')}
                 </button>
                 {selectedPlan ? <span className="rounded-full bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700">{selectedPlan.name}</span> : null}
               </div>
@@ -451,51 +521,51 @@ const SubscriptionOnboardingWizard = ({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label className="relative">
                     <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="name" value={formData.name} onChange={handleChange} required placeholder="Full name" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
+                    <input name="name" value={formData.name} onChange={handleChange} required placeholder={t('Full name')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
                   </label>
                   <label className="relative">
                     <FiShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="storeName" value={formData.storeName} onChange={handleChange} required placeholder="Store name" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
+                    <input name="storeName" value={formData.storeName} onChange={handleChange} required placeholder={t('Store name')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
                   </label>
                   <label className="relative">
                     <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="Email" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={t('Email')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
                   </label>
                   <label className="relative">
                     <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="phone" value={formData.phone} onChange={handleChange} required placeholder="Phone" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
+                    <input name="phone" value={formData.phone} onChange={handleChange} required placeholder={t('Phone')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
                   </label>
-                  <textarea name="storeDescription" value={formData.storeDescription} onChange={handleChange} rows={3} placeholder="Store description" className="md:col-span-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                  <input name="address.street" value={formData.address.street} onChange={handleChange} placeholder="Street" className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                  <input name="address.city" value={formData.address.city} onChange={handleChange} placeholder="City" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                  <input name="address.state" value={formData.address.state} onChange={handleChange} placeholder="State" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                  <input name="address.zipCode" value={formData.address.zipCode} onChange={handleChange} placeholder="Zip code" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
-                  <input name="address.country" value={formData.address.country} onChange={handleChange} placeholder="Country" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <textarea name="storeDescription" value={formData.storeDescription} onChange={handleChange} rows={3} placeholder={t('Store description')} className="md:col-span-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input name="address.street" value={formData.address.street} onChange={handleChange} placeholder={t('Street')} className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input name="address.city" value={formData.address.city} onChange={handleChange} placeholder={t('City')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input name="address.state" value={formData.address.state} onChange={handleChange} placeholder={t('State')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input name="address.zipCode" value={formData.address.zipCode} onChange={handleChange} placeholder={t('Zip code')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
+                  <input name="address.country" value={formData.address.country} onChange={handleChange} placeholder={t('Country')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500" />
                   <label className="relative">
                     <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required placeholder="Password" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-12 text-sm outline-none focus:border-teal-500" />
-                    <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{showPassword ? 'Hide' : 'Show'}</button>
+                    <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required placeholder={t('Password')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-12 text-sm outline-none focus:border-teal-500" />
+                    <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{showPassword ? t('Hide') : t('Show')}</button>
                   </label>
                   <label className="relative">
                     <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required placeholder="Confirm password" className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-12 text-sm outline-none focus:border-teal-500" />
-                    <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+                    <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required placeholder={t('Confirm password')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-12 text-sm outline-none focus:border-teal-500" />
+                    <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{showConfirmPassword ? t('Hide') : t('Show')}</button>
                   </label>
                   <select value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-teal-500">
-                    <option value="tradeLicense">Trade Licence</option>
-                    <option value="gst">GST</option>
+                    <option value="tradeLicense">{t('Trade Licence')}</option>
+                    <option value="gst">{t('GST')}</option>
                   </select>
                   <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={(event) => setDocumentFile(event.target.files?.[0] || null)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-teal-100 file:px-4 file:py-2 file:font-semibold file:text-teal-700" />
                 </div>
                 <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <label className="flex items-start gap-3 text-sm text-slate-600">
                     <input type="checkbox" checked={agreedToTerms} onChange={(event) => setAgreedToTerms(event.target.checked)} className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600" />
-                    <span>I agree to the <button type="button" onClick={() => setShowTerms(true)} className="font-semibold text-teal-700 underline">Terms & Conditions</button></span>
+                    <span>{t('I agree to the')} <button type="button" onClick={() => setShowTerms(true)} className="font-semibold text-teal-700 underline">{t('Terms & Conditions')}</button></span>
                   </label>
                 </div>
                 <button type="submit" disabled={isLoading} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60">
                   {isLoading ? <FiLoader className="animate-spin" /> : <FiMail />}
-                  Register and verify email
+                  {t('Register and verify email')}
                 </button>
               </form>
             </motion.div>
@@ -506,19 +576,19 @@ const SubscriptionOnboardingWizard = ({
               <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-xl">
                 <div className="text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-teal-700"><FiCreditCard size={28} /></div>
-                  <h2 className="text-2xl font-bold text-slate-900">Complete your subscription</h2>
-                  <p className="mt-2 text-sm text-slate-500">Billing becomes active only after webhook confirmation updates MongoDB.</p>
+                  <h2 className="text-2xl font-bold text-slate-900">{t('Complete your subscription')}</h2>
+                  <p className="mt-2 text-sm text-slate-500">{t('Billing becomes active only after webhook confirmation updates MongoDB.')}</p>
                 </div>
-                {selectedPlan ? <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-center text-slate-700">{selectedPlan.name} | {formatPrice(selectedPlan)} | per {getIntervalLabel(selectedPlan)}</div> : null}
-                {paymentState === 'processing' ? <div className="mt-6 rounded-3xl border border-teal-200 bg-teal-50 px-4 py-4 text-sm text-teal-800">Waiting for billing confirmation. This page will keep checking automatically.</div> : null}
-                {paymentState === 'pending' ? <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">Payment is still pending confirmation. Please give the gateway a moment and retry if needed.</div> : null}
-                {paymentState === 'failed' ? <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">Billing could not be confirmed. Please retry the payment step.</div> : null}
+                {selectedPlan ? <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-center text-slate-700">{selectedPlan.name} | {formatPrice(selectedPlan, t)} | {t('per')} {getIntervalLabel(selectedPlan, t)}</div> : null}
+                {paymentState === 'processing' ? <div className="mt-6 rounded-3xl border border-teal-200 bg-teal-50 px-4 py-4 text-sm text-teal-800">{t('Waiting for billing confirmation. This page will keep checking automatically.')}</div> : null}
+                {paymentState === 'pending' ? <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">{t('Payment is still pending confirmation. Please give the gateway a moment and retry if needed.')}</div> : null}
+                {paymentState === 'failed' ? <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">{t('Billing could not be confirmed. Please retry the payment step.')}</div> : null}
                 <div className="mt-6 flex flex-col gap-3">
                   <button type="button" onClick={handlePayment} disabled={isLoading || paymentState === 'processing'} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
                     {isLoading ? <FiLoader className="animate-spin" /> : <FiCreditCard />}
-                    {isLoading ? 'Preparing checkout...' : paymentState === 'processing' ? 'Checking payment status...' : paymentState === 'checkout_open' ? 'Payment window open' : 'Start secure payment'}
+                    {isLoading ? t('Preparing checkout...') : paymentState === 'processing' ? t('Checking payment status...') : paymentState === 'checkout_open' ? t('Payment window open') : t('Start secure payment')}
                   </button>
-                  <button type="button" onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-100">Back to registration</button>
+                  <button type="button" onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-100">{t('Back to registration')}</button>
                 </div>
               </div>
             </motion.div>
@@ -528,9 +598,9 @@ const SubscriptionOnboardingWizard = ({
             <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="mx-auto max-w-lg">
               <div className="rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-xl">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><FiCheck size={28} /></div>
-                <h2 className="text-2xl font-bold text-slate-900">Subscription submitted successfully</h2>
-                <p className="mt-3 text-sm text-slate-500">Your billing is synced from the gateway and your vendor account is now awaiting admin approval.</p>
-                <button type="button" onClick={() => navigate('/vendor/login')} className="mt-6 w-full rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700">Go to vendor login</button>
+                <h2 className="text-2xl font-bold text-slate-900">{t('Subscription submitted successfully')}</h2>
+                <p className="mt-3 text-sm text-slate-500">{t('Your billing is synced from the gateway and your vendor account is now awaiting admin approval.')}</p>
+                <button type="button" onClick={() => navigate('/vendor/login')} className="mt-6 w-full rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700">{t('Go to vendor login')}</button>
               </div>
             </motion.div>
           ) : null}
@@ -554,10 +624,10 @@ const SubscriptionOnboardingWizard = ({
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4" onClick={() => setShowTerms(false)}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-slate-200 p-5">
-                <div className="flex items-center gap-2"><FiFileText className="text-teal-700" /><h3 className="font-bold text-slate-900">Terms & Conditions</h3></div>
+                <div className="flex items-center gap-2"><FiFileText className="text-teal-700" /><h3 className="font-bold text-slate-900">{t('Terms & Conditions')}</h3></div>
                 <button type="button" onClick={() => setShowTerms(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><FiX /></button>
               </div>
-              <div className="max-h-[60vh] overflow-y-auto p-5">{termsContent ? <div className="prose prose-sm max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: termsContent }} /> : <p className="text-sm text-slate-500">No terms are configured yet.</p>}</div>
+              <div className="max-h-[60vh] overflow-y-auto p-5">{termsContent ? <div className="prose prose-sm max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: termsContent }} /> : <p className="text-sm text-slate-500">{t('No terms are configured yet.')}</p>}</div>
             </motion.div>
           </motion.div>
         ) : null}

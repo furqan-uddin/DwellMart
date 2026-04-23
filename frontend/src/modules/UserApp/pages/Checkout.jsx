@@ -20,6 +20,8 @@ import { useOrderStore } from "../../../shared/store/orderStore";
 import { formatPrice } from "../../../shared/utils/helpers";
 import api from "../../../shared/utils/api";
 import toast from "react-hot-toast";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 import MobileLayout from "../components/Layout/MobileLayout";
 import MobileCheckoutSteps from "../components/Mobile/MobileCheckoutSteps";
 import PageTransition from "../../../shared/components/PageTransition";
@@ -27,6 +29,64 @@ import OrderSummary from "../components/Mobile/CheckoutOrderSummary";
 
 
 const MobileCheckout = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Your cart is empty",
+    "Continue Shopping",
+    "Order placed successfully!",
+    "Checkout",
+    "Shipping Information",
+    "Saved Addresses",
+    "Add New Address",
+    "Full Name",
+    "Email",
+    "Phone Number",
+    "Address",
+    "City",
+    "State",
+    "ZIP Code",
+    "Country",
+    "Payment Method",
+    "Credit/Debit Card",
+    "Cash on Delivery",
+    "Bank Transfer",
+    "Shipping Options",
+    "Standard Shipping",
+    "5-7 business days",
+    "Express Shipping",
+    "2-3 business days",
+    "Updating shipping estimate...",
+    "Estimated shipping:",
+    "Coupon Code",
+    "Enter code",
+    "Applying...",
+    "Apply",
+    "Available coupons",
+    "OFF",
+    "Free Shipping",
+    "Min order:",
+    "Applied",
+    "Code:",
+    "Back to Shipping",
+    "Back",
+    "Placing Order...",
+    "Place Order",
+    "Continue to Payment",
+    "Secure Checkout",
+    "Please enter a coupon code",
+    "Coupon applied!",
+    "Address added and selected!",
+    "Failed to add address",
+    "Please fill all shipping details correctly.",
+    "Please enter a valid 10-digit phone number.",
+    "Please wait for coupon validation to complete.",
+    "Order placed successfully!",
+    "Failed to place order",
+    "product",
+    "products",
+    "available"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const navigate = useNavigate();
   const { items, getTotal, clearCart, getItemsByVendor } = useCartStore();
   const { user, isAuthenticated } = useAuthStore();
@@ -201,7 +261,7 @@ const MobileCheckout = () => {
   const handleApplyCoupon = async (codeOverride = "") => {
     const normalizedCode = String(codeOverride || couponCode).trim().toUpperCase();
     if (!normalizedCode) {
-      toast.error("Please enter a coupon code");
+      toast.error(t("Please enter a coupon code"));
       return;
     }
 
@@ -222,7 +282,7 @@ const MobileCheckout = () => {
       setCouponCode(coupon.code || normalizedCode);
       setAppliedCoupon(coupon);
       setAppliedDiscount(discountAmount);
-      toast.success(`Coupon "${coupon.code}" applied!`);
+      toast.success(t('Coupon applied!'));
     } catch {
       setAppliedCoupon(null);
       setAppliedDiscount(0);
@@ -250,9 +310,9 @@ const MobileCheckout = () => {
       const newAddress = await addAddress(addressData);
       handleSelectAddress(newAddress);
       setShowAddressForm(false);
-      toast.success("Address added and selected!");
+      toast.success(t("Address added and selected!"));
     } catch (error) {
-      toast.error(error?.message || "Failed to add address");
+      toast.error(t(error?.message || "Failed to add address"));
     }
   };
 
@@ -262,13 +322,13 @@ const MobileCheckout = () => {
         <MobileLayout showBottomNav={false} showCartBar={false}>
           <div className="flex items-center justify-center min-h-[60vh] px-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Your cart is empty
+               <h2 className="text-xl font-bold text-gray-800 mb-4">
+                {t('Your cart is empty')}
               </h2>
               <button
                 onClick={() => navigate("/home")}
                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold">
-                Continue Shopping
+                {t('Continue Shopping')}
               </button>
             </div>
           </div>
@@ -297,17 +357,17 @@ const MobileCheckout = () => {
 
     const missingRequired = Object.values(normalizedShipping).some((v) => !v);
     if (missingRequired) {
-      toast.error("Please fill all shipping details correctly.");
+      toast.error(t("Please fill all shipping details correctly."));
       return;
     }
 
     if (normalizedShipping.phone.length !== 10) {
-      toast.error("Please enter a valid 10-digit phone number.");
+      toast.error(t("Please enter a valid 10-digit phone number."));
       return;
     }
 
     if (step === 2 && isApplyingCoupon) {
-      toast.error("Please wait for coupon validation to complete.");
+      toast.error(t("Please wait for coupon validation to complete."));
       return;
     }
     if (step === 2 && isPlacingOrder) {
@@ -334,10 +394,10 @@ const MobileCheckout = () => {
         });
 
         clearCart();
-        toast.success("Order placed successfully!");
+        toast.success(t("Order placed successfully!"));
         navigate(`/order-confirmation/${order.id}`);
       } catch (error) {
-        toast.error(error?.message || "Failed to place order");
+        toast.error(t(error?.message || "Failed to place order"));
       } finally {
         setIsPlacingOrder(false);
       }
@@ -357,7 +417,7 @@ const MobileCheckout = () => {
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <FiArrowLeft className="text-xl text-gray-700" />
               </button>
-              <h1 className="text-xl font-bold text-gray-800">Checkout</h1>
+              <h1 className="text-xl font-bold text-gray-800">{t('Checkout')}</h1>
             </div>
             {/* Steps Bar */}
             <div className="px-4 pb-3">
@@ -377,14 +437,14 @@ const MobileCheckout = () => {
                     className="px-4 py-4 lg:p-0">
                     <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                       <FiTruck className="text-primary-600" />
-                      Shipping Information
+                      {t('Shipping Information')}
                     </h2>
 
                     {/* Saved Addresses */}
                     {isAuthenticated && addresses.length > 0 && (
                       <div className="mb-4">
                         <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                          Saved Addresses
+                          {t('Saved Addresses')}
                         </h3>
                         <div className="space-y-2 mb-3">
                           {addresses.map((address) => (
@@ -426,7 +486,7 @@ const MobileCheckout = () => {
                           onClick={() => setShowAddressForm(true)}
                           className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold text-sm">
                           <FiPlus />
-                          Add New Address
+                          {t('Add New Address')}
                         </button>
                       </div>
                     )}
@@ -435,7 +495,7 @@ const MobileCheckout = () => {
                     <div className="space-y-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm lg:p-6">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Full Name
+                          {t('Full Name')}
                         </label>
                         <input
                           type="text"
@@ -449,7 +509,7 @@ const MobileCheckout = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Email
+                            {t('Email')}
                           </label>
                           <input
                             type="email"
@@ -462,7 +522,7 @@ const MobileCheckout = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Phone Number
+                            {t('Phone Number')}
                           </label>
                           <input
                             type="tel"
@@ -476,7 +536,7 @@ const MobileCheckout = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Address
+                          {t('Address')}
                         </label>
                         <textarea
                           name="address"
@@ -490,7 +550,7 @@ const MobileCheckout = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            City
+                            {t('City')}
                           </label>
                           <input
                             type="text"
@@ -503,7 +563,7 @@ const MobileCheckout = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            State
+                            {t('State')}
                           </label>
                           <input
                             type="text"
@@ -518,7 +578,7 @@ const MobileCheckout = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            ZIP Code
+                            {t('ZIP Code')}
                           </label>
                           <input
                             type="text"
@@ -531,7 +591,7 @@ const MobileCheckout = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Country
+                            {t('Country')}
                           </label>
                           <input
                             type="text"
@@ -555,7 +615,7 @@ const MobileCheckout = () => {
                     className="px-4 py-4 lg:p-0">
                     <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                       <FiCreditCard className="text-primary-600" />
-                      Payment Method
+                      {t('Payment Method')}
                     </h2>
                     <div className="space-y-3 mb-6">
                       {["card", "cash", "bank"].map((method) => (
@@ -575,10 +635,10 @@ const MobileCheckout = () => {
                           />
                           <span className="font-semibold text-gray-800 capitalize text-base">
                             {method === "card"
-                              ? "Credit/Debit Card"
+                              ? t("Credit/Debit Card")
                               : method === "cash"
-                                ? "Cash on Delivery"
-                                : "Bank Transfer"}
+                                ? t("Cash on Delivery")
+                                : t("Bank Transfer")}
                           </span>
                         </label>
                       ))}
@@ -588,7 +648,7 @@ const MobileCheckout = () => {
                     {total < 100 && (
                       <div className="mb-6">
                         <h3 className="text-base font-semibold text-gray-800 mb-3">
-                          Shipping Options
+                          {t('Shipping Options')}
                         </h3>
                         <div className="space-y-3">
                           <label
@@ -606,10 +666,10 @@ const MobileCheckout = () => {
                                 className="w-5 h-5 text-primary-500 mr-3"
                               />
                               <span className="font-semibold text-gray-800 text-base">
-                                Standard Shipping
+                                {t('Standard Shipping')}
                               </span>
                               <p className="text-xs text-gray-600">
-                                5-7 business days
+                                {t('5-7 business days')}
                               </p>
                             </div>
                             <span className="font-bold text-gray-800">
@@ -631,10 +691,10 @@ const MobileCheckout = () => {
                                 className="w-5 h-5 text-primary-500 mr-3"
                               />
                               <span className="font-semibold text-gray-800 text-base">
-                                Express Shipping
+                                {t('Express Shipping')}
                               </span>
                               <p className="text-xs text-gray-600">
-                                2-3 business days
+                                {t('2-3 business days')}
                               </p>
                             </div>
                             <span className="font-bold text-gray-800">
@@ -644,8 +704,8 @@ const MobileCheckout = () => {
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
                           {isEstimatingShipping
-                            ? "Updating shipping estimate..."
-                            : `Estimated shipping: ${formatPrice(shipping)}`}
+                            ? t("Updating shipping estimate...")
+                            : `${t('Estimated shipping:')} ${formatPrice(shipping)}`}
                         </p>
                       </div>
                     )}
@@ -653,7 +713,7 @@ const MobileCheckout = () => {
                     {/* Coupon Code */}
                     <div className="mb-6">
                       <h3 className="text-base font-semibold text-gray-800 mb-3">
-                        Coupon Code
+                        {t('Coupon Code')}
                       </h3>
                       {!appliedCoupon ? (
                         <>
@@ -662,7 +722,7 @@ const MobileCheckout = () => {
                               type="text"
                               value={couponCode}
                               onChange={(e) => setCouponCode(e.target.value)}
-                              placeholder="Enter code"
+                              placeholder={t("Enter code")}
                               className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
                             />
                             <button
@@ -670,14 +730,14 @@ const MobileCheckout = () => {
                               onClick={() => handleApplyCoupon()}
                               disabled={isApplyingCoupon}
                               className="px-4 py-3 gradient-green text-white rounded-xl font-semibold hover:shadow-glow-green transition-all">
-                              {isApplyingCoupon ? "Applying..." : "Apply"}
+                              {isApplyingCoupon ? t("Applying...") : t("Apply")}
                             </button>
                           </div>
                           {availableCoupons.length > 0 && (
                             <div className="mt-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
                               <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
                                 <FiTag className="text-primary-600" />
-                                Available coupons
+                                {t('Available coupons')}
                               </h4>
                               <div className="space-y-2 max-h-40 overflow-y-auto">
                                 {availableCoupons.slice(0, 8).map((coupon) => (
@@ -692,14 +752,14 @@ const MobileCheckout = () => {
                                       <p className="text-sm font-semibold text-gray-800">{coupon.code}</p>
                                       <p className="text-xs font-semibold text-primary-700">
                                         {coupon.type === "percentage"
-                                          ? `${coupon.value}% OFF`
+                                          ? `${coupon.value}% ${t('OFF')}`
                                           : coupon.type === "fixed"
-                                            ? `${formatPrice(coupon.value)} OFF`
-                                            : "Free Shipping"}
+                                            ? `${formatPrice(coupon.value)} ${t('OFF')}`
+                                            : t("Free Shipping")}
                                       </p>
                                     </div>
                                     <p className="text-xs text-gray-600">
-                                      Min order: {formatPrice(coupon.minOrderValue || 0)}
+                                      {t('Min order:')} {formatPrice(coupon.minOrderValue || 0)}
                                     </p>
                                   </button>
                                 ))}
@@ -711,10 +771,10 @@ const MobileCheckout = () => {
                         <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
                           <div>
                             <p className="text-sm font-semibold text-green-800">
-                              {appliedCoupon.code || "Coupon"} Applied
+                              {appliedCoupon.code || "Coupon"} {t('Applied')}
                             </p>
                             <p className="text-xs text-green-600">
-                              Code: {couponCode}
+                              {t('Code:')} {couponCode}
                             </p>
                           </div>
                           <button
@@ -765,14 +825,14 @@ const MobileCheckout = () => {
                         type="submit"
                         disabled={step === 2 && isPlacingOrder}
                         className="w-full gradient-green text-white py-3.5 rounded-xl font-bold text-lg shadow-lg hover:shadow-glow-green transition-all duration-300 transform hover:-translate-y-0.5">
-                        {step === 2 ? (isPlacingOrder ? "Placing Order..." : "Place Order") : "Continue to Payment"}
+                        {step === 2 ? (isPlacingOrder ? t("Placing Order...") : t("Place Order")) : t("Continue to Payment")}
                       </button>
                       {step === 2 && (
                         <button
                           type="button"
                           onClick={() => setStep(1)}
                           className="w-full mt-3 py-2 text-gray-500 font-semibold hover:text-gray-700 transition-colors text-sm">
-                          Back to Shipping
+                          {t('Back to Shipping')}
                         </button>
                       )}
                     </div>
@@ -781,7 +841,7 @@ const MobileCheckout = () => {
                   {/* Trust Badges or Info */}
                   <div className="flex justify-center gap-4 text-gray-400 text-2xl pt-2 opacity-70">
                     <FiLock className="w-6 h-6" />
-                    <span className="text-xs text-gray-500">Secure Checkout</span>
+                    <span className="text-xs text-gray-500">{t('Secure Checkout')}</span>
                   </div>
                 </div>
               </div>
@@ -795,7 +855,7 @@ const MobileCheckout = () => {
                     type="button"
                     onClick={() => setStep(step - 1)}
                     className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors">
-                    Back
+                    {t('Back')}
                   </button>
                 )}
                 <button

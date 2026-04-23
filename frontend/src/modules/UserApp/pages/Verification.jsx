@@ -6,8 +6,25 @@ import toast from 'react-hot-toast';
 import MobileLayout from "../components/Layout/MobileLayout";
 import PageTransition from '../../../shared/components/PageTransition';
 import { useAuthStore } from '../../../shared/store/authStore';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const MobileVerification = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Verification',
+    'Verification code',
+    "Enter the verification code we've sent to your",
+    'email',
+    'Verifying...',
+    'Confirm',
+    "Didn't receive the code?",
+    'Resend',
+    'Back',
+    'Please enter the complete verification code',
+    'Verification successful!',
+    'Invalid verification code. Please try again.',
+    'Verification code sent to your email',
+    'Failed to resend code. Please try again.'
+  ]);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -67,16 +84,16 @@ const MobileVerification = () => {
     const verificationCode = codes.join('');
 
     if (verificationCode.length !== codes.length) {
-      toast.error('Please enter the complete verification code');
+      toast.error(t('Please enter the complete verification code'));
       return;
     }
 
     try {
       await verifyOTP(email, verificationCode);
-      toast.success('Verification successful!');
+      toast.success(t('Verification successful!'));
       navigate('/home');
     } catch (error) {
-      toast.error('Invalid verification code. Please try again.');
+      toast.error(t('Invalid verification code. Please try again.'));
     }
   };
 
@@ -84,9 +101,9 @@ const MobileVerification = () => {
     if (!email) return;
     try {
       await resendOTP(email);
-      toast.success('Verification code sent to your email');
+      toast.success(t('Verification code sent to your email'));
     } catch (error) {
-      toast.error(error?.message || 'Failed to resend code. Please try again.');
+      toast.error(error?.message || t('Failed to resend code. Please try again.'));
     }
   };
 
@@ -107,12 +124,12 @@ const MobileVerification = () => {
                 className="mb-6 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <FiArrowLeft className="mr-2" size={20} />
-                <span className="text-sm font-medium">Back</span>
+                <span className="text-sm font-medium">{t('Back')}</span>
               </button>
 
               {/* Header */}
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Verification</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('Verification')}</h1>
 
                 {/* Verification Icon */}
                 <div className="flex justify-center mb-6">
@@ -127,10 +144,10 @@ const MobileVerification = () => {
                   </div>
                 </div>
 
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Verification code</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('Verification code')}</h2>
                 <p className="text-sm text-gray-600">
-                  Enter the verification code we've sent to your{' '}
-                  <span className="font-medium text-gray-900">{email || 'email'}</span>
+                  {t("Enter the verification code we've sent to your")}{' '}
+                  <span className="font-medium text-gray-900">{email || t('email')}</span>
                 </p>
               </div>
 
@@ -162,19 +179,19 @@ const MobileVerification = () => {
                   disabled={isLoading || codes.some(code => !code)}
                   className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Verifying...' : 'Confirm'}
+                  {isLoading ? t('Verifying...') : t('Confirm')}
                 </button>
               </form>
 
               {/* Resend Link */}
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Didn't receive the code?{' '}
+                  {t("Didn't receive the code?")}{' '}
                   <button
                     onClick={handleResend}
                     className="text-primary-600 hover:text-primary-700 font-semibold"
                   >
-                    Resend
+                    {t('Resend')}
                   </button>
                 </p>
               </div>

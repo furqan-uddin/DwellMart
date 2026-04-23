@@ -8,8 +8,42 @@ import { isValidEmail, isValidPhone } from '../../../shared/utils/helpers';
 import toast from 'react-hot-toast';
 import MobileLayout from "../components/Layout/MobileLayout";
 import PageTransition from '../../../shared/components/PageTransition';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const MobileRegister = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Back',
+    'Get Started Now',
+    'Create an account or log in to explore about our app',
+    'Sign Up',
+    'Log In',
+    'First Name',
+    'Last Name',
+    'EmailAddress',
+    'Email',
+    'Phone Number',
+    'Set Password',
+    'Creating Account...',
+    'Already have an account?',
+    'Sign In',
+    'First name is required',
+    'First name must be at least 2 characters',
+    'Last name is required',
+    'Last name must be at least 2 characters',
+    'Email is required',
+    'Please enter a valid email',
+    'Phone number is required',
+    'Please enter a valid phone number',
+    'Password is required',
+    'Password must be at least 6 characters',
+    'Registration successful!',
+    'Registration failed. Please try again.',
+    'Raj',
+    'Sarkar',
+    'sarkarraj0766@gmail.com',
+    '4547260592',
+    'Create a password'
+  ]);
   const navigate = useNavigate();
   const { register: registerUser, isLoading } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -39,11 +73,11 @@ const MobileRegister = () => {
       const phone = data.phone;
 
       await registerUser(fullName, data.email, data.password, phone);
-      toast.success('Registration successful!');
+      toast.success(t('Registration successful!'));
       // Navigate to verification page
       navigate('/verification', { state: { email: data.email } });
     } catch (error) {
-      toast.error(error.message || 'Registration failed. Please try again.');
+      toast.error(error.message || t('Registration failed. Please try again.'));
     }
   };
 
@@ -64,13 +98,13 @@ const MobileRegister = () => {
                 className="mb-2 -ml-2 inline-flex items-center gap-2 text-gray-400 hover:text-primary-600 transition-all group px-2 py-1 rounded-lg hover:bg-primary-50/50"
               >
                 <FiArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
-                <span className="text-sm font-semibold tracking-wide">Back</span>
+                <span className="text-sm font-semibold tracking-wide">{t('Back')}</span>
               </button>
 
               {/* Header */}
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Get Started Now</h1>
-                <p className="text-sm text-gray-600">Create an account or log in to explore about our app</p>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('Get Started Now')}</h1>
+                <p className="text-sm text-gray-600">{t('Create an account or log in to explore about our app')}</p>
               </div>
 
               {/* Sign Up / Log In Toggle */}
@@ -84,7 +118,7 @@ const MobileRegister = () => {
                         : 'text-gray-600 hover:text-gray-900'
                       }`}
                   >
-                    Sign Up
+                    {t('Sign Up')}
                   </button>
                   <button
                     type="button"
@@ -94,7 +128,7 @@ const MobileRegister = () => {
                         : 'text-gray-600 hover:text-gray-900'
                       }`}
                   >
-                    Log In
+                    {t('Log In')}
                   </button>
                 </div>
               </div>
@@ -104,24 +138,24 @@ const MobileRegister = () => {
                 {/* First Name */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    First Name
+                    {t('First Name')}
                   </label>
                   <div className="relative">
                     <FiUser className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
                       {...register('firstName', {
-                        required: 'First name is required',
+                        required: t('First name is required'),
                         minLength: {
                           value: 2,
-                          message: 'First name must be at least 2 characters',
+                          message: t('First name must be at least 2 characters'),
                         },
                       })}
                       className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${errors.firstName
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-gray-200 focus:border-primary-500'
                         } focus:outline-none transition-colors text-base`}
-                      placeholder="Raj"
+                      placeholder={t('Raj')}
                     />
                   </div>
                   {errors.firstName && (
@@ -132,24 +166,24 @@ const MobileRegister = () => {
                 {/* Last Name */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Last Name
+                    {t('Last Name')}
                   </label>
                   <div className="relative">
                     <FiUser className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
                       {...register('lastName', {
-                        required: 'Last name is required',
+                        required: t('Last name is required'),
                         minLength: {
                           value: 2,
-                          message: 'Last name must be at least 2 characters',
+                          message: t('Last name must be at least 2 characters'),
                         },
                       })}
                       className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${errors.lastName
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-gray-200 focus:border-primary-500'
                         } focus:outline-none transition-colors text-base`}
-                      placeholder="Sarkar"
+                      placeholder={t('Sarkar')}
                     />
                   </div>
                   {errors.lastName && (
@@ -160,22 +194,22 @@ const MobileRegister = () => {
                 {/* Email */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email
+                    {t('Email')}
                   </label>
                   <div className="relative">
                     <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="email"
                       {...register('email', {
-                        required: 'Email is required',
+                        required: t('Email is required'),
                         validate: (value) =>
-                          isValidEmail(value) || 'Please enter a valid email',
+                          isValidEmail(value) || t('Please enter a valid email'),
                       })}
                       className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${errors.email
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-gray-200 focus:border-primary-500'
                         } focus:outline-none transition-colors text-base`}
-                      placeholder="sarkarraj0766@gmail.com"
+                      placeholder={t('sarkarraj0766@gmail.com')}
                     />
                   </div>
                   {errors.email && (
@@ -186,7 +220,7 @@ const MobileRegister = () => {
                 {/* Phone */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone Number
+                    {t('Phone Number')}
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -203,15 +237,15 @@ const MobileRegister = () => {
                       <input
                         type="tel"
                         {...register('phone', {
-                          required: 'Phone number is required',
+                          required: t('Phone number is required'),
                           validate: (value) =>
-                            isValidPhone(value) || 'Please enter a valid phone number',
+                            isValidPhone(value) || t('Please enter a valid phone number'),
                         })}
                         className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${errors.phone
                             ? 'border-red-300 focus:border-red-500'
                             : 'border-gray-200 focus:border-primary-500'
                           } focus:outline-none transition-colors text-base`}
-                        placeholder="4547260592"
+                        placeholder={t('4547260592')}
                       />
                     </div>
                   </div>
@@ -223,24 +257,24 @@ const MobileRegister = () => {
                 {/* Password */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Set Password
+                    {t('Set Password')}
                   </label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       {...register('password', {
-                        required: 'Password is required',
+                        required: t('Password is required'),
                         minLength: {
                           value: 6,
-                          message: 'Password must be at least 6 characters',
+                          message: t('Password must be at least 6 characters'),
                         },
                       })}
                       className={`w-full pl-12 pr-12 py-3 rounded-xl border-2 ${errors.password
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-gray-200 focus:border-primary-500'
                         } focus:outline-none transition-colors text-base`}
-                      placeholder="Create a password"
+                      placeholder={t('Create a password')}
                     />
                     <button
                       type="button"
@@ -261,19 +295,19 @@ const MobileRegister = () => {
                   disabled={isLoading}
                   className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Creating Account...' : 'Sign Up'}
+                  {isLoading ? t('Creating Account...') : t('Sign Up')}
                 </button>
               </form>
 
               {/* Sign In Link */}
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Already have an account?{' '}
+                  {t('Already have an account?')}{' '}
                   <Link
                     to="/login"
                     className="text-primary-600 hover:text-primary-700 font-semibold"
                   >
-                    Sign In
+                    {t('Sign In')}
                   </Link>
                 </p>
               </div>

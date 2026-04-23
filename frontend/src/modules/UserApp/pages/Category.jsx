@@ -13,6 +13,8 @@ import useInfiniteScroll from "../../../shared/hooks/useInfiniteScroll";
 import LazyImage from "../../../shared/components/LazyImage";
 import { getPlaceholderImage } from "../../../shared/utils/helpers";
 import api from "../../../shared/utils/api";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeId = (value) => String(value ?? "").trim();
 
@@ -69,6 +71,30 @@ const normalizeProduct = (raw) => {
 };
 
 const MobileCategory = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Category Not Found",
+    "Go Back Home",
+    "Search in category...",
+    "available",
+    "Filters",
+    "Switch Category",
+    "Price Range",
+    "Min Price",
+    "Max Price",
+    "Minimum Rating",
+    "Stars",
+    "Clear All",
+    "Apply Filters",
+    "No products found",
+    "There are no products available in this category at the moment.",
+    "Loading more products...",
+    "Loading...",
+    "Load More",
+    "product",
+    "products"
+  ]);
+
+  const { translateObject, translateArray } = useDynamicTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const categoryId = normalizeId(id);
@@ -80,7 +106,7 @@ const MobileCategory = () => {
   }, [initialize]);
 
   // Get category from store or fallback
-  const category = useMemo(() => {
+  const rawCategory = useMemo(() => {
     const cat = getCategoryById(categoryId);
     return (
       cat ||
@@ -93,6 +119,17 @@ const MobileCategory = () => {
       })
     );
   }, [categoryId, categories, getCategoryById]);
+
+  const [category, setCategory] = useState(null);
+  useEffect(() => {
+    const translateCat = async () => {
+      if (rawCategory) {
+        const translated = await translateObject(rawCategory, ['name', 'description']);
+        setCategory(translated);
+      }
+    };
+    translateCat();
+  }, [rawCategory, translateObject]);
 
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,9 +165,9 @@ const MobileCategory = () => {
         const products = Array.isArray(payload?.products) ? payload.products : [];
         if (cancelled) return;
 
-        setCategoryProductsFeed(
-          products.map(normalizeProduct).filter((product) => product.id)
-        );
+        const normalized = products.map(normalizeProduct).filter((product) => product.id);
+        const translated = await translateArray(normalized, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        setCategoryProductsFeed(translated);
       } catch {
         if (cancelled) return;
         const fallback = getCatalogProducts().filter((product) => {
@@ -149,15 +186,20 @@ const MobileCategory = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryId, categories]);
+  }, [categoryId, categories, translateArray]);
 
-  const rootCategories = useMemo(() => {
-    const roots = categories.filter(
-      (cat) => !getParentId(cat) && cat.isActive !== false
-    );
-    if (roots.length) return roots;
-    return fallbackCategories;
-  }, [categories]);
+  const [translatedRootCategories, setTranslatedRootCategories] = useState([]);
+  useEffect(() => {
+    const translateRoots = async () => {
+      const roots = categories.filter(
+        (cat) => !getParentId(cat) && cat.isActive !== false
+      );
+      const target = roots.length ? roots : fallbackCategories;
+      const translated = await translateArray(target, ['name', 'description']);
+      setTranslatedRootCategories(translated);
+    };
+    translateRoots();
+  }, [categories, translateArray]);
 
   const categoryProducts = useMemo(() => {
     if (!category) return [];
@@ -241,12 +283,12 @@ const MobileCategory = () => {
           <div className="flex items-center justify-center min-h-[60vh] px-4">
             <div className="text-center">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Category Not Found
+                {t('Category Not Found')}
               </h2>
               <button
                 onClick={() => navigate("/")}
                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold">
-                Go Back Home
+                {t('Go Back Home')}
               </button>
             </div>
           </div>
@@ -285,7 +327,7 @@ const MobileCategory = () => {
                   <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                   <input
                     type="text"
-                    placeholder="Search in category..."
+                    placeholder={t("Search in category...")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-10 py-1.5 bg-gray-100 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -300,8 +342,7 @@ const MobileCategory = () => {
                   )}
                 </div>
                 <p className="text-[10px] text-gray-500 mt-1">
-                  {categoryProducts.length} product
-                  {categoryProducts.length !== 1 ? "s" : ""} available
+                  {categoryProducts.length} {categoryProducts.length !== 1 ? t("products") : t("product")} {t('available')}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -363,7 +404,7 @@ const MobileCategory = () => {
                             <div className="flex items-center gap-1.5">
                               <FiFilter className="text-sm text-gray-700" />
                               <h3 className="text-sm font-bold text-gray-800">
-                                Filters
+                                {t('Filters')}
                               </h3>
                             </div>
                             <button
@@ -379,7 +420,7 @@ const MobileCategory = () => {
                               {/* Category Switcher */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Switch Category
+                                  {t('Switch Category')}
                                 </h4>
                                 <select
                                   value={categoryId}
@@ -390,7 +431,7 @@ const MobileCategory = () => {
                                   }}
                                   className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs"
                                 >
-                                  {rootCategories.map((cat) => (
+                                  {translatedRootCategories.map((cat) => (
                                     <option key={cat.id} value={normalizeId(cat.id)}>
                                       {cat.name}
                                     </option>
@@ -401,12 +442,12 @@ const MobileCategory = () => {
                               {/* Price Range */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Price Range
+                                  {t('Price Range')}
                                 </h4>
                                 <div className="space-y-1.5">
                                   <input
                                     type="number"
-                                    placeholder="Min Price"
+                                    placeholder={t("Min Price")}
                                     value={filters.minPrice}
                                     onChange={(e) =>
                                       handleFilterChange(
@@ -418,7 +459,7 @@ const MobileCategory = () => {
                                   />
                                   <input
                                     type="number"
-                                    placeholder="Max Price"
+                                    placeholder={t("Max Price")}
                                     value={filters.maxPrice}
                                     onChange={(e) =>
                                       handleFilterChange(
@@ -434,7 +475,7 @@ const MobileCategory = () => {
                               {/* Rating Filter */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Minimum Rating
+                                  {t('Minimum Rating')}
                                 </h4>
                                 <div className="space-y-0.5">
                                   {[4, 3, 2, 1].map((rating) => (
@@ -465,7 +506,7 @@ const MobileCategory = () => {
                                         }}
                                       />
                                       <span className="text-xs text-gray-700">
-                                        {rating}+ Stars
+                                        {rating}+ {t('Stars')}
                                       </span>
                                     </label>
                                   ))}
@@ -479,12 +520,12 @@ const MobileCategory = () => {
                             <button
                               onClick={clearFilters}
                               className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                              Clear All
+                              {t('Clear All')}
                             </button>
                             <button
                               onClick={() => setShowFilters(false)}
                               className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs hover:shadow-glow-green transition-all">
-                              Apply Filters
+                              {t('Apply Filters')}
                             </button>
                           </div>
                         </motion.div>
@@ -502,11 +543,10 @@ const MobileCategory = () => {
               <div className="text-center py-12">
                 <div className="text-6xl text-gray-300 mx-auto mb-4">📦</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  No products found
+                  {t('No products found')}
                 </h3>
                 <p className="text-gray-600">
-                  There are no products available in this category at the
-                  moment.
+                  {t('There are no products available in this category at the moment.')}
                 </p>
               </div>
             ) : viewMode === "grid" ? (

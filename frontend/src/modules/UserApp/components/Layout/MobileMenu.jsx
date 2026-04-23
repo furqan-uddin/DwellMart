@@ -7,12 +7,15 @@ import { useAuthStore } from "../../../../shared/store/authStore";
 import { useWishlistStore } from "../../../../shared/store/wishlistStore";
 import { useUserNotificationStore } from "../../store/userNotificationStore";
 import { appLogo } from "../../../../data/logos";
+import LanguageSelector from "../../../../shared/components/LanguageSelector";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const MobileMenu = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
   const wishlistCount = useWishlistStore((state) => state.getItemCount());
   const unreadCount = useUserNotificationStore((state) => state.unreadCount);
+  const { getTranslatedText: t } = usePageTranslation(["Home", "Shop", "Categories", "Exclusive Offers", "Track Order", "My Profile", "My Orders", "Wishlist", "Notifications", "Become a Seller", "Help Center", "Sign In / Register", "Logout", "Personal Space", "Support", "Member", "Dwell Mart Pro"]);
 
   // Prevent background scroll
   useEffect(() => {
@@ -39,22 +42,23 @@ const MobileMenu = ({ isOpen, onClose }) => {
   };
 
   const mainLinks = [
-    { label: "Home", icon: FiHome, path: "/home" },
-    { label: "Categories", icon: FiGrid, path: "/categories" },
-    { label: "Exclusive Offers", icon: FiTag, path: "/offers" },
-    { label: "Track Order", icon: FiShoppingBag, path: isAuthenticated ? "/orders" : "/login" },
+    { label: t("Home"), icon: FiHome, path: "/home" },
+    { label: t("Shop"), icon: FiShoppingBag, path: "/shop" },
+    { label: t("Categories"), icon: FiGrid, path: "/categories" },
+    { label: t("Exclusive Offers"), icon: FiTag, path: "/offers" },
+    { label: t("Track Order"), icon: FiShoppingBag, path: isAuthenticated ? "/orders" : "/login" },
   ];
 
   const personalLinks = [
-    { label: "My Profile", icon: FiUser, path: "/profile" },
-    { label: "My Orders", icon: FiShoppingBag, path: "/orders" },
-    { label: "Wishlist", icon: FiHeart, path: "/wishlist", badge: wishlistCount },
-    { label: "Notifications", icon: FiBell, path: "/notifications", badge: unreadCount },
+    { label: t("My Profile"), icon: FiUser, path: "/profile" },
+    { label: t("My Orders"), icon: FiShoppingBag, path: "/orders" },
+    { label: t("Wishlist"), icon: FiHeart, path: "/wishlist", badge: wishlistCount },
+    { label: t("Notifications"), icon: FiBell, path: "/notifications", badge: unreadCount },
   ];
 
   const secondaryLinks = [
-    { label: "Become a Seller", icon: FiTag, path: "/sell-on-dwellmart", highlight: true },
-    { label: "Help Center", icon: FiHelpCircle, path: "/support" },
+    { label: t("Become a Seller"), icon: FiTag, path: "/sell-on-dwellmart", highlight: true },
+    { label: t("Help Center"), icon: FiHelpCircle, path: "/support" },
   ];
 
   const menuContent = (
@@ -107,7 +111,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <p className="text-white text-base font-bold truncate tracking-tight">{user?.name}</p>
-                    <p className="text-white/40 text-xs truncate uppercase tracking-widest font-medium opacity-50">{user?.role || 'Member'}</p>
+                    <p className="text-white/40 text-xs truncate uppercase tracking-widest font-medium opacity-50">{user?.role || t('Member')}</p>
                   </div>
                 </div>
               ) : (
@@ -116,9 +120,15 @@ const MobileMenu = ({ isOpen, onClose }) => {
                   onClick={onClose}
                   className="block w-full py-4 px-6 bg-primary-600 hover:bg-primary-500 text-white text-center rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-xl shadow-primary-600/20"
                 >
-                  Sign In / Register
+                  {t("Sign In / Register")}
                 </Link>
               )}
+            </div>
+
+            {/* Language Settings Drawer/Section */}
+            <div className="px-4 pb-4">
+              <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Language</p>
+              <LanguageSelector variant="mobile" />
             </div>
 
             {/* Scrollable Nav - Fixed scroll bleed */}
@@ -140,7 +150,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
               {/* Personal Section */}
               <div className="space-y-1 mb-10">
-                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 scale-95 origin-left">Personal Space</p>
+                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 scale-95 origin-left">{t("Personal Space")}</p>
                 {personalLinks.map((link) => (
                   <Link
                     key={link.label}
@@ -164,7 +174,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
 
               {/* Support Section */}
               <div className="space-y-1">
-                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 scale-95 origin-left">Support</p>
+                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 scale-95 origin-left">{t("Support")}</p>
                 {secondaryLinks.map((link) => (
                   <Link
                     key={link.label}
@@ -189,7 +199,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
                   className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-red-400/80 hover:text-red-400 hover:bg-red-400/5 rounded-xl transition-all text-sm font-black uppercase tracking-widest"
                 >
                   <FiLogOut className="text-lg" />
-                  <span>Logout</span>
+                  <span>{t("Logout")}</span>
                 </button>
               </div>
             )}
@@ -197,7 +207,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
             {/* Minimal footer for guests */}
             {!isAuthenticated && (
               <div className="p-6 border-t border-white/5 text-center bg-gradient-to-t from-white/5 to-transparent flex-shrink-0">
-                <span className="text-[9px] font-black text-white/10 uppercase tracking-[0.5em]">Dwell Mart Pro</span>
+                <span className="text-[9px] font-black text-white/10 uppercase tracking-[0.5em]">{t("Dwell Mart Pro")}</span>
               </div>
             )}
           </motion.div>
@@ -210,3 +220,5 @@ const MobileMenu = ({ isOpen, onClose }) => {
 };
 
 export default MobileMenu;
+
+

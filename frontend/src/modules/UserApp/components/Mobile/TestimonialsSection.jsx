@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { FiStar } from "react-icons/fi";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const normalizeRating = (value) => {
   const rating = Number(value);
@@ -8,6 +9,13 @@ const normalizeRating = (value) => {
 };
 
 const TestimonialsSection = ({ testimonials = [] }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Customer Voices",
+    "Why shoppers stay with DwellMart",
+    "Real feedback from customers who shop with trusted vendors across the marketplace.",
+    "Happy Customer"
+  ]);
+
   if (!Array.isArray(testimonials) || testimonials.length === 0) {
     return null;
   }
@@ -17,13 +25,13 @@ const TestimonialsSection = ({ testimonials = [] }) => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold tracking-[0.24em] uppercase border border-amber-100">
-            Customer Voices
+            {t("Customer Voices")}
           </p>
           <h2 className="mt-4 text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
-            Why shoppers stay with DwellMart
+            {t("Why shoppers stay with DwellMart")}
           </h2>
           <p className="mt-3 text-sm sm:text-base text-gray-600 max-w-2xl mx-auto leading-7">
-            Real feedback from customers who shop with trusted vendors across the marketplace.
+            {t("Real feedback from customers who shop with trusted vendors across the marketplace.")}
           </p>
         </div>
 
@@ -66,7 +74,7 @@ const TestimonialsSection = ({ testimonials = [] }) => {
                       ))}
                     </div>
                     <h3 className="mt-3 text-lg font-bold text-gray-900 truncate">
-                      {testimonial.name || "Happy Customer"}
+                      {testimonial.name || t("Happy Customer")}
                     </h3>
                     {subtitle ? (
                       <p className="text-sm text-gray-500">{subtitle}</p>

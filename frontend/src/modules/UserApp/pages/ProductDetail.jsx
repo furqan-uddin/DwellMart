@@ -35,6 +35,8 @@ import PageTransition from "../../../shared/components/PageTransition";
 import Badge from "../../../shared/components/Badge";
 import ProductCard from "../../../shared/components/ProductCard";
 import { getVariantSignature } from "../../../shared/utils/variant";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const resolveVariantPrice = (product, selectedVariant) => {
   const basePrice = Number(product?.price) || 0;
@@ -162,6 +164,51 @@ const normalizeProduct = (raw) => {
 };
 
 const MobileProductDetail = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Loading product...",
+    "Product Not Found",
+    "Go Back Home",
+    "Product is out of stock",
+    "Please select required variant options",
+    "Selected variant is out of stock",
+    "Only available for selected variant",
+    "Added to cart!",
+    "Removed from cart!",
+    "Removed from wishlist",
+    "Added to wishlist",
+    "Link copied to clipboard",
+    "You can review only after this product is delivered",
+    "Unable to submit review",
+    "Back",
+    "Flash Sale - Limited Time Offer",
+    "Verified Vendor",
+    "Reviews",
+    "In Stock",
+    "Low Stock",
+    "Out of Stock",
+    "OFF",
+    "Best price guaranteed",
+    "Quantity",
+    "available",
+    "Remove from Cart",
+    "Add to Cart",
+    "Product Description",
+    "Product FAQs",
+    "Reviews are available after product delivery.",
+    "Customer Reviews",
+    "Response from Seller",
+    "Similar Products",
+    "No similar products yet",
+    "You might also like",
+    "item(s) available for selected variant",
+    "Check out",
+    "High-quality",
+    "available in",
+    "This product is carefully selected to ensure the best quality and freshness.",
+    "Remove"
+  ]);
+
+  const { translateObject, translateArray } = useDynamicTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const localFallbackProduct = useMemo(() => normalizeProduct(getProductById(id)), [id]);
@@ -237,20 +284,30 @@ const MobileProductDetail = () => {
 
         if (!active) return;
 
-        setProduct(resolvedProduct);
-        if (resolvedSimilar.length > 0) {
-          setSimilarProducts(resolvedSimilar);
-        } else if (resolvedProduct?.id) {
-          setSimilarProducts(getSimilarProducts(resolvedProduct.id, 5));
+        const translatedProduct = await translateObject(resolvedProduct, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        const translatedSimilar = await translateArray(resolvedSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+
+        setProduct(translatedProduct);
+        if (translatedSimilar.length > 0) {
+          setSimilarProducts(translatedSimilar);
+        } else if (translatedProduct?.id) {
+          const localSimilar = getSimilarProducts(translatedProduct.id, 5);
+          const translatedLocalSimilar = await translateArray(localSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+          setSimilarProducts(translatedLocalSimilar);
         } else {
           setSimilarProducts([]);
         }
       } catch {
         if (!active) return;
-        setProduct(localFallbackProduct);
-        setSimilarProducts(
-          localFallbackProduct?.id ? getSimilarProducts(localFallbackProduct.id, 5) : []
-        );
+        const translatedFallback = await translateObject(localFallbackProduct, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        setProduct(translatedFallback);
+        if (translatedFallback?.id) {
+          const localSimilar = getSimilarProducts(translatedFallback.id, 5);
+          const translatedLocalSimilar = await translateArray(localSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+          setSimilarProducts(translatedLocalSimilar);
+        } else {
+          setSimilarProducts([]);
+        }
       } finally {
         if (active) setIsLoadingProduct(false);
       }
@@ -280,37 +337,10 @@ const MobileProductDetail = () => {
     }
   }, [product?.id, fetchReviews]);
 
-  if (!product) {
-    return (
-      <PageTransition>
-        <MobileLayout showBottomNav={false} showCartBar={false}>
-          <div className="flex items-center justify-center min-h-[60vh] px-4">
-            <div className="text-center">
-              {isLoadingProduct ? (
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Loading product...</h2>
-              ) : (
-                <>
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">
-                    Product Not Found
-                  </h2>
-                  <button
-                    onClick={() => navigate("/home")}
-                    className="gradient-green text-white px-6 py-3 rounded-xl font-semibold">
-                    Go Back Home
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </MobileLayout>
-      </PageTransition>
-    );
-  }
-
   const handleAddToCart = () => {
     if (!product) return;
     if (product.stock === "out_of_stock") {
-      toast.error("Product is out of stock");
+      toast.error(t("Product is out of stock"));
       return;
     }
     const attributeAxes = Array.isArray(product?.variants?.attributes)
@@ -325,7 +355,7 @@ const MobileProductDetail = () => {
     const selectedSize = String(selectedVariant?.size || "").trim();
     const selectedColor = String(selectedVariant?.color || "").trim();
     if (isMissingDynamicAxis || ((hasSizeVariants && !selectedSize) || (hasColorVariants && !selectedColor))) {
-      toast.error("Please select required variant options");
+      toast.error(t("Please select required variant options"));
       return;
     }
 
@@ -339,11 +369,11 @@ const MobileProductDetail = () => {
       ? variantStockValue
       : Number(product.stockQuantity || 0);
     if (effectiveStock <= 0) {
-      toast.error("Selected variant is out of stock");
+      toast.error(t("Selected variant is out of stock"));
       return;
     }
     if (quantity > effectiveStock) {
-      toast.error(`Only ${effectiveStock} item(s) available for selected variant`);
+      toast.error(`${t('Only')} ${effectiveStock} ${t('item(s) available for selected variant')}`);
       return;
     }
 
@@ -360,20 +390,20 @@ const MobileProductDetail = () => {
     });
     if (!addedToCart) return;
     triggerCartAnimation();
-    toast.success("Added to cart!");
+    toast.success(t("Added to cart!"));
   };
 
   const handleRemoveFromCart = () => {
     if (!product) return;
     removeItem(product.id, selectedVariant || {});
-    toast.success("Removed from cart!");
+    toast.success(t("Removed from cart!"));
   };
 
   const handleFavorite = () => {
     if (!product) return;
     if (isFavorite) {
       removeFromWishlist(product.id);
-      toast.success("Removed from wishlist");
+      toast.success(t("Removed from wishlist"));
     } else {
       const addedToWishlist = addToWishlist({
         id: product.id,
@@ -382,7 +412,7 @@ const MobileProductDetail = () => {
         image: product.image,
       });
       if (addedToWishlist) {
-        toast.success("Added to wishlist");
+        toast.success(t("Added to wishlist"));
       }
     }
   };
@@ -461,9 +491,45 @@ const MobileProductDetail = () => {
     return eligibleOrder?._id || null;
   }, [isAuthenticated, user?.id, product?.id, getAllOrders]);
 
+  const translatedVendor = useMemo(() => {
+    if (!vendor) return null;
+    return translateObject(vendor, ['storeName', 'name', 'storeDescription']);
+  }, [vendor, translateObject]);
+
+  const translatedBrand = useMemo(() => {
+    if (!brand) return null;
+    return translateObject(brand, ['name', 'description']);
+  }, [brand, translateObject]);
+
+  const [translatedProductReviews, setTranslatedProductReviews] = useState([]);
+  useEffect(() => {
+    const translateReviews = async () => {
+      if (productReviews.length > 0) {
+        const translated = await translateArray(productReviews, ['comment', 'user', 'vendorResponse']);
+        setTranslatedProductReviews(translated);
+      } else {
+        setTranslatedProductReviews([]);
+      }
+    };
+    translateReviews();
+  }, [productReviews, translateArray]);
+
+  const [translatedFaqs, setTranslatedFaqs] = useState([]);
+  useEffect(() => {
+    const translateFaqs = async () => {
+      if (productFaqs.length > 0) {
+        const translated = await translateArray(productFaqs, ['question', 'answer']);
+        setTranslatedFaqs(translated);
+      } else {
+        setTranslatedFaqs([]);
+      }
+    };
+    translateFaqs();
+  }, [productFaqs, translateArray]);
+
   const handleSubmitReview = async (reviewData) => {
     if (!eligibleDeliveredOrderId) {
-      toast.error("You can review only after this product is delivered");
+      toast.error(t("You can review only after this product is delivered"));
       return false;
     }
 
@@ -472,13 +538,41 @@ const MobileProductDetail = () => {
       orderId: eligibleDeliveredOrderId,
     });
     if (!ok) {
-      toast.error("Unable to submit review");
+      toast.error(t("Unable to submit review"));
       return false;
     }
 
     await fetchReviews(product.id, { sort: "newest", limit: 50 });
     return true;
   };
+
+  if (!product) {
+    return (
+      <PageTransition>
+        <MobileLayout showBottomNav={false} showCartBar={false}>
+          <div className="flex items-center justify-center min-h-[60vh] px-4">
+            <div className="text-center">
+              {isLoadingProduct ? (
+                <h2 className="text-xl font-bold text-gray-800 mb-4">{t("Loading product...")}</h2>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">
+                    {t("Product Not Found")}
+                  </h2>
+                  <button
+                    onClick={() => navigate("/home")}
+                    className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
+                  >
+                    {t("Go Back Home")}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </MobileLayout>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -492,7 +586,7 @@ const MobileProductDetail = () => {
               <div className="p-2 rounded-full group-hover:bg-gray-100 transition-colors">
                 <FiArrowLeft className="text-xl" />
               </div>
-              <span className="font-medium">Back</span>
+              <span className="font-medium">{t('Back')}</span>
             </button>
           </div>
 
@@ -504,7 +598,7 @@ const MobileProductDetail = () => {
               </div>
               {product.flashSale && (
                 <div className="mt-4 flex justify-center lg:justify-start">
-                  <Badge variant="flash" size="lg">Flash Sale - Limited Time Offer</Badge>
+                  <Badge variant="flash" size="lg">{t('Flash Sale - Limited Time Offer')}</Badge>
                 </div>
               )}
             </div>
@@ -536,12 +630,12 @@ const MobileProductDetail = () => {
                           </div>
                         )}
                         <span className="font-medium text-sm group-hover:text-primary-600 transition-colors">
-                          {vendor.storeName || vendor.name}
+                          {translatedVendor?.storeName || translatedVendor?.name || product.vendorName}
                         </span>
-                        {vendor.isVerified && (
+                        {translatedVendor?.isVerified && (
                           <FiCheckCircle
                             className="text-accent-500 text-sm"
-                            title="Verified Vendor"
+                            title={t("Verified Vendor")}
                           />
                         )}
                         <span className="text-gray-400 group-hover:translate-x-1 transition-transform">{"->"}</span>
@@ -564,7 +658,7 @@ const MobileProductDetail = () => {
                           />
                         </div>
                         <span className="font-medium text-sm group-hover:text-primary-600 transition-colors">
-                          {brand.name}
+                          {translatedBrand?.name || product.brandName}
                         </span>
                         <span className="text-gray-400 group-hover:translate-x-1 transition-transform">{"->"}</span>
                       </Link>
@@ -583,11 +677,11 @@ const MobileProductDetail = () => {
                         <FiStar className="text-yellow-500 fill-yellow-500" />
                       </div>
                       <span className="text-gray-500 text-sm font-medium hover:text-gray-700 cursor-pointer">
-                        {product.reviewCount || 0} Reviews
+                        {product.reviewCount || 0} {t('Reviews')}
                       </span>
                       <span className="text-gray-300">|</span>
                       <span className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded-lg">
-                        {product.stock === "in_stock" ? "In Stock" : product.stock === "low_stock" ? "Low Stock" : "Out of Stock"}
+                        {product.stock === "in_stock" ? t("In Stock") : product.stock === "low_stock" ? t("Low Stock") : t("Out of Stock")}
                       </span>
                     </div>
                   )}
@@ -611,9 +705,9 @@ const MobileProductDetail = () => {
                             ((product.originalPrice - currentPrice) /
                               product.originalPrice) *
                             100
-                          )}% OFF
+                          )}% {t('OFF')}
                         </span>
-                        <span className="text-sm text-gray-500">Best price guaranteed</span>
+                        <span className="text-sm text-gray-500">{t('Best price guaranteed')}</span>
                       </div>
                     )}
                   </div>
@@ -631,7 +725,7 @@ const MobileProductDetail = () => {
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-3">
-                      Quantity
+                      {t('Quantity')}
                     </label>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
@@ -652,7 +746,7 @@ const MobileProductDetail = () => {
                         </button>
                       </div>
                       <span className="text-sm text-gray-500">
-                        {selectedAvailableStock} {product.unit}s available
+                        {selectedAvailableStock} {t(product.unit || 'unit')}{(selectedAvailableStock !== 1 && product.unit === 'item') ? 's' : ''} {t('available')}
                       </span>
                     </div>
                   </div>
@@ -665,7 +759,7 @@ const MobileProductDetail = () => {
                       onClick={handleRemoveFromCart}
                       className="col-span-3 py-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-red-50 text-red-600 border border-red-100 hover:bg-red-100">
                       <FiTrash2 className="text-xl" />
-                      <span>Remove from Cart</span>
+                      <span>{t('Remove from Cart')}</span>
                     </button>
                   ) : (
                     <button
@@ -678,8 +772,8 @@ const MobileProductDetail = () => {
                       <FiShoppingBag className="text-xl" />
                       <span>
                         {product.stock === "out_of_stock"
-                          ? "Out of Stock"
-                          : "Add to Cart"}
+                          ? t("Out of Stock")
+                          : t("Add to Cart")}
                       </span>
                     </button>
                   )}
@@ -700,12 +794,12 @@ const MobileProductDetail = () => {
                       if (navigator.share) {
                         navigator.share({
                           title: product.name,
-                          text: `Check out ${product.name}`,
+                          text: `${t('Check out')} ${product.name}`,
                           url: window.location.href,
                         });
                       } else {
                         navigator.clipboard.writeText(window.location.href);
-                        toast.success("Link copied to clipboard");
+                        toast.success(t("Link copied to clipboard"));
                       }
                     }}
                     className="col-span-1 py-4 bg-white text-gray-700 border-2 border-gray-200 rounded-xl font-semibold transition-all duration-300 hover:border-gray-300 hover:bg-gray-50 flex items-center justify-center">
@@ -716,29 +810,27 @@ const MobileProductDetail = () => {
                 {/* Description */}
                 <div className="pt-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Product Description
+                    {t('Product Description')}
                   </h3>
                   <div className="prose prose-sm lg:prose-base text-gray-600 leading-relaxed bg-gray-50 p-6 rounded-2xl border border-gray-100">
                     {product.description ? (
                       <p>{product.description}</p>
                     ) : (
                       <p>
-                        High-quality {product.name.toLowerCase()} available in{" "}
-                        {product.unit.toLowerCase()}. This product is carefully selected
-                        to ensure the best quality and freshness.
+                        {t('High-quality')} {product.name.toLowerCase()} {t('available in')} {t(product.unit || 'unit')}. {t('This product is carefully selected to ensure the best quality and freshness.')}
                       </p>
                     )}
                   </div>
                 </div>
 
                 {/* FAQs */}
-                {productFaqs.length > 0 && (
+                {translatedFaqs.length > 0 && (
                   <div className="pt-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">
-                      Product FAQs
+                      {t('Product FAQs')}
                     </h3>
                     <div className="space-y-3">
-                      {productFaqs.map((faq, index) => (
+                      {translatedFaqs.map((faq, index) => (
                         <div
                           key={`${faq.question}-${index}`}
                           className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm"
@@ -765,20 +857,20 @@ const MobileProductDetail = () => {
                       />
                     ) : (
                       <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm text-gray-600">
-                        Reviews are available after product delivery.
+                        {t('Reviews are available after product delivery.')}
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* Reviews List */}
-                {productReviews.length > 0 && (
+                {translatedProductReviews.length > 0 && (
                   <div className="pt-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">
-                      Customer Reviews ({productReviews.length})
+                      {t('Customer Reviews')} ({translatedProductReviews.length})
                     </h3>
                     <div className="space-y-4">
-                      {productReviews.slice(0, 3).map((review) => (
+                      {translatedProductReviews.slice(0, 3).map((review) => (
                         <div key={review.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -798,9 +890,9 @@ const MobileProductDetail = () => {
                           {review.vendorResponse && (
                             <div className="mt-3 ml-10 bg-primary-50 border border-primary-100 rounded-lg p-3">
                               <p className="text-xs font-semibold text-primary-700 mb-1">
-                                Vendor Response
+                                {t('Response from Seller')}
                               </p>
-                              <p className="text-sm text-primary-800">{review.vendorResponse}</p>
+                              <p className="text-sm text-gray-600 leading-relaxed">{review.vendorResponse}</p>
                             </div>
                           )}
                         </div>
@@ -813,21 +905,29 @@ const MobileProductDetail = () => {
           </div>
 
           {/* Similar Products */}
-          {similarProducts.length > 0 && (
-            <div className="px-4 py-8 lg:px-8 mt-8 lg:mt-16 border-t border-gray-200">
-              <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-6">
-                You May Also Like
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                {similarProducts.map((similarProduct) => (
-                  <ProductCard
-                    key={similarProduct.id}
-                    product={similarProduct}
-                  />
+          <div className="mt-16 px-4 lg:px-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-8">
+              {similarProducts.length > 0 ? t('Similar Products') : t('You might also like')}
+            </h3>
+            {similarProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
+                {similarProducts.map((p) => (
+                  <div key={p.id} className="hidden lg:block">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+                {similarProducts.map((p) => (
+                  <div key={p.id} className="lg:hidden">
+                    <MobileProductCard product={p} />
+                  </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-8 text-center">
+                <p className="text-gray-500">{t('No similar products yet')}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sticky Bottom Action Bar (Mobile Only) */}
@@ -848,12 +948,12 @@ const MobileProductDetail = () => {
                 if (navigator.share) {
                   navigator.share({
                     title: product.name,
-                    text: `Check out ${product.name}`,
+                    text: `${t('Check out')} ${product.name}`,
                     url: window.location.href,
                   });
                 } else {
                   navigator.clipboard.writeText(window.location.href);
-                  toast.success("Link copied to clipboard");
+                  toast.success(t("Link copied to clipboard"));
                 }
               }}
               className="p-3 bg-gray-100 text-gray-700 rounded-xl font-semibold transition-all duration-300">
@@ -864,7 +964,7 @@ const MobileProductDetail = () => {
                 onClick={handleRemoveFromCart}
                 className="flex-1 py-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-100">
                 <FiTrash2 className="text-xl" />
-                <span>Remove</span>
+                <span>{t('Remove')}</span>
               </button>
             ) : (
               <button
@@ -877,8 +977,8 @@ const MobileProductDetail = () => {
                 <FiShoppingBag className="text-xl" />
                 <span>
                   {product.stock === "out_of_stock"
-                    ? "Out of Stock"
-                    : "Add to Cart"}
+                    ? t("Out of Stock")
+                    : t("Add to Cart")}
                 </span>
               </button>
             )}

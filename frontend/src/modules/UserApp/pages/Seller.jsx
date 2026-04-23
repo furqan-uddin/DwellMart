@@ -11,6 +11,8 @@ import useInfiniteScroll from "../../../shared/hooks/useInfiniteScroll";
 import LazyImage from "../../../shared/components/LazyImage";
 import { getPlaceholderImage } from "../../../shared/utils/helpers";
 import api from "../../../shared/utils/api";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeVendor = (raw) => ({
     ...raw,
@@ -35,6 +37,28 @@ const normalizeProduct = (raw) => ({
 });
 
 const Seller = () => {
+    const { getTranslatedText: t } = usePageTranslation([
+        "Loading seller...",
+        "Seller Not Found",
+        "Go Back Home",
+        "Filters",
+        "Price Range",
+        "Min Price",
+        "Max Price",
+        "Minimum Rating",
+        "Stars",
+        "Clear All",
+        "Apply Filters",
+        "Ratings",
+        "Products",
+        "No products found",
+        "This seller has no products available at the moment.",
+        "Loading more products...",
+        "Loading...",
+        "Load More"
+    ]);
+
+    const { translateObject, translateArray } = useDynamicTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const vendorId = String(id ?? "").trim();
@@ -189,9 +213,11 @@ const Seller = () => {
                 }
 
                 const productList = allProducts.map(normalizeProduct);
+                const translatedVendor = await translateObject(vendorDoc, ['storeName', 'name', 'storeDescription']);
+                const translatedProducts = await translateArray(productList, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
 
-                setRemoteVendor(vendorDoc);
-                setRemoteProducts(productList);
+                setRemoteVendor(translatedVendor);
+                setRemoteProducts(translatedProducts);
             } catch {
                 if (!active) return;
                 setRemoteVendor(null);
@@ -212,7 +238,7 @@ const Seller = () => {
             <PageTransition>
                 <MobileLayout showBottomNav={false} showCartBar={false}>
                     <div className="flex items-center justify-center min-h-[60vh] px-4">
-                        <p className="text-gray-600">Loading seller...</p>
+                        <p className="text-gray-600">{t('Loading seller...')}</p>
                     </div>
                 </MobileLayout>
             </PageTransition>
@@ -226,12 +252,12 @@ const Seller = () => {
                     <div className="flex items-center justify-center min-h-[60vh] px-4">
                         <div className="text-center">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">
-                                Seller Not Found
+                                {t('Seller Not Found')}
                             </h2>
                             <button
                                 onClick={() => navigate("/home")}
                                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold">
-                                Go Back Home
+                                {t('Go Back Home')}
                             </button>
                         </div>
                     </div>
@@ -312,7 +338,7 @@ const Seller = () => {
                                                             <div className="flex items-center gap-1.5">
                                                                 <FiFilter className="text-sm text-gray-700" />
                                                                 <h3 className="text-sm font-bold text-gray-800">
-                                                                    Filters
+                                                                    {t('Filters')}
                                                                 </h3>
                                                             </div>
                                                             <button
@@ -325,12 +351,12 @@ const Seller = () => {
                                                             <div className="p-2 space-y-2">
                                                                 <div>
                                                                     <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                                                        Price Range
+                                                                        {t('Price Range')}
                                                                     </h4>
                                                                     <div className="space-y-1.5">
                                                                         <input
                                                                             type="number"
-                                                                            placeholder="Min Price"
+                                                                            placeholder={t("Min Price")}
                                                                             value={filters.minPrice}
                                                                             onChange={(e) =>
                                                                                 handleFilterChange(
@@ -342,7 +368,7 @@ const Seller = () => {
                                                                         />
                                                                         <input
                                                                             type="number"
-                                                                            placeholder="Max Price"
+                                                                            placeholder={t("Max Price")}
                                                                             value={filters.maxPrice}
                                                                             onChange={(e) =>
                                                                                 handleFilterChange(
@@ -356,7 +382,7 @@ const Seller = () => {
                                                                 </div>
                                                                 <div>
                                                                     <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                                                        Minimum Rating
+                                                                        {t('Minimum Rating')}
                                                                     </h4>
                                                                     <div className="space-y-0.5">
                                                                         {[4, 3, 2, 1].map((rating) => (
@@ -387,7 +413,7 @@ const Seller = () => {
                                                                                     }}
                                                                                 />
                                                                                 <span className="text-xs text-gray-700">
-                                                                                    {rating}+ Stars
+                                                                                    {rating}+ {t('Stars')}
                                                                                 </span>
                                                                             </label>
                                                                         ))}
@@ -399,12 +425,12 @@ const Seller = () => {
                                                             <button
                                                                 onClick={clearFilters}
                                                                 className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                                                                Clear All
+                                                                {t('Clear All')}
                                                             </button>
                                                             <button
                                                                 onClick={() => setShowFilters(false)}
                                                                 className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs hover:shadow-glow-green transition-all">
-                                                                Apply Filters
+                                                                {t('Apply Filters')}
                                                             </button>
                                                         </div>
                                                     </motion.div>
@@ -435,11 +461,11 @@ const Seller = () => {
                                     <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
                                         <div className="flex items-center gap-1">
                                             <FiStar className="text-yellow-500 fill-yellow-500" />
-                                            <span>{vendor.rating} Ratings</span>
+                                            <span>{vendor.rating} {t('Ratings')}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <FiShoppingBag className="text-gray-500" />
-                                            <span>{vendorProducts.length} Products</span>
+                                            <span>{vendorProducts.length} {t('Products')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -453,10 +479,10 @@ const Seller = () => {
                             <div className="text-center py-12">
                                 <div className="text-6xl text-gray-300 mx-auto mb-4">🏪</div>
                                 <h3 className="text-xl font-bold text-gray-800 mb-2">
-                                    No products found
+                                    {t('No products found')}
                                 </h3>
                                 <p className="text-gray-600">
-                                    This seller has no products available at the moment.
+                                    {t('This seller has no products available at the moment.')}
                                 </p>
                             </div>
                         ) : viewMode === "grid" ? (

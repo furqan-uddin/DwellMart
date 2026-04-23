@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { FiCheck } from "react-icons/fi";
 import { formatPrice } from "../../utils/helpers";
 import { getVariantSignature } from "../../utils/variant";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeAxisName = (value) =>
   String(value || "")
@@ -17,27 +19,58 @@ const toEntries = (value) => {
 };
 
 const VariantSelector = ({ variants, onVariantChange, currentPrice }) => {
-  const [selectedVariant, setSelectedVariant] = useState({});
+  const { getTranslatedText: t } = usePageTranslation([
+    "Size",
+    "Color",
+    "Select",
+    "Selected variant price:",
+    "in_stock",
+    "out_of_stock"
+  ]);
 
-  const axes = useMemo(() => {
+  const { translateArray } = useDynamicTranslation();
+  const [selectedVariant, setSelectedVariant] = useState({});
+  const [translatedAxes, setTranslatedAxes] = useState([]);
+
+  const rawAxes = useMemo(() => {
     const dynamicAxes = Array.isArray(variants?.attributes)
       ? variants.attributes
-          .map((attr) => ({
-            label: String(attr?.name || "").trim(),
-            key: normalizeAxisName(attr?.name),
-            values: Array.isArray(attr?.values) ? attr.values : [],
-          }))
-          .filter((attr) => attr.label && attr.key && attr.values.length > 0)
+        .map((attr) => ({
+          label: String(attr?.name || "").trim(),
+          key: normalizeAxisName(attr?.name),
+          values: Array.isArray(attr?.values) ? attr.values : [],
+        }))
+        .filter((attr) => attr.label && attr.key && attr.values.length > 0)
       : [];
     if (dynamicAxes.length) return dynamicAxes;
 
     const fallback = [];
     const sizes = Array.isArray(variants?.sizes) ? variants.sizes : [];
     const colors = Array.isArray(variants?.colors) ? variants.colors : [];
-    if (sizes.length) fallback.push({ label: "Size", key: "size", values: sizes });
-    if (colors.length) fallback.push({ label: "Color", key: "color", values: colors });
+    if (sizes.length) fallback.push({ label: t("Size"), key: "size", values: sizes });
+    if (colors.length) fallback.push({ label: t("Color"), key: "color", values: colors });
     return fallback;
-  }, [variants]);
+  }, [variants, t]);
+
+  useEffect(() => {
+    const translateAxesContent = async () => {
+      if (rawAxes.length > 0) {
+        const translated = await Promise.all(rawAxes.map(async (axis) => {
+          const transLabel = await translateArray([{ name: axis.label }], ['name']);
+          const transValues = await translateArray(axis.values.map(v => ({ name: v })), ['name']);
+          return {
+            ...axis,
+            label: transLabel[0]?.name || axis.label,
+            values: transValues.map(v => v.name)
+          };
+        }));
+        setTranslatedAxes(translated);
+      }
+    };
+    translateAxesContent();
+  }, [rawAxes, translateArray]);
+
+  const axes = translatedAxes.length > 0 ? translatedAxes : rawAxes;
 
   const getVariantStockValue = (selection) => {
     const entries = toEntries(variants?.stockMap);
@@ -129,9 +162,9 @@ const VariantSelector = ({ variants, onVariantChange, currentPrice }) => {
       {axes.map((axis) => (
         <div key={axis.key}>
           <label className="block text-sm font-semibold text-gray-700 mb-3">
-            {axis.label}:{" "}
+             {axis.label}:{" "}
             <span className="font-normal text-gray-600">
-              {selectedVariant?.[axis.key] || `Select ${axis.label.toLowerCase()}`}
+              {selectedVariant?.[axis.key] || `${t('Select')} ${axis.label.toLowerCase()}`}
             </span>
           </label>
           <div className="flex flex-wrap gap-3">
@@ -165,8 +198,8 @@ const VariantSelector = ({ variants, onVariantChange, currentPrice }) => {
       ))}
 
       {getVariantPrice() !== Number(currentPrice || 0) && (
-        <div className="p-4 bg-primary-50 rounded-xl border border-primary-200">
-          <p className="text-sm text-gray-600 mb-1">Selected variant price:</p>
+         <div className="p-4 bg-primary-50 rounded-xl border border-primary-200">
+          <p className="text-sm text-gray-600 mb-1">{t('Selected variant price:')}</p>
           <p className="text-xl font-bold text-primary-700">{formatPrice(getVariantPrice())}</p>
         </div>
       )}

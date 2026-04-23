@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiPackage, FiTruck, FiMapPin, FiCreditCard, FiRotateCw, FiArrowLeft, FiShoppingBag, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
@@ -11,8 +11,55 @@ import toast from 'react-hot-toast';
 import PageTransition from '../../../shared/components/PageTransition';
 import Badge from '../../../shared/components/Badge';
 import LazyImage from '../../../shared/components/LazyImage';
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const MobileOrderDetail = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Loading order...",
+    "Order Not Found",
+    "Back to Orders",
+    "Items added to cart!",
+    "Are you sure you want to cancel this order?",
+    "Order cancelled successfully",
+    "Failed to cancel order",
+    "This order cannot be cancelled",
+    "Return can only be requested for delivered orders",
+    "Please enter a valid return reason",
+    "Please select a vendor for return request",
+    "Return request submitted successfully",
+    "Failed to submit return request",
+    "Order Details",
+    "Order Summary",
+    "Shipping Address",
+    "Payment Information",
+    "Subtotal",
+    "Discount",
+    "Shipping",
+    "Tax",
+    "Total",
+    "Cancel Order",
+    "Reorder",
+    "Request Return",
+    "Track Order",
+    "Reason",
+    "Select Vendor",
+    "Choose vendor",
+    "Describe the issue briefly",
+    "Submitting...",
+    "Submit Return Request",
+    "N/A",
+    "Phone:",
+    "Credit/Debit Card",
+    "Cash on Delivery",
+    "Bank Transfer",
+    "Order Items",
+    "Payment Method:",
+    "Tracking Number:",
+    "Order Date:"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { getOrder, cancelOrder, fetchOrderById, requestReturn } = useOrderStore();
@@ -22,17 +69,39 @@ const MobileOrderDetail = () => {
   const [returnReason, setReturnReason] = useState('Product issue');
   const [returnVendorId, setReturnVendorId] = useState('');
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
-  const order = getOrder(orderId);
+   const order = getOrder(orderId);
+  const [translatedVendorGroups, setTranslatedVendorGroups] = useState([]);
+  const [translatedOrderItems, setTranslatedOrderItems] = useState([]);
+
+  useEffect(() => {
+    const translateContent = async () => {
+      if (order?.vendorItems) {
+        const groups = await Promise.all(order.vendorItems.map(async (group) => {
+          const items = await translateArray(group.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+          const vendorNameRes = await translateArray([{ name: group.vendorName }], ['name']);
+          return {
+            ...group,
+            vendorName: vendorNameRes[0]?.name || group.vendorName,
+            items
+          };
+        }));
+        setTranslatedVendorGroups(groups);
+      }
+      if (order?.items) {
+        const items = await translateArray(order.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        setTranslatedOrderItems(items);
+      }
+    };
+    translateContent();
+  }, [order, translateArray]);
+
   const shippingAddress = order?.shippingAddress || {};
-  const orderItems = Array.isArray(order?.items) ? order.items : [];
-  const vendorOptions = Array.isArray(order?.vendorItems)
-    ? order.vendorItems
-      .map((group) => ({
-        id: String(group?.vendorId || ''),
-        name: group?.vendorName || 'Vendor',
-      }))
-      .filter((group) => group.id)
-    : [];
+  const orderItems = translatedOrderItems.length > 0 ? translatedOrderItems : (Array.isArray(order?.items) ? order.items : []);
+  const vendorItems = translatedVendorGroups.length > 0 ? translatedVendorGroups : (order?.vendorItems || []);
+  const vendorOptions = vendorItems.map((group) => ({
+    id: String(group?.vendorId || ''),
+    name: group?.vendorName || t('Vendor'),
+  })).filter((group) => group.id);
 
   useEffect(() => {
     let mounted = true;
@@ -58,7 +127,7 @@ const MobileOrderDetail = () => {
       <PageTransition>
         <MobileLayout showBottomNav={false} showCartBar={false}>
           <div className="flex items-center justify-center min-h-[60vh] px-4">
-            <p className="text-gray-600">Loading order...</p>
+            <p className="text-gray-600">{t('Loading order...')}</p>
           </div>
         </MobileLayout>
       </PageTransition>
@@ -71,12 +140,12 @@ const MobileOrderDetail = () => {
         <MobileLayout showBottomNav={false} showCartBar={false}>
           <div className="flex items-center justify-center min-h-[60vh] px-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Order Not Found</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">{t('Order Not Found')}</h2>
               <button
                 onClick={() => navigate('/orders')}
                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
               >
-                Back to Orders
+                {t('Back to Orders')}
               </button>
             </div>
           </div>
@@ -85,8 +154,9 @@ const MobileOrderDetail = () => {
     );
   }
 
-  const formatDate = (dateString) => {
+   const formatDate = (dateString) => {
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return t('N/A');
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -103,31 +173,31 @@ const MobileOrderDetail = () => {
         image: item.image,
         quantity: item.quantity,
         variant: item.variant || undefined,
-      });
+       });
     });
-    toast.success('Items added to cart!');
+    toast.success(t('Items added to cart!'));
     navigate('/checkout');
   };
 
   const handleCancel = async () => {
-    if (window.confirm('Are you sure you want to cancel this order?')) {
+     if (window.confirm(t('Are you sure you want to cancel this order?'))) {
       if (['pending', 'processing'].includes(order.status)) {
         try {
           await cancelOrder(order.id);
-          toast.success('Order cancelled successfully');
+          toast.success(t('Order cancelled successfully'));
           navigate('/orders');
         } catch (error) {
-          toast.error(error?.message || 'Failed to cancel order');
+          toast.error(t(error?.message || 'Failed to cancel order'));
         }
       } else {
-        toast.error('This order cannot be cancelled');
+        toast.error(t('This order cannot be cancelled'));
       }
     }
   };
 
   const openReturnModal = () => {
-    if (order.status !== 'delivered') {
-      toast.error('Return can only be requested for delivered orders');
+     if (order.status !== 'delivered') {
+      toast.error(t('Return can only be requested for delivered orders'));
       return;
     }
     if (vendorOptions.length === 1) {
@@ -141,28 +211,28 @@ const MobileOrderDetail = () => {
   const handleRequestReturn = async () => {
     if (isSubmittingReturn) return;
 
-    const reason = String(returnReason || '').trim();
+     const reason = String(returnReason || '').trim();
     if (reason.length < 5) {
-      toast.error('Please enter a valid return reason');
+      toast.error(t('Please enter a valid return reason'));
       return;
     }
 
-    if (vendorOptions.length > 1 && !returnVendorId) {
-      toast.error('Please select a vendor for return request');
+     if (vendorOptions.length > 1 && !returnVendorId) {
+      toast.error(t('Please select a vendor for return request'));
       return;
     }
 
     try {
       setIsSubmittingReturn(true);
-      await requestReturn(order.id, {
+       await requestReturn(order.id, {
         reason,
         ...(returnVendorId ? { vendorId: returnVendorId } : {}),
       });
-      toast.success('Return request submitted successfully');
+      toast.success(t('Return request submitted successfully'));
       setShowReturnModal(false);
       setReturnReason('Product issue');
     } catch (error) {
-      toast.error(error?.response?.data?.message || error?.message || 'Failed to submit return request');
+      toast.error(t(error?.response?.data?.message || error?.message || 'Failed to submit return request'));
     } finally {
       setIsSubmittingReturn(false);
     }
@@ -182,20 +252,20 @@ const MobileOrderDetail = () => {
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
                 <div className="flex-1">
-                  <h1 className="text-xl font-bold text-gray-800">Order Details</h1>
-                  <p className="text-sm text-gray-600">Order #{order.id}</p>
+                  <h1 className="text-xl font-bold text-gray-800">{t('Order Details')}</h1>
+                  <p className="text-sm text-gray-600">{t('Order')} #{order.id}</p>
                 </div>
-                <Badge variant={order.status}>{order.status.toUpperCase()}</Badge>
+                <Badge variant={order.status}>{t(order.status.toUpperCase())}</Badge>
               </div>
             </div>
 
             <div className="px-4 py-4 space-y-4">
               {/* Order Items */}
               <div className="glass-card rounded-2xl p-4">
-                <h2 className="text-base font-bold text-gray-800 mb-4">Order Items</h2>
-                {order.vendorItems && order.vendorItems.length > 0 ? (
+                <h2 className="text-base font-bold text-gray-800 mb-4">{t('Order Items')}</h2>
+                {vendorItems && vendorItems.length > 0 ? (
                   <div className="space-y-4">
-                    {order.vendorItems.map((vendorGroup) => (
+                    {vendorItems.map((vendorGroup) => (
                       <div key={vendorGroup.vendorId} className="space-y-2">
                         {/* Vendor Header */}
                         <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200/50">
@@ -275,7 +345,7 @@ const MobileOrderDetail = () => {
               <div className="glass-card rounded-2xl p-4">
                 <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <FiMapPin className="text-primary-600" />
-                  Shipping Address
+                  {t('Shipping Address')}
                 </h2>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p className="font-semibold text-gray-800">{shippingAddress.name || 'N/A'}</p>
@@ -285,7 +355,7 @@ const MobileOrderDetail = () => {
                     {shippingAddress.zipCode || 'N/A'}
                   </p>
                   <p>{shippingAddress.country || 'N/A'}</p>
-                  <p className="mt-2">Phone: {shippingAddress.phone || 'N/A'}</p>
+                  <p className="mt-2">{t('Phone:')} {shippingAddress.phone || t('N/A')}</p>
                 </div>
               </div>
 
@@ -293,23 +363,26 @@ const MobileOrderDetail = () => {
               <div className="glass-card rounded-2xl p-4">
                 <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <FiCreditCard className="text-primary-600" />
-                  Payment Information
+                  {t('Payment Information')}
                 </h2>
                 <div className="text-sm text-gray-600 space-y-2">
                   <div className="flex justify-between">
-                    <span>Payment Method:</span>
+                    <span>{t('Payment Method:')}</span>
                     <span className="font-semibold text-gray-800 capitalize">
-                      {order.paymentMethod}
+                      {order.paymentMethod === 'card' ? t('Credit/Debit Card') :
+                        order.paymentMethod === 'cash' ? t('Cash on Delivery') :
+                          order.paymentMethod === 'bank' ? t('Bank Transfer') :
+                            (order.paymentMethod || t('N/A'))}
                     </span>
                   </div>
                   {order.trackingNumber && (
                     <div className="flex justify-between">
-                      <span>Tracking Number:</span>
+                      <span>{t('Tracking Number:')}</span>
                       <span className="font-semibold text-gray-800">{order.trackingNumber}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span>Order Date:</span>
+                    <span>{t('Order Date:')}</span>
                     <span className="font-semibold text-gray-800">{formatDate(order.date)}</span>
                   </div>
                 </div>
@@ -317,28 +390,28 @@ const MobileOrderDetail = () => {
 
               {/* Order Summary */}
               <div className="glass-card rounded-2xl p-4">
-                <h2 className="text-base font-bold text-gray-800 mb-3">Order Summary</h2>
+                <h2 className="text-base font-bold text-gray-800 mb-3">{t('Order Summary')}</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
+                    <span>{t('Subtotal')}</span>
                     <span>{formatPrice(order.subtotal)}</span>
                   </div>
                   {order.discount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Discount</span>
+                      <span>{t('Discount')}</span>
                       <span>-{formatPrice(order.discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-gray-600">
-                    <span>Shipping</span>
+                    <span>{t('Shipping')}</span>
                     <span>{formatPrice(order.shipping)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tax</span>
+                    <span>{t('Tax')}</span>
                     <span>{formatPrice(order.tax)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t border-gray-200">
-                    <span>Total</span>
+                    <span>{t('Total')}</span>
                     <span className="text-primary-600">{formatPrice(order.total)}</span>
                   </div>
                 </div>
@@ -351,7 +424,7 @@ const MobileOrderDetail = () => {
                     onClick={handleCancel}
                     className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition-colors"
                   >
-                    Cancel Order
+                    {t('Cancel Order')}
                   </button>
                 )}
                 <button
@@ -359,7 +432,7 @@ const MobileOrderDetail = () => {
                   className="w-full py-3 gradient-green text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-glow-green transition-all"
                 >
                   <FiRotateCw className="text-lg" />
-                  Reorder
+                  {t('Reorder')}
                 </button>
                 {order.status === 'delivered' && (
                   <button
@@ -367,7 +440,7 @@ const MobileOrderDetail = () => {
                     className="w-full py-3 bg-amber-50 text-amber-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
                   >
                     <FiPackage className="text-lg" />
-                    Request Return
+                    {t('Request Return')}
                   </button>
                 )}
                 <button
@@ -375,7 +448,7 @@ const MobileOrderDetail = () => {
                   className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
                 >
                   <FiTruck className="text-lg" />
-                  Track Order
+                  {t('Track Order')}
                 </button>
               </div>
             </div>
@@ -397,7 +470,7 @@ const MobileOrderDetail = () => {
                 className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-4 sm:p-5"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-800">Request Return</h3>
+                  <h3 className="text-lg font-bold text-gray-800">{t('Request Return')}</h3>
                   <button
                     onClick={() => setShowReturnModal(false)}
                     className="p-2 rounded-full hover:bg-gray-100"
@@ -409,14 +482,14 @@ const MobileOrderDetail = () => {
                 {vendorOptions.length > 1 && (
                   <div className="mb-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Select Vendor
+                      {t('Select Vendor')}
                     </label>
                     <select
                       value={returnVendorId}
                       onChange={(e) => setReturnVendorId(e.target.value)}
                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="">Choose vendor</option>
+                      <option value="">{t('Choose vendor')}</option>
                       {vendorOptions.map((vendor) => (
                         <option key={vendor.id} value={vendor.id}>
                           {vendor.name}
@@ -428,14 +501,14 @@ const MobileOrderDetail = () => {
 
                 <div className="mb-4">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Reason
+                    {t('Reason')}
                   </label>
                   <textarea
                     value={returnReason}
                     onChange={(e) => setReturnReason(e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Describe the issue briefly"
+                    placeholder={t("Describe the issue briefly")}
                   />
                 </div>
 
@@ -444,7 +517,7 @@ const MobileOrderDetail = () => {
                   disabled={isSubmittingReturn}
                   className="w-full py-3 gradient-green text-white rounded-xl font-semibold disabled:opacity-70"
                 >
-                  {isSubmittingReturn ? 'Submitting...' : 'Submit Return Request'}
+                  {isSubmittingReturn ? t('Submitting...') : t('Submit Return Request')}
                 </button>
               </motion.div>
             </motion.div>

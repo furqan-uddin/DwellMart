@@ -14,8 +14,21 @@ import { useAuthStore } from "../../store/authStore";
 import { formatPrice } from "../../utils/helpers";
 import { Link } from "react-router-dom";
 import SwipeableCartItem from "./SwipeableCartItem";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const CartDrawer = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Shopping Cart",
+    "Your cart is empty",
+    "Add some items to get started!",
+    "Total:",
+    "Proceed to Checkout",
+    "Clear Cart",
+    "Loading card text...",
+  ]);
+  const { translateArray } = useDynamicTranslation();
+
   const checkoutLink = "/checkout";
   const { isCartOpen, toggleCart } = useUIStore();
   const {
@@ -27,11 +40,35 @@ const CartDrawer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const total = getTotal();
 
+  const [translatedVendorGroups, setTranslatedVendorGroups] = useState([]);
+
   // Group items by vendor
   const itemsByVendor = useMemo(
     () => getItemsByVendor(),
     [items, getItemsByVendor]
   );
+
+  useEffect(() => {
+    const translateContent = async () => {
+      if (itemsByVendor.length > 0) {
+        const groups = await Promise.all(itemsByVendor.map(async (group) => {
+          const transItems = await translateArray(group.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+          const vendorNameRes = await translateArray([{ name: group.vendorName }], ['name']);
+          return {
+            ...group,
+            vendorName: vendorNameRes[0]?.name || group.vendorName,
+            items: transItems
+          };
+        }));
+        setTranslatedVendorGroups(groups);
+      } else {
+        setTranslatedVendorGroups([]);
+      }
+    };
+    if (isCartOpen) {
+      translateContent();
+    }
+  }, [itemsByVendor, translateArray, isCartOpen]);
 
   // Prevent body scroll when cart is open
   useEffect(() => {
@@ -50,6 +87,8 @@ const CartDrawer = () => {
       document.body.style.overflowY = "";
     };
   }, [isCartOpen]);
+
+  const displayGroups = translatedVendorGroups.length > 0 ? translatedVendorGroups : itemsByVendor;
 
   return (
     <AnimatePresence>
@@ -82,7 +121,7 @@ const CartDrawer = () => {
             className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-2xl z-[10000] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-800">Shopping Cart</h2>
+              <h2 className="text-xl font-bold text-gray-800">{t('Shopping Cart')}</h2>
               <button
                 onClick={toggleCart}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -96,16 +135,16 @@ const CartDrawer = () => {
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <FiShoppingBag className="text-6xl text-gray-300 mb-4" />
                   <p className="text-gray-500 font-medium mb-2">
-                    Your cart is empty
+                    {t('Your cart is empty')}
                   </p>
                   <p className="text-sm text-gray-400">
-                    Add some items to get started!
+                    {t('Add some items to get started!')}
                   </p>
                 </div>
               ) : (
                 <AnimatePresence mode="popLayout">
                   <div className="space-y-6">
-                    {itemsByVendor.map((vendorGroup, vendorIndex) => (
+                    {displayGroups.map((vendorGroup, vendorIndex) => (
                       <div key={vendorGroup.vendorId} className="space-y-3">
                         {/* Vendor Header */}
                         <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200/50 shadow-sm">
@@ -141,7 +180,7 @@ const CartDrawer = () => {
               <div className="border-t border-gray-200 p-3 sm:p-6 bg-gray-50">
                 <div className="flex items-center justify-between mb-2 sm:mb-4">
                   <span className="text-sm sm:text-lg font-semibold text-gray-800">
-                    Total:
+                    {t('Total:')}
                   </span>
                   <span className="text-lg sm:text-2xl font-bold text-primary-600">
                     {formatPrice(total)}
@@ -152,12 +191,12 @@ const CartDrawer = () => {
                     to={checkoutLink}
                     onClick={toggleCart}
                     className="w-full gradient-green text-white py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base text-center">
-                    Proceed to Checkout
+                    {t('Proceed to Checkout')}
                   </Link>
                   <button
                     onClick={clearCart}
                     className="w-full py-1.5 sm:py-2 text-sm sm:text-base text-gray-600 hover:text-red-600 font-medium transition-colors">
-                    Clear Cart
+                    {t('Clear Cart')}
                   </button>
                 </div>
               </div>
@@ -170,3 +209,4 @@ const CartDrawer = () => {
 };
 
 export default CartDrawer;
+

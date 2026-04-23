@@ -174,13 +174,13 @@ const MobileProductCard = ({ product }) => {
         whileTap={{ scale: 0.98 }}
         className="glass-card rounded-2xl overflow-hidden mb-4"
         {...longPressHandlers}>
-        <div className="flex gap-4 p-4">
+        <div className="flex gap-3 p-3">
           {/* Product Image */}
-          <Link to={`/product/${product.id}`} className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 block">
+          <Link to={`/product/${product.id}`} className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 block p-1">
             <LazyImage
               src={product.image}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.src = getPlaceholderImage(200, 200, "Product");
               }}
@@ -189,9 +189,9 @@ const MobileProductCard = ({ product }) => {
 
           {/* Product Info */}
           <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-start justify-between gap-2 mb-0">
               <Link to={`/product/${product.id}`} className="flex-1">
-                <h3 className="font-bold text-gray-800 text-sm line-clamp-2">
+                <h3 className="font-bold text-gray-800 text-sm line-clamp-2 leading-none">
                   {product.name}
                 </h3>
               </Link>
@@ -206,11 +206,11 @@ const MobileProductCard = ({ product }) => {
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mb-2">{product.unit}</p>
+            <p className="text-[10px] text-gray-500 mb-0 leading-none">{product.unit}</p>
 
             {/* Vendor Badge */}
             {product.vendorId && (
-              <div className="mb-2">
+              <div className="mb-0.5">
                 <VendorBadge
                   vendor={getVendorById(product.vendorId)}
                   showVerified={true}
@@ -222,7 +222,7 @@ const MobileProductCard = ({ product }) => {
 
             {/* Rating */}
             {product.rating && (
-              <div className="flex items-center gap-1 mb-2">
+              <div className="flex items-center gap-1 mb-0.5">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <FiStar
@@ -241,12 +241,12 @@ const MobileProductCard = ({ product }) => {
             )}
 
             {/* Price */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg font-bold text-gray-800">
+            <div className="flex items-center gap-2 mb-0.5 leading-none">
+              <span className="text-lg font-bold text-gray-800 leading-none">
                 {formatPrice(product.price)}
               </span>
               {product.originalPrice && (
-                <span className="text-xs text-gray-400 line-through font-medium">
+                <span className="text-xs text-gray-400 line-through font-medium leading-none">
                   {formatPrice(product.originalPrice)}
                 </span>
               )}

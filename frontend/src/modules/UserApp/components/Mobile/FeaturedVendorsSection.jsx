@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom';
 import { FiArrowRight } from 'react-icons/fi';
 import VendorShowcaseCard from './VendorShowcaseCard';
 import { getApprovedVendors } from '../../data/catalogData';
+import { usePageTranslation } from '../../../../hooks/usePageTranslation';
 
 const FeaturedVendorsSection = ({ vendors = null }) => {
+  const { getTranslatedText: t } = usePageTranslation(["Best Sellers", "Shop from trusted stores", "See All"]);
   const approvedVendors = Array.isArray(vendors) && vendors.length > 0
     ? vendors
     : getApprovedVendors();
@@ -18,14 +20,14 @@ const FeaturedVendorsSection = ({ vendors = null }) => {
     <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Best Sellers</h2>
-          <p className="text-xs text-gray-600 mt-0.5">Shop from trusted stores</p>
+          <h2 className="text-xl font-bold text-gray-800">{t("Best Sellers")}</h2>
+          <p className="text-xs text-gray-600 mt-0.5">{t("Shop from trusted stores")}</p>
         </div>
         <Link
           to="/search"
           className="flex items-center gap-1 text-sm text-primary-600 font-semibold hover:text-primary-700 transition-colors"
         >
-          <span>See All</span>
+          <span>{t("See All")}</span>
           <FiArrowRight className="text-sm" />
         </Link>
       </div>

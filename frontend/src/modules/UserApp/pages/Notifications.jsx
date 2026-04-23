@@ -4,6 +4,7 @@ import { FiBell, FiCheck, FiTrash2, FiInbox, FiRefreshCw } from "react-icons/fi"
 import MobileLayout from "../components/Layout/MobileLayout";
 import PageTransition from "../../../shared/components/PageTransition";
 import { useUserNotificationStore } from "../store/userNotificationStore";
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -13,6 +14,20 @@ const formatDateTime = (value) => {
 };
 
 const UserNotifications = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Notifications',
+    'unread',
+    'Refresh',
+    'Mark all read',
+    'Loading notifications...',
+    'No notifications yet',
+    'Order and account updates will appear here.',
+    'Notification',
+    'Mark as read',
+    'Delete notification',
+    'Load more',
+    'Loading...'
+  ]);
   const {
     notifications,
     unreadCount,
@@ -39,8 +54,8 @@ const UserNotifications = () => {
             className="flex items-start justify-between gap-3"
           >
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-              <p className="text-sm text-gray-600">{unreadCount} unread</p>
+              <h1 className="text-2xl font-bold text-gray-800">{t('Notifications')}</h1>
+              <p className="text-sm text-gray-600">{unreadCount} {t('unread')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -50,7 +65,7 @@ const UserNotifications = () => {
               >
                 <span className="inline-flex items-center gap-1">
                   <FiRefreshCw />
-                  Refresh
+                  {t('Refresh')}
                 </span>
               </button>
               <button
@@ -59,21 +74,21 @@ const UserNotifications = () => {
                 className="px-3 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
-                Mark all read
+                {t('Mark all read')}
               </button>
             </div>
           </motion.div>
 
           {isLoading && notifications.length === 0 ? (
             <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-200 text-gray-600">
-              Loading notifications...
+              {t('Loading notifications...')}
             </div>
           ) : notifications.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-200">
               <FiInbox className="mx-auto mb-3 text-4xl text-gray-400" />
-              <p className="text-gray-700 font-semibold">No notifications yet</p>
+              <p className="text-gray-700 font-semibold">{t('No notifications yet')}</p>
               <p className="text-sm text-gray-500 mt-1">
-                Order and account updates will appear here.
+                {t('Order and account updates will appear here.')}
               </p>
             </div>
           ) : (
@@ -95,7 +110,7 @@ const UserNotifications = () => {
                       <div className="flex items-center gap-2">
                         <FiBell className={notification?.isRead ? "text-gray-400" : "text-primary-600"} />
                         <h3 className="font-semibold text-gray-800 truncate">
-                          {notification?.title || "Notification"}
+                          {notification?.title || t("Notification")}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-700 mt-1 break-words">
@@ -111,7 +126,7 @@ const UserNotifications = () => {
                         <button
                           onClick={() => markAsRead(notification?._id)}
                           className="p-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-white"
-                          title="Mark as read"
+                          title={t("Mark as read")}
                           type="button"
                         >
                           <FiCheck />
@@ -120,7 +135,7 @@ const UserNotifications = () => {
                       <button
                         onClick={() => removeNotification(notification?._id)}
                         className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                        title="Delete notification"
+                        title={t("Delete notification")}
                         type="button"
                       >
                         <FiTrash2 />
@@ -140,7 +155,7 @@ const UserNotifications = () => {
                 className="w-full py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
-                {isLoading ? "Loading..." : "Load more"}
+                {isLoading ? t("Loading...") : t("Load more")}
               </button>
             </div>
           )}

@@ -5,10 +5,46 @@ import { motion } from 'framer-motion';
 import { useAdminAuthStore } from '../store/adminStore';
 import toast from 'react-hot-toast';
 
+const decodeJwtPayload = (token) => {
+  try {
+    const parts = String(token || '').split('.');
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = window.atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
+const resolveAdminRedirectPath = (location) => {
+  const fromPath = location?.state?.from?.pathname;
+  if (
+    typeof fromPath === 'string' &&
+    fromPath.startsWith('/admin') &&
+    fromPath !== '/admin/login'
+  ) {
+    return fromPath;
+  }
+  return '/admin/dashboard';
+};
+
 const AdminLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, isLoading } = useAdminAuthStore();
+  const { login, logout, isAuthenticated, isLoading, token } = useAdminAuthStore();
+  const accessToken = token || localStorage.getItem('adminToken');
+  const payload = decodeJwtPayload(accessToken);
+  const role = String(payload?.role || '').toLowerCase();
+  const tokenExpiryMs =
+    typeof payload?.exp === 'number' ? payload.exp * 1000 : null;
+  const isExpired = tokenExpiryMs ? Date.now() >= tokenExpiryMs : false;
+  const hasValidRole = role === 'admin' || role === 'superadmin';
+  const hasRoleClaim = Boolean(role);
+  const hasValidSession =
+    Boolean(accessToken) &&
+    !isExpired &&
+    (!hasRoleClaim || hasValidRole);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -17,13 +53,20 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Redirect if already authenticated
+  // Clear stale persisted auth state that no longer has a valid token session.
   useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/admin/dashboard';
+    if (isAuthenticated && !hasValidSession) {
+      logout();
+    }
+  }, [hasValidSession, isAuthenticated, logout]);
+
+  // Redirect only for a valid authenticated session.
+  useEffect(() => {
+    if (isAuthenticated && hasValidSession) {
+      const from = resolveAdminRedirectPath(location);
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [hasValidSession, isAuthenticated, navigate, location]);
 
   const handleChange = (e) => {
     setFormData({
@@ -43,7 +86,7 @@ const AdminLogin = () => {
     try {
       await login(formData.email, formData.password, rememberMe);
       toast.success('Login successful!');
-      const from = location.state?.from?.pathname || '/admin/dashboard';
+      const from = resolveAdminRedirectPath(location);
       navigate(from, { replace: true });
     } catch (error) {
       toast.error(error.message || 'Invalid credentials');

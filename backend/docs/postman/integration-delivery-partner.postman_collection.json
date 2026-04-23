@@ -1,0 +1,313 @@
+{
+  "info": {
+    "_postman_id": "9f24c34a-5b68-4f6f-9df5-f8d3dcb67a8a",
+    "name": "DwellMarrt - Delivery Partner Integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health endpoint is reachable', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Eligible Orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{baseUrl}}/api/integrations/orders?page=1&limit=20"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Orders fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.eql(true);",
+              "    pm.expect(Array.isArray(json.data)).to.eql(true);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json && Array.isArray(json.data) && json.data.length > 0 && json.data[0].orderId) {",
+              "    pm.collectionVariables.set('orderId', json.data[0].orderId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Single Order Header",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{baseUrl}}/api/integrations/orders/{{orderId}}"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Single order fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.eql(true);",
+              "    pm.expect(json.data).to.be.an('object');",
+              "    pm.expect(json.data.orderId).to.eql(pm.collectionVariables.get('orderId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Order Item Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{baseUrl}}/api/integrations/order-details/{{orderId}}"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Order item details fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.eql(true);",
+              "    pm.expect(Array.isArray(json.data)).to.eql(true);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json && Array.isArray(json.data) && json.data.length > 0) {",
+              "    pm.collectionVariables.set('itemCode', json.data[0].itemCode);",
+              "    pm.collectionVariables.set('itemQty', String(json.data[0].qty));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Delivery Status - DELIVERED",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DELIVERED\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"note\": \"Delivered successfully\",\n  \"partnerReferenceId\": \"{{partnerReferenceId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/integrations/orders/{{orderId}}/delivery-status"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delivery callback accepted', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.eql(true);",
+              "    pm.expect(json.data.status).to.eql('DELIVERED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delivery Duplicate Callback (Idempotency)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DELIVERED\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"note\": \"Delivered successfully\",\n  \"partnerReferenceId\": \"{{partnerReferenceId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/integrations/orders/{{orderId}}/delivery-status"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Duplicate callback handled idempotently', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.eql(true);",
+              "    pm.expect(json.data.status).to.eql('DELIVERED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Update (Expected 409 in AT_ORDER_PLACEMENT mode)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{clientId}}",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"items\": [\n    {\n      \"itemCode\": \"{{itemCode}}\",\n      \"qty\": {{itemQty}}\n    }\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/api/integrations/inventory/update"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Inventory endpoint behavior verified', function () {",
+              "    pm.expect([200, 409]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "clientId",
+      "value": "partner_test"
+    },
+    {
+      "key": "apiKey",
+      "value": "partner_secret_123"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "itemCode",
+      "value": ""
+    },
+    {
+      "key": "itemQty",
+      "value": "1"
+    },
+    {
+      "key": "partnerReferenceId",
+      "value": "TP-ORD-123456"
+    }
+  ]
+}

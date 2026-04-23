@@ -11,10 +11,30 @@ import useLongPress from "../../modules/UserApp/hooks/useLongPress";
 import LongPressMenu from "../../modules/UserApp/components/Mobile/LongPressMenu";
 import FlyingItem from "../../modules/UserApp/components/Mobile/FlyingItem";
 import { getVariantSignature } from "../utils/variant";
+import { usePageTranslation } from "../../hooks/usePageTranslation";
 
 
 const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
   const navigate = useNavigate();
+  const { getTranslatedText: t } = usePageTranslation([
+    "Please select variant on product page",
+    "Added to cart!",
+    "Removed from cart!",
+    "Link copied to clipboard",
+    "Removed from wishlist",
+    "Added to wishlist",
+    "OFF",
+    "Hot Deal",
+    "Ending Soon",
+    "Available",
+    "Sold",
+    "Remove",
+    "Out of Stock",
+    "Adding...",
+    "Add",
+    "Add to Cart"
+  ]);
+
   const productLink = `/product/${product.id}`;
   const { items, addItem, removeItem } = useCartStore();
   const triggerCartAnimation = useUIStore(
@@ -53,7 +73,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
     const hasSizeVariants = Array.isArray(product?.variants?.sizes) && product.variants.sizes.length > 0;
     const hasColorVariants = Array.isArray(product?.variants?.colors) && product.variants.colors.length > 0;
     if (hasDynamicAxes || hasSizeVariants || hasColorVariants) {
-      toast.error("Please select variant on product page");
+      toast.error(t("Please select variant on product page"));
       navigate(productLink);
       return;
     }
@@ -110,7 +130,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
     });
     if (!addedToCart) return;
     triggerCartAnimation();
-    toast.success("Added to cart!");
+    toast.success(t("Added to cart!"));
   };
 
   const handleRemoveFromCart = (e) => {
@@ -119,7 +139,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
       e.stopPropagation();
     }
     removeItem(product.id, {});
-    toast.success("Removed from cart!");
+    toast.success(t("Removed from cart!"));
   };
 
   const handleLongPress = (e) => {
@@ -140,7 +160,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
       });
     } else {
       navigator.clipboard.writeText(window.location.origin + productLink);
-      toast.success("Link copied to clipboard");
+      toast.success(t("Link copied to clipboard"));
     }
   };
 
@@ -150,7 +170,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
     e.stopPropagation();
     if (isFavorite) {
       removeFromWishlist(product.id);
-      toast.success("Removed from wishlist");
+      toast.success(t("Removed from wishlist"));
     } else {
       const addedToWishlist = addToWishlist({
         id: product.id,
@@ -159,7 +179,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
         image: product.image,
       });
       if (addedToWishlist) {
-        toast.success("Added to wishlist");
+        toast.success(t("Added to wishlist"));
       }
     }
   };
@@ -193,28 +213,28 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
 
           {/* Product Image */}
           <Link to={productLink} className="block">
-            <div className="w-full h-28 md:h-40 lg:h-36 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative group-hover:bg-gray-200/50 transition-colors">
+            <div className="w-full h-36 md:h-48 lg:h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative group-hover:bg-gray-200/50 transition-colors p-2">
               {product.originalPrice && (
                 <div className={`absolute top-0 left-0 text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-br-lg z-10 shadow-sm ${isFlashSale ? "bg-gradient-to-r from-red-600 to-orange-500" : "bg-red-500"}`}>
                   {Math.round(
                     ((product.originalPrice - product.price) /
                       product.originalPrice) *
                     100
-                  )}% OFF
+                  )}% {t("OFF")}
                 </div>
               )}
               {isFlashSale && (
                 <div className="absolute top-0 right-0 p-1">
                   <div className="bg-yellow-400 text-gray-900 text-[8px] font-black px-1.5 py-0.5 rounded-full animate-pulse uppercase tracking-tighter">
-                    Hot Deal
+                    {t("Hot Deal")}
                   </div>
                 </div>
               )}
               <LazyImage
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                style={{ willChange: "transform", transform: "translateZ(0)" }}
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                style={{ scale: 1.15, willChange: "transform", transform: "translateZ(0)" }}
                 onError={(e) => {
                   e.target.src = getPlaceholderImage(300, 300, "Product Image");
                 }}
@@ -224,20 +244,20 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
         </div>
 
         {/* Product Info */}
-        <div className="p-1.5 md:p-4 lg:p-3 flex-1 flex flex-col bg-white">
-          <Link to={productLink} className="block lg:h-6">
-            <h3 className="font-bold text-gray-800 mb-0 md:mb-1 lg:mb-0.5 line-clamp-2 md:line-clamp-1 text-[11px] md:text-sm transition-colors group-hover:text-primary-600 leading-tight">
+        <div className="p-1 md:p-3 lg:p-2 flex-1 flex flex-col bg-white">
+          <Link to={productLink} className="block lg:h-5">
+            <h3 className="font-bold text-gray-800 mb-0 line-clamp-2 md:line-clamp-1 text-[11px] md:text-sm transition-colors group-hover:text-primary-600 leading-none">
               {product.name}
             </h3>
           </Link>
-          <p className="text-[9px] md:text-xs text-gray-400 mb-0.5 md:mb-2 lg:mb-1 font-medium lg:h-4">
+          <p className="text-[8px] md:text-xs text-gray-400 mb-0 font-medium lg:h-3 leading-none truncate">
             {product.unit}
           </p>
 
 
 
           {/* Rating */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-0.5">
             {product.rating && !hideRating && (
               <div className="flex items-center gap-1">
                 <div className="flex items-center bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
@@ -251,17 +271,17 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
             )}
             {isFlashSale && (
               <span className="text-[9px] font-bold text-red-500 uppercase tracking-tighter hidden md:inline">
-                Ending Soon
+                {t("Ending Soon")}
               </span>
             )}
           </div>
 
           {/* Flash Sale Progress Bar */}
           {isFlashSale && (
-            <div className="mb-3 space-y-1">
+            <div className="mb-1 space-y-0.5">
               <div className="flex justify-between text-[8px] md:text-[10px] font-bold">
-                <span className="text-gray-500 uppercase">Available</span>
-                <span className="text-orange-600">{soldPercentage}% Sold</span>
+                <span className="text-gray-500 uppercase">{t("Available")}</span>
+                <span className="text-orange-600">{soldPercentage}% {t("Sold")}</span>
               </div>
               <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
@@ -275,8 +295,8 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
           )}
 
           {/* Price */}
-          <div className="flex flex-col items-start gap-0 md:flex-row md:items-end md:gap-2 lg:gap-1.5 mb-1.5 md:mb-3 lg:mb-2 mt-auto">
-            <span className={`text-xs md:text-xl font-black ${isFlashSale ? "text-red-600" : "text-gray-900"}`}>
+          <div className="flex flex-col items-start gap-0 md:flex-row md:items-end md:gap-2 mb-0.5 mt-auto leading-none">
+            <span className={`text-xs md:text-xl font-black leading-none ${isFlashSale ? "text-red-600" : "text-gray-900"}`}>
               {formatPrice(product.price)}
             </span>
             {product.originalPrice && (
@@ -294,7 +314,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
               whileTap={{ scale: 0.95 }}
               className="w-full py-1.5 md:py-2.5 lg:py-2 rounded-xl font-bold text-xs md:text-sm bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-all duration-300 flex items-center justify-center gap-1.5">
               <FiTrash2 className="text-xs md:text-base" />
-              <span>Remove</span>
+              <span>{t("Remove")}</span>
             </motion.button>
           ) : (
             <motion.button
@@ -330,10 +350,10 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
               </motion.div>
               <span>
                 {product.stock === "out_of_stock"
-                  ? "Out of Stock"
+                  ? t("Out of Stock")
                   : isAdding
-                    ? "Adding..."
-                    : <><span className="md:hidden">Add</span><span className="hidden md:inline">Add to Cart</span></>}
+                    ? t("Adding...")
+                    : <><span className="md:hidden">{t("Add")}</span><span className="hidden md:inline">{t("Add to Cart")}</span></>}
               </span>
             </motion.button>
           )}

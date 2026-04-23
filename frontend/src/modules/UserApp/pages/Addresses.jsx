@@ -9,8 +9,47 @@ import PageTransition from '../../../shared/components/PageTransition';
 import ProtectedRoute from '../../../shared/components/Auth/ProtectedRoute';
 import { useAddressStore } from '../../../shared/store/addressStore';
 import { useAuthStore } from '../../../shared/store/authStore';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const MobileAddresses = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Saved Addresses',
+    'Add Address',
+    'Loading addresses...',
+    'No addresses saved',
+    'Add your first address to get started',
+    'Default',
+    'Set as Default',
+    'Edit Address',
+    'Add New Address',
+    'Update Address',
+    'Cancel',
+    'Address Label',
+    'Home, Work, etc.',
+    'Full Name',
+    'Phone Number',
+    'Street Address',
+    'City',
+    'State',
+    'Zip Code',
+    'Country',
+    'Address updated successfully!',
+    'Address added successfully!',
+    'Failed to save address',
+    'Address deleted successfully!',
+    'Failed to delete address',
+    'Default address updated',
+    'Failed to set default address',
+    'Are you sure you want to delete this address?',
+    'Address label is required',
+    'Full name is required',
+    'Phone number is required',
+    'Address is required',
+    'City is required',
+    'State is required',
+    'Zip code is required',
+    'Country is required'
+  ]);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { addresses, addAddress, updateAddress, deleteAddress, setDefaultAddress, fetchAddresses, isLoading } =
@@ -34,16 +73,16 @@ const MobileAddresses = () => {
     try {
       if (editingAddress) {
         await updateAddress(editingAddress.id, data);
-        toast.success('Address updated successfully!');
+        toast.success(t('Address updated successfully!'));
       } else {
         await addAddress(data);
-        toast.success('Address added successfully!');
+        toast.success(t('Address added successfully!'));
       }
       reset();
       setIsFormOpen(false);
       setEditingAddress(null);
     } catch (error) {
-      toast.error(error?.message || 'Failed to save address');
+      toast.error(error?.message || t('Failed to save address'));
     }
   };
 
@@ -54,12 +93,12 @@ const MobileAddresses = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this address?')) {
+    if (window.confirm(t('Are you sure you want to delete this address?'))) {
       try {
         await deleteAddress(id);
-        toast.success('Address deleted successfully!');
+        toast.success(t('Address deleted successfully!'));
       } catch (error) {
-        toast.error(error?.message || 'Failed to delete address');
+        toast.error(error?.message || t('Failed to delete address'));
       }
     }
   };
@@ -84,7 +123,7 @@ const MobileAddresses = () => {
                 >
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
-                <h1 className="text-xl font-bold text-gray-800 flex-1">Saved Addresses</h1>
+                <h1 className="text-xl font-bold text-gray-800 flex-1">{t('Saved Addresses')}</h1>
                 <button
                   onClick={() => setIsFormOpen(true)}
                   className="p-2 gradient-green text-white rounded-xl hover:shadow-glow-green transition-all"
@@ -98,18 +137,18 @@ const MobileAddresses = () => {
             <div className="px-4 py-4">
               {isLoading ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">Loading addresses...</p>
+                  <p className="text-gray-600">{t('Loading addresses...')}</p>
                 </div>
               ) : addresses.length === 0 ? (
                 <div className="text-center py-12">
                   <FiMapPin className="text-6xl text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">No addresses saved</h3>
-                  <p className="text-gray-600 mb-6">Add your first address to get started</p>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No addresses saved')}</h3>
+                  <p className="text-gray-600 mb-6">{t('Add your first address to get started')}</p>
                   <button
                     onClick={() => setIsFormOpen(true)}
                     className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
                   >
-                    Add Address
+                    {t('Add Address')}
                   </button>
                 </div>
               ) : (
@@ -129,7 +168,7 @@ const MobileAddresses = () => {
                               <h3 className="font-bold text-gray-800 text-base">{address.name}</h3>
                               {address.isDefault && (
                                 <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs font-semibold">
-                                  Default
+                                  {t('Default')}
                                 </span>
                               )}
                             </div>
@@ -149,14 +188,14 @@ const MobileAddresses = () => {
                             onClick={async () => {
                               try {
                                 await setDefaultAddress(address.id);
-                                toast.success('Default address updated');
+                                toast.success(t('Default address updated'));
                               } catch (error) {
-                                toast.error(error?.message || 'Failed to set default address');
+                                toast.error(error?.message || t('Failed to set default address'));
                               }
                             }}
                             className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors"
                           >
-                            Set as Default
+                            {t('Set as Default')}
                           </button>
                         )}
                         <button
@@ -189,6 +228,7 @@ const MobileAddresses = () => {
                 register={register}
                 handleSubmit={handleSubmit}
                 errors={errors}
+                t={t}
               />
             )}
           </AnimatePresence>
@@ -206,6 +246,7 @@ const AddressFormModal = ({
   register,
   handleSubmit,
   errors,
+  t,
 }) => {
   return (
     <motion.div
@@ -224,7 +265,7 @@ const AddressFormModal = ({
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-800">
-            {editingAddress ? 'Edit Address' : 'Add New Address'}
+            {editingAddress ? t('Edit Address') : t('Add New Address')}
           </h2>
           <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full">
             <FiX className="text-xl" />
@@ -232,21 +273,21 @@ const AddressFormModal = ({
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Address Label</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Address Label')}</label>
             <input
               type="text"
-              {...register('name', { required: 'Address label is required' })}
+              {...register('name', { required: t('Address label is required') })}
               className={`w-full px-4 py-3 rounded-xl border-2 ${errors.name ? 'border-red-300' : 'border-gray-200'
                 } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
-              placeholder="Home, Work, etc."
+              placeholder={t('Home, Work, etc.')}
             />
             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Full Name')}</label>
             <input
               type="text"
-              {...register('fullName', { required: 'Full name is required' })}
+              {...register('fullName', { required: t('Full name is required') })}
               className={`w-full px-4 py-3 rounded-xl border-2 ${errors.fullName ? 'border-red-300' : 'border-gray-200'
                 } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
             />
@@ -255,20 +296,20 @@ const AddressFormModal = ({
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Phone Number')}</label>
             <input
               type="tel"
-              {...register('phone', { required: 'Phone number is required' })}
+              {...register('phone', { required: t('Phone number is required') })}
               className={`w-full px-4 py-3 rounded-xl border-2 ${errors.phone ? 'border-red-300' : 'border-gray-200'
                 } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
             />
             {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Street Address</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Street Address')}</label>
             <input
               type="text"
-              {...register('address', { required: 'Address is required' })}
+              {...register('address', { required: t('Address is required') })}
               className={`w-full px-4 py-3 rounded-xl border-2 ${errors.address ? 'border-red-300' : 'border-gray-200'
                 } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
             />
@@ -278,38 +319,38 @@ const AddressFormModal = ({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">City</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('City')}</label>
               <input
                 type="text"
-                {...register('city', { required: 'City is required' })}
+                {...register('city', { required: t('City is required') })}
                 className={`w-full px-4 py-3 rounded-xl border-2 ${errors.city ? 'border-red-300' : 'border-gray-200'
                   } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">State</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('State')}</label>
               <input
                 type="text"
-                {...register('state', { required: 'State is required' })}
+                {...register('state', { required: t('State is required') })}
                 className={`w-full px-4 py-3 rounded-xl border-2 ${errors.state ? 'border-red-300' : 'border-gray-200'
                   } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Zip Code</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Zip Code')}</label>
               <input
                 type="text"
-                {...register('zipCode', { required: 'Zip code is required' })}
+                {...register('zipCode', { required: t('Zip code is required') })}
                 className={`w-full px-4 py-3 rounded-xl border-2 ${errors.zipCode ? 'border-red-300' : 'border-gray-200'
                   } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Country</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Country')}</label>
             <input
               type="text"
-              {...register('country', { required: 'Country is required' })}
+              {...register('country', { required: t('Country is required') })}
               className={`w-full px-4 py-3 rounded-xl border-2 ${errors.country ? 'border-red-300' : 'border-gray-200'
                 } focus:outline-none focus:ring-2 focus:ring-primary-500 text-base`}
             />
@@ -319,14 +360,14 @@ const AddressFormModal = ({
               type="submit"
               className="flex-1 gradient-green text-white py-3 rounded-xl font-semibold hover:shadow-glow-green transition-all"
             >
-              {editingAddress ? 'Update Address' : 'Add Address'}
+              {editingAddress ? t('Update Address') : t('Add Address')}
             </button>
             <button
               type="button"
               onClick={onCancel}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
             >
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         </form>

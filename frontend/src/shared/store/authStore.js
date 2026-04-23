@@ -15,8 +15,8 @@ export const useAuthStore = create(
       // Login action
       login: async (email, password, rememberMe = false) => {
         set({ isLoading: true });
+        const normalizedEmail = String(email || '').trim().toLowerCase();
         try {
-          const normalizedEmail = String(email || '').trim().toLowerCase();
           const response = await api.post('/user/auth/login', { email: normalizedEmail, password });
           const payload = response?.data ?? response;
           const accessToken = payload?.accessToken;
@@ -280,6 +280,7 @@ export const useAuthStore = create(
 
       // Initialize auth state from localStorage
       initialize: () => {
+        set({ isLoading: false });
         const token = localStorage.getItem('token');
         if (token) {
           const storedState = JSON.parse(localStorage.getItem('auth-storage') || '{}');
@@ -298,6 +299,13 @@ export const useAuthStore = create(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+        pendingEmail: state.pendingEmail,
+      }),
     }
   )
 );

@@ -5,8 +5,10 @@ import { formatPrice } from '../../../../shared/utils/helpers';
 import LazyImage from '../../../../shared/components/LazyImage';
 import { useCartStore } from '../../../../shared/store/useStore';
 import toast from 'react-hot-toast';
+import { usePageTranslation } from '../../../../hooks/usePageTranslation';
 
 const WishlistGridItem = ({ item, index, onMoveToCart, onRemove }) => {
+  const { getTranslatedText: t } = usePageTranslation(["Remove", "Add", "Removed from cart!"]);
   const { items: cartItems, removeItem } = useCartStore();
   const isInCart = cartItems.some((i) => i.id === item.id);
 
@@ -15,7 +17,7 @@ const WishlistGridItem = ({ item, index, onMoveToCart, onRemove }) => {
       e.stopPropagation();
     }
     removeItem(item.id);
-    toast.success("Removed from cart!");
+    toast.success(t("Removed from cart!"));
   };
   return (
     <motion.div
@@ -110,7 +112,7 @@ const WishlistGridItem = ({ item, index, onMoveToCart, onRemove }) => {
             style={{ willChange: "transform", transform: "translateZ(0)" }}
             className="w-full py-1 rounded-md font-semibold text-[10px] transition-all duration-300 flex items-center justify-center gap-1 mt-auto bg-red-50 text-red-600 border border-red-100">
             <FiTrash2 className="text-xs" />
-            <span>Remove</span>
+            <span>{t('Remove')}</span>
           </motion.button>
         ) : (
           <motion.button
@@ -122,7 +124,7 @@ const WishlistGridItem = ({ item, index, onMoveToCart, onRemove }) => {
             style={{ willChange: "transform", transform: "translateZ(0)" }}
             className="w-full py-1 rounded-md font-semibold text-[10px] transition-all duration-300 flex items-center justify-center gap-1 mt-auto gradient-green text-white group/btn">
             <FiShoppingBag className="text-xs transition-transform" />
-            <span>Add</span>
+            <span>{t('Add')}</span>
           </motion.button>
         )}
       </div>

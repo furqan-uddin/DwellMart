@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+export const INTEGRATION_PARTNER_STATUSES = [
+    'NEW',
+    'READY_FOR_ASSIGNMENT',
+    'ASSIGNED',
+    'PICKED_UP',
+    'OUT_FOR_DELIVERY',
+    'DELIVERED',
+    'DELIVERY_FAILED',
+    'CANCELLED',
+];
+
+export const INTEGRATION_INVENTORY_UPDATE_MODES = [
+    'AT_ORDER_PLACEMENT',
+    'POST_DELIVERY',
+];
+
 const orderItemSchema = new mongoose.Schema({
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
     vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', index: true },
@@ -25,6 +41,46 @@ const vendorItemGroupSchema = new mongoose.Schema({
         default: 'pending',
     },
 });
+
+const integrationLogEntrySchema = new mongoose.Schema(
+    {
+        status: { type: String, enum: INTEGRATION_PARTNER_STATUSES, required: true },
+        timestamp: { type: Date, required: true },
+        note: { type: String, trim: true, default: '' },
+        source: { type: String, trim: true, default: 'third_party_api' },
+        partnerReferenceId: { type: String, trim: true },
+        requestId: { type: String, trim: true },
+        rawPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
+    },
+    { _id: false }
+);
+
+const orderIntegrationSchema = new mongoose.Schema(
+    {
+        eligibleForPartner: { type: Boolean, default: true, index: true },
+        exposedToPartnerAt: { type: Date },
+        deliveryPartnerName: { type: String, trim: true },
+        partnerReferenceId: { type: String, trim: true },
+        partnerStatus: {
+            type: String,
+            enum: INTEGRATION_PARTNER_STATUSES,
+            default: 'READY_FOR_ASSIGNMENT',
+            index: true,
+        },
+        lastPartnerSyncAt: { type: Date },
+        deliveredAt: { type: Date },
+        inventoryUpdateMode: {
+            type: String,
+            enum: INTEGRATION_INVENTORY_UPDATE_MODES,
+            default: 'AT_ORDER_PLACEMENT',
+        },
+        inventoryUpdatedAfterDelivery: { type: Boolean, default: false },
+        inventoryUpdatedAt: { type: Date },
+        inventoryUpdateSource: { type: String, trim: true },
+        logs: { type: [integrationLogEntrySchema], default: [] },
+    },
+    { _id: false }
+);
 
 const orderSchema = new mongoose.Schema(
     {
@@ -81,6 +137,7 @@ const orderSchema = new mongoose.Schema(
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: Date,
         deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+        integration: { type: orderIntegrationSchema, default: () => ({}) },
     },
     { timestamps: true }
 );
@@ -101,6 +158,8 @@ orderSchema.index(
 orderSchema.index({ isDeleted: 1, createdAt: -1 });
 orderSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
 orderSchema.index({ 'vendorItems.vendorId': 1, createdAt: -1 });
+orderSchema.index({ 'integration.eligibleForPartner': 1, status: 1, createdAt: -1 });
+orderSchema.index({ 'integration.partnerStatus': 1, createdAt: -1 });
 
 const Order = mongoose.model('Order', orderSchema);
 export { Order };

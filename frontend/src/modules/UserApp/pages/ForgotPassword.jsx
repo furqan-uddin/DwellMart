@@ -6,10 +6,29 @@ import toast from 'react-hot-toast';
 import MobileLayout from '../components/Layout/MobileLayout';
 import PageTransition from '../../../shared/components/PageTransition';
 import { useAuthStore } from '../../../shared/store/authStore';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const OTP_LENGTH = 6;
 
 const MobileForgotPassword = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Please enter your email.',
+    'If the email exists, reset OTP has been sent.',
+    'Please enter the full OTP.',
+    'OTP verified. Please set your new password.',
+    'Forgot Password',
+    'Enter your account email to receive OTP.',
+    'Enter the OTP sent to',
+    'Email Address',
+    'your.email@example.com',
+    'Sending OTP...',
+    'Send OTP',
+    'Resend OTP',
+    'Change Email',
+    'Verifying...',
+    'Verify OTP',
+    'Back to Login'
+  ]);
   const navigate = useNavigate();
   const { forgotPassword, verifyResetOtp, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
@@ -26,13 +45,13 @@ const MobileForgotPassword = () => {
   const handleRequestOtp = async (e) => {
     if (e) e.preventDefault();
     if (!email.trim()) {
-      toast.error('Please enter your email.');
+      toast.error(t('Please enter your email.'));
       return;
     }
 
     try {
       await forgotPassword(email.trim().toLowerCase());
-      toast.success('If the email exists, reset OTP has been sent.');
+      toast.success(t('If the email exists, reset OTP has been sent.'));
       setStep('verify');
     } catch (error) {
       const message = String(
@@ -80,13 +99,13 @@ const MobileForgotPassword = () => {
     e.preventDefault();
     const otp = codes.join('');
     if (otp.length !== OTP_LENGTH) {
-      toast.error('Please enter the full OTP.');
+      toast.error(t('Please enter the full OTP.'));
       return;
     }
 
     try {
       await verifyResetOtp(email.trim().toLowerCase(), otp);
-      toast.success('OTP verified. Please set your new password.');
+      toast.success(t('OTP verified. Please set your new password.'));
       navigate(`/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch {
       // Global API interceptor shows toast
@@ -105,25 +124,25 @@ const MobileForgotPassword = () => {
           >
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Forgot Password</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('Forgot Password')}</h1>
                 <p className="text-sm text-gray-600">
                   {step === 'request'
-                    ? 'Enter your account email to receive OTP.'
-                    : `Enter the OTP sent to ${email}`}
+                    ? t('Enter your account email to receive OTP.')
+                    : `${t('Enter the OTP sent to')} ${email}`}
                 </p>
               </div>
 
               {step === 'request' ? (
                 <form onSubmit={handleRequestOtp} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Email Address')}</label>
                     <div className="relative">
                       <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="your.email@example.com"
+                        placeholder={t('your.email@example.com')}
                         className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:outline-none transition-colors text-base"
                         required
                       />
@@ -134,7 +153,7 @@ const MobileForgotPassword = () => {
                     disabled={isLoading}
                     className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                    {isLoading ? t('Sending OTP...') : t('Send OTP')}
                   </button>
                 </form>
               ) : (
@@ -164,23 +183,23 @@ const MobileForgotPassword = () => {
                       className="text-sm text-primary-600 hover:text-primary-700 font-medium disabled:text-gray-400 inline-flex items-center gap-2"
                     >
                       <FiRefreshCw />
-                      Resend OTP
+                      {t('Resend OTP')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setStep('request')}
                       className="text-sm text-gray-600 hover:text-gray-800 font-medium"
                     >
-                      Change Email
+                      {t('Change Email')}
                     </button>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isLoading || codes.some((c) => !c)}
+                    disabled={isLoading}
                     className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isLoading ? 'Verifying...' : <><FiCheck /> Verify OTP</>}
+                    {isLoading ? t('Verifying...') : <><FiCheck /> {t('Verify OTP')}</>}
                   </button>
                 </form>
               )}
@@ -188,7 +207,7 @@ const MobileForgotPassword = () => {
               <div className="text-center pt-6">
                 <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 font-medium">
                   <FiArrowLeft />
-                  Back to Login
+                  {t('Back to Login')}
                 </Link>
               </div>
             </div>

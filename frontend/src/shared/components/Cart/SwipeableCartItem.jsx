@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FiTrash2, FiMinus, FiPlus, FiHeart, FiAlertCircle } from "react-icons/fi";
 import { toast } from "react-hot-toast";
@@ -7,8 +7,19 @@ import { useWishlistStore } from "../../store/wishlistStore";
 import { formatPrice } from "../../utils/helpers";
 import { formatVariantLabel } from "../../utils/variant";
 import useSwipeGesture from "../../../modules/UserApp/hooks/useSwipeGesture";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
 
 const SwipeableCartItem = ({ item, index }) => {
+    const { getTranslatedText: t } = usePageTranslation([
+        "Only",
+        "items available in stock",
+        "left!",
+        "Saved for later!",
+        "Item removed",
+        "Undo",
+        "Save for Later"
+    ]);
+
     const [swipeOffset, setSwipeOffset] = useState(0);
     const [isDeleted, setIsDeleted] = useState(false);
     const [hasAnimated, setHasAnimated] = useState(false);
@@ -41,7 +52,7 @@ const SwipeableCartItem = ({ item, index }) => {
         }
 
         if (Number.isFinite(availableStock) && newQuantity > availableStock) {
-            toast.error(`Only ${availableStock} items available in stock`);
+            toast.error(`${t('Only')} ${availableStock} ${t('items available in stock')}`);
             return;
         }
 
@@ -57,17 +68,17 @@ const SwipeableCartItem = ({ item, index }) => {
         });
         if (!addedToWishlist) return;
         removeItem(item.id, item.variant);
-        toast.success("Saved for later!");
+        toast.success(t("Saved for later!"));
     };
 
     const handleSwipeRight = () => {
         setIsDeleted(true);
         deletedItemRef.current = { ...item };
         removeItem(item.id, item.variant);
-        toast.success("Item removed", {
+        toast.success(t("Item removed"), {
             duration: 3000,
             action: {
-                label: "Undo",
+                label: t("Undo"),
                 onClick: () => {
                     if (deletedItemRef.current) {
                         const { addItem: addToCart } = useCartStore.getState();
@@ -146,7 +157,7 @@ const SwipeableCartItem = ({ item, index }) => {
                     {isLowStock() && (
                         <div className="flex items-center gap-1 text-xs text-orange-600 mb-2">
                             <FiAlertCircle className="text-xs" />
-                            <span>Only {getProductStock()} left!</span>
+                            <span>{t('Only')} {getProductStock()} {t('left!')}</span>
                         </div>
                     )}
 
@@ -206,7 +217,7 @@ const SwipeableCartItem = ({ item, index }) => {
                         }}
                         className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-pink-50 text-pink-600 rounded-lg font-medium hover:bg-pink-100 transition-colors text-sm">
                         <FiHeart className="text-sm" />
-                        Save for Later
+                        {t('Save for Later')}
                     </button>
                 </div>
             </div>
@@ -215,6 +226,7 @@ const SwipeableCartItem = ({ item, index }) => {
 };
 
 export default SwipeableCartItem;
+
 
 
 

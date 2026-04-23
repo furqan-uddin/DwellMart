@@ -10,6 +10,8 @@ import PageTransition from "../../../shared/components/PageTransition";
 import useInfiniteScroll from "../../../shared/hooks/useInfiniteScroll";
 import api from "../../../shared/utils/api";
 import { useCategoryStore } from "../../../shared/store/categoryStore";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeProduct = (raw) => {
   const categoryObj =
@@ -29,9 +31,18 @@ const normalizeProduct = (raw) => {
 };
 
 const MobileDailyDeals = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Daily Deals', 'Search in deals...', 'Filters', 'Category',
+    'All Categories', 'Price Range', 'Min Price', 'Max Price',
+    'Clear All', 'Apply Filters', 'No deals found',
+    'Check back later for new deals.', 'Loading...', 'Load More'
+  ]);
+  const { translateArray, translateText } = useDynamicTranslation();
+
   const navigate = useNavigate();
   const { categories: storeCategories, initialize: initializeCategories } = useCategoryStore();
   const [allDeals, setAllDeals] = useState([]);
+  const [translatedCategories, setTranslatedCategories] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
@@ -53,6 +64,11 @@ const MobileDailyDeals = () => {
     }
     return fallbackCategories;
   }, [storeCategories]);
+
+  useEffect(() => {
+    if (categories.length === 0) return;
+    translateArray(categories, ['name']).then(setTranslatedCategories);
+  }, [categories, translateArray]);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,12 +200,12 @@ const MobileDailyDeals = () => {
                 <FiArrowLeft className="text-xl text-gray-700" />
               </button>
               <div className="flex-1">
-                <h1 className="text-xl font-bold text-gray-800">Daily Deals</h1>
+                <h1 className="text-xl font-bold text-gray-800">{t('Daily Deals')}</h1>
                 <div className="relative mt-1">
                   <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                   <input
                     type="text"
-                    placeholder="Search in deals..."
+                    placeholder={t('Search in deals...')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-10 py-1.5 bg-gray-100 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -247,21 +263,21 @@ const MobileDailyDeals = () => {
                           style={{ marginTop: "-50px" }}
                         >
                           <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200 bg-gray-50">
-                            <h3 className="text-sm font-bold text-gray-800">Filters</h3>
+                            <h3 className="text-sm font-bold text-gray-800">{t('Filters')}</h3>
                             <button onClick={() => setShowFilters(false)} className="p-0.5 hover:bg-gray-200 rounded-full">
                               <FiX className="text-sm text-gray-600" />
                             </button>
                           </div>
                           <div className="max-h-[50vh] overflow-y-auto scrollbar-hide p-2 space-y-2">
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-1 text-xs">Category</h4>
+                              <h4 className="font-semibold text-gray-700 mb-1 text-xs">{t('Category')}</h4>
                               <select
                                 value={filters.category}
                                 onChange={(e) => handleFilterChange("category", e.target.value)}
                                 className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs"
                               >
-                                <option value="">All Categories</option>
-                                {categories.map((cat) => (
+                                <option value="">{t('All Categories')}</option>
+                                {translatedCategories.map((cat) => (
                                   <option key={cat.id} value={String(cat.id)}>
                                     {cat.name}
                                   </option>
@@ -269,16 +285,16 @@ const MobileDailyDeals = () => {
                               </select>
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-1 text-xs">Price Range</h4>
+                              <h4 className="font-semibold text-gray-700 mb-1 text-xs">{t('Price Range')}</h4>
                               <div className="space-y-1.5">
-                                <input type="number" placeholder="Min Price" value={filters.minPrice} onChange={(e) => handleFilterChange("minPrice", e.target.value)} className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs" />
-                                <input type="number" placeholder="Max Price" value={filters.maxPrice} onChange={(e) => handleFilterChange("maxPrice", e.target.value)} className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs" />
+                                <input type="number" placeholder={t('Min Price')} value={filters.minPrice} onChange={(e) => handleFilterChange("minPrice", e.target.value)} className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs" />
+                                <input type="number" placeholder={t('Max Price')} value={filters.maxPrice} onChange={(e) => handleFilterChange("maxPrice", e.target.value)} className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs" />
                               </div>
                             </div>
                           </div>
                           <div className="border-t border-gray-200 p-2 bg-gray-50 space-y-1.5">
-                            <button onClick={clearFilters} className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300">Clear All</button>
-                            <button onClick={() => setShowFilters(false)} className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs">Apply Filters</button>
+                            <button onClick={clearFilters} className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300">{t('Clear All')}</button>
+                            <button onClick={() => setShowFilters(false)} className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs">{t('Apply Filters')}</button>
                           </div>
                         </motion.div>
                       </>
@@ -293,8 +309,8 @@ const MobileDailyDeals = () => {
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl text-gray-300 mx-auto mb-4">[ ]</div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No deals found</h3>
-                <p className="text-gray-600">Check back later for new deals.</p>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No deals found')}</h3>
+                <p className="text-gray-600">{t('Check back later for new deals.')}</p>
               </div>
             ) : viewMode === "grid" ? (
               <>
@@ -308,7 +324,7 @@ const MobileDailyDeals = () => {
                 {hasMore && (
                   <div ref={loadMoreRef} className="mt-6 flex flex-col items-center gap-4">
                     <button onClick={loadMore} disabled={isLoading} className="px-6 py-3 gradient-green text-white rounded-xl font-semibold disabled:opacity-50">
-                      {isLoading ? "Loading..." : "Load More"}
+                      {isLoading ? t("Loading...") : t("Load More")}
                     </button>
                   </div>
                 )}
@@ -323,7 +339,7 @@ const MobileDailyDeals = () => {
                 {hasMore && (
                   <div ref={loadMoreRef} className="mt-6 flex flex-col items-center gap-4">
                     <button onClick={loadMore} disabled={isLoading} className="px-6 py-3 gradient-green text-white rounded-xl font-semibold disabled:opacity-50">
-                      {isLoading ? "Loading..." : "Load More"}
+                      {isLoading ? t("Loading...") : t("Load More")}
                     </button>
                   </div>
                 )}

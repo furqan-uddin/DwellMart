@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCreditCard, FiLoader, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 let stripeScriptPromise = null;
 
@@ -27,11 +28,26 @@ const StripeSubscriptionForm = ({
   open,
   clientSecret,
   publishableKey,
-  title = 'Complete Card Payment',
-  subtitle = 'Your subscription becomes active only after the billing webhook confirms payment.',
+  title,
+  subtitle,
   onClose,
   onSubmitted,
 }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Complete Card Payment',
+    'Your subscription becomes active only after the billing webhook confirms payment.',
+    'Unable to load Stripe payment form.',
+    'Payment confirmation failed.',
+    'Payment submitted. Waiting for billing confirmation.',
+    'Loading secure payment form...',
+    'Cancel',
+    'Submitting...',
+    'Confirm Payment'
+  ]);
+
+  const displayTitle = title || t('Complete Card Payment');
+  const displaySubtitle = subtitle || t('Your subscription becomes active only after the billing webhook confirms payment.');
+
   const mountRef = useRef(null);
   const stripeRef = useRef(null);
   const elementsRef = useRef(null);
@@ -74,7 +90,7 @@ const StripeSubscriptionForm = ({
         paymentElementRef.current = paymentElement;
         setIsReady(true);
       } catch (error) {
-        toast.error(error.message || 'Unable to load Stripe payment form.');
+        toast.error(error.message || t('Unable to load Stripe payment form.'));
       }
     };
 
@@ -92,7 +108,7 @@ const StripeSubscriptionForm = ({
       stripeRef.current = null;
       setIsReady(false);
     };
-  }, [open, clientSecret, publishableKey]);
+  }, [open, clientSecret, publishableKey, t]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -119,14 +135,14 @@ const StripeSubscriptionForm = ({
       });
 
       if (result.error) {
-        toast.error(result.error.message || 'Payment confirmation failed.');
+        toast.error(result.error.message || t('Payment confirmation failed.'));
         return;
       }
 
-      toast.success('Payment submitted. Waiting for billing confirmation.');
+      toast.success(t('Payment submitted. Waiting for billing confirmation.'));
       onSubmitted?.();
     } catch (error) {
-      toast.error(error.message || 'Payment confirmation failed.');
+      toast.error(error.message || t('Payment confirmation failed.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -143,8 +159,8 @@ const StripeSubscriptionForm = ({
               <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
                 <FiCreditCard size={22} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-              <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+              <h3 className="text-xl font-bold text-slate-900">{displayTitle}</h3>
+              <p className="mt-1 text-sm text-slate-500">{displaySubtitle}</p>
             </div>
             <button
               type="button"
@@ -161,7 +177,7 @@ const StripeSubscriptionForm = ({
               {!isReady && (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
                   <FiLoader className="animate-spin" />
-                  Loading secure payment form...
+                  {t('Loading secure payment form...')}
                 </div>
               )}
             </div>
@@ -173,7 +189,7 @@ const StripeSubscriptionForm = ({
               onClick={onClose}
               className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-100"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
@@ -181,7 +197,7 @@ const StripeSubscriptionForm = ({
               disabled={!isReady || isSubmitting}
               className="flex-1 rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Submitting...' : 'Confirm Payment'}
+              {isSubmitting ? t('Submitting...') : t('Confirm Payment')}
             </button>
           </div>
         </div>

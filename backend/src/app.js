@@ -18,6 +18,8 @@ import userRoutes from './modules/user/routes/user.routes.js';
 import adminRoutes from './modules/admin/routes/admin.routes.js';
 import vendorRoutes from './modules/vendor/routes/vendor.routes.js';
 import deliveryRoutes from './modules/delivery/routes/delivery.routes.js';
+import integrationRoutes from './modules/integrations/routes/integration.routes.js';
+import translationRoutes from './routes/translationRoutes.js';
 
 // Middleware imports
 import { apiLimiter } from './middlewares/rateLimiter.js';
@@ -131,6 +133,8 @@ app.use('/api/user', userRoutes);         // Customer: auth, addresses, wishlist
 app.use('/api/admin', adminRoutes);       // Admin: auth, vendors, orders, catalog, analytics
 app.use('/api/vendor', vendorRoutes);     // Vendor: auth, products, orders, earnings
 app.use('/api/delivery', deliveryRoutes); // Delivery: auth, orders
+app.use('/api/integrations', integrationRoutes); // Partner Integrations: delivery provider APIs
+app.use('/api/v1/translate', translationRoutes); // Public Translation
 
 // ─── Error Handling ──────────────────────────────────────────────────────────
 app.use(notFound);

@@ -142,6 +142,7 @@ import ComingSoon from "./modules/UserApp/pages/ComingSoon";
 import SellOnDwellmart from "./modules/UserApp/pages/SellOnDwellmart";
 import ShopWithConfidence from "./modules/UserApp/pages/ShopWithConfidence";
 import StaticPage from "./modules/UserApp/pages/StaticPage";
+import Shop from "./modules/UserApp/pages/Shop";
 // Delivery Routes
 import DeliveryLogin from "./modules/Delivery/pages/Login";
 import DeliveryRegister from "./modules/Delivery/pages/Register";
@@ -254,8 +255,8 @@ const AppRoutes = () => {
           </RouteWrapper>
         }
       />
-      <Route
-        path="/search"
+      <Route path="/shop" element={<RouteWrapper><Shop /></RouteWrapper>} />
+      <Route path="/search"
         element={
           <RouteWrapper>
             <MobileSearch />
@@ -728,3 +729,5 @@ function App() {
 }
 
 export default App;
+
+

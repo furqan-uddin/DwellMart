@@ -11,6 +11,8 @@ import PageTransition from '../../../shared/components/PageTransition';
 import { useCategoryStore } from '../../../shared/store/categoryStore';
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeId = (value) => String(value ?? '').trim();
 
@@ -55,7 +57,44 @@ const normalizeProduct = (raw) => {
   };
 };
 
-const MobileSearch = () => {
+const MobileSearch = ({ isShopPage = false }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Search in shop...",
+    "Search products...",
+    "Found",
+    "product(s)",
+    "Newest",
+    "Oldest",
+    "Price: Low to High",
+    "Price: High to Low",
+    "Popular",
+    "Top Rated",
+    "Filters",
+    "Category",
+    "All Categories",
+    "Price Range",
+    "Min Price",
+    "Max Price",
+    "Vendor",
+    "All Vendors",
+    "Minimum Rating",
+    "Stars",
+    "Clear All",
+    "Apply Filters",
+    "Loading products...",
+    "No products found",
+    "Try adjusting your search or filters",
+    "Clear Filters",
+    "Voice search is not supported in your browser",
+    "Voice recognition error",
+    "Loading more products...",
+    "Show results for",
+    "Stores",
+    "Loading...",
+    "Load More"
+  ]);
+
+  const { translateObject, translateArray } = useDynamicTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { categories: storeCategories, initialize: initializeCategories } = useCategoryStore();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -112,7 +151,8 @@ const MobileSearch = () => {
         const payload = response?.data ?? response;
         const vendors = Array.isArray(payload?.vendors) ? payload.vendors : [];
         if (cancelled) return;
-        setApprovedVendors(vendors);
+        const translatedVendors = await translateArray(vendors, ['storeName', 'name', 'storeDescription']);
+        setApprovedVendors(translatedVendors);
       } catch {
         if (!cancelled) {
           setApprovedVendors([]);
@@ -155,7 +195,7 @@ const MobileSearch = () => {
 
   const handleVoiceSearch = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast.error('Voice search is not supported in your browser');
+      toast.error(t('Voice search is not supported in your browser'));
       return;
     }
 
@@ -177,7 +217,7 @@ const MobileSearch = () => {
 
     recognition.onerror = () => {
       setIsListening(false);
-      toast.error('Voice recognition error');
+      toast.error(t('Voice recognition error'));
     };
 
     recognition.onend = () => {
@@ -236,7 +276,8 @@ const MobileSearch = () => {
         const pages = Number(payload?.pages || 1);
         const total = Number(payload?.total || list.length || 0);
 
-        setProducts((prev) => (append ? [...prev, ...list] : list));
+        const translatedProducts = await translateArray(list, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        setProducts((prev) => (append ? [...prev, ...translatedProducts] : translatedProducts));
         setPagination({ page, pages, total });
       } catch {
         if (!append) {
@@ -302,7 +343,7 @@ const MobileSearch = () => {
 
   // Check if any filter is active
   const hasActiveFilters =
-    filters.minPrice || filters.maxPrice || filters.minRating || filters.category || filters.vendor;
+    filters.minPrice || filters.maxPrice || filters.minRating || filters.category || filters.vendor || searchQuery;
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -394,9 +435,9 @@ const MobileSearch = () => {
                     setShowSuggestions(true);
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Search products..."
+                  placeholder={isShopPage ? t("Search in shop...") : t("Search products...")}
                   className="w-full pl-12 pr-20 py-3 glass-card rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-700 placeholder:text-gray-400 text-base"
-                  autoFocus
+                  autoFocus={!isShopPage}
                 />
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                   <motion.button
@@ -446,7 +487,7 @@ const MobileSearch = () => {
             {/* Filter Toggle and View Mode */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                Found {pagination.total} product(s)
+                {t('Found')} {pagination.total} {t('product(s)')}
               </p>
               <div className="flex items-center gap-2">
                 <select
@@ -454,12 +495,12 @@ const MobileSearch = () => {
                   onChange={(e) => handleSortChange(e.target.value)}
                   className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
-                  <option value="newest">Newest</option>
-                  <option value="oldest">Oldest</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="popular">Popular</option>
-                  <option value="rating">Top Rated</option>
+                  <option value="newest">{t('Newest')}</option>
+                  <option value="oldest">{t('Oldest')}</option>
+                  <option value="price-asc">{t('Price: Low to High')}</option>
+                  <option value="price-desc">{t('Price: High to Low')}</option>
+                  <option value="popular">{t('Popular')}</option>
+                  <option value="rating">{t('Top Rated')}</option>
                 </select>
                 {/* View Toggle Buttons */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-1">
@@ -492,7 +533,7 @@ const MobileSearch = () => {
                       className={`text-lg transition-colors ${hasActiveFilters ? "text-blue-600" : "text-gray-600"
                         }`}
                     />
-                    <span className="font-semibold text-gray-700 text-sm">Filters</span>
+                    <span className="font-semibold text-gray-700 text-sm">{t('Filters')}</span>
                   </button>
 
                   {/* Filter Dropdown */}
@@ -523,7 +564,7 @@ const MobileSearch = () => {
                             <div className="flex items-center gap-1.5">
                               <FiFilter className="text-sm text-gray-700" />
                               <h3 className="text-sm font-bold text-gray-800">
-                                Filters
+                                {t('Filters')}
                               </h3>
                             </div>
                             <button
@@ -539,7 +580,7 @@ const MobileSearch = () => {
                               {/* Category Filter */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Category
+                                  {t('Category')}
                                 </h4>
                                 <div className="relative">
                                   <button
@@ -550,7 +591,7 @@ const MobileSearch = () => {
                                     }}
                                     className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between text-gray-700"
                                   >
-                                    <span>{filters.category ? categories.find(c => normalizeId(c.id) === normalizeId(filters.category))?.name : "All Categories"}</span>
+                                    <span>{filters.category ? categories.find(c => normalizeId(c.id) === normalizeId(filters.category))?.name : t("All Categories")}</span>
                                     <motion.div
                                       animate={{ rotate: showCategoryDropdown ? 180 : 0 }}
                                       transition={{ duration: 0.2 }}
@@ -574,7 +615,7 @@ const MobileSearch = () => {
                                           }}
                                           className={`px-3 py-2 text-sm cursor-pointer hover:bg-white transition-colors ${!filters.category ? "bg-white text-primary-700 font-bold" : "text-gray-600"}`}
                                         >
-                                          All Categories
+                                          {t('All Categories')}
                                         </div>
                                         {categories.map((cat) => (
                                           <div
@@ -597,12 +638,12 @@ const MobileSearch = () => {
                               {/* Price Range */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Price Range
+                                  {t('Price Range')}
                                 </h4>
                                 <div className="space-y-1.5">
                                   <input
                                     type="number"
-                                    placeholder="Min Price"
+                                    placeholder={t("Min Price")}
                                     value={filters.minPrice}
                                     onChange={(e) =>
                                       handleFilterChange("minPrice", e.target.value)
@@ -611,7 +652,7 @@ const MobileSearch = () => {
                                   />
                                   <input
                                     type="number"
-                                    placeholder="Max Price"
+                                    placeholder={t("Max Price")}
                                     value={filters.maxPrice}
                                     onChange={(e) =>
                                       handleFilterChange("maxPrice", e.target.value)
@@ -626,10 +667,10 @@ const MobileSearch = () => {
                                 <div className="flex items-center justify-between mb-2">
                                   <h4 className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
                                     <FiShoppingBag className="text-primary-600" />
-                                    Vendor
+                                    {t('Vendor')}
                                   </h4>
                                   <span className="text-xs text-primary-600 font-semibold bg-primary-50 px-2 py-0.5 rounded-full">
-                                    {approvedVendors.length}+ Stores
+                                    {approvedVendors.length}+ {t('Stores')}
                                   </span>
                                 </div>
                                 <div className="relative">
@@ -642,7 +683,7 @@ const MobileSearch = () => {
                                     className="w-full px-3 py-2.5 rounded-xl border-2 border-primary-100 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm font-bold flex items-center justify-between text-gray-800 shadow-sm"
                                   >
                                     <span className="truncate pr-2">
-                                      {filters.vendor ? approvedVendors.find(v => normalizeId(v.id) === normalizeId(filters.vendor))?.storeName || approvedVendors.find(v => normalizeId(v.id) === normalizeId(filters.vendor))?.name : "All Vendors"}
+                                      {filters.vendor ? approvedVendors.find(v => normalizeId(v.id) === normalizeId(filters.vendor))?.storeName || approvedVendors.find(v => normalizeId(v.id) === normalizeId(filters.vendor))?.name : t("All Vendors")}
                                     </span>
                                     <motion.div
                                       animate={{ rotate: showVendorDropdown ? 180 : 0 }}
@@ -667,7 +708,7 @@ const MobileSearch = () => {
                                           }}
                                           className={`p-3 text-sm cursor-pointer hover:bg-white transition-colors border-b border-gray-100 flex items-center justify-between ${!filters.vendor ? "bg-white text-primary-700 font-bold" : "text-gray-600"}`}
                                         >
-                                          <span>All Vendors</span>
+                                          <span>{t('All Vendors')}</span>
                                           {!filters.vendor && <FiFilter className="text-primary-500" />}
                                         </div>
                                         {approvedVendors.map((vendor) => (
@@ -695,7 +736,7 @@ const MobileSearch = () => {
                               {/* Rating Filter */}
                               <div>
                                 <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                  Minimum Rating
+                                  {t('Minimum Rating')}
                                 </h4>
                                 <div className="space-y-0.5">
                                   {[4, 3, 2, 1].map((rating) => (
@@ -724,7 +765,7 @@ const MobileSearch = () => {
                                         }}
                                       />
                                       <span className="text-xs text-gray-700">
-                                        {rating}+ Stars
+                                        {rating}+ {t('Stars')}
                                       </span>
                                     </label>
                                   ))}
@@ -738,12 +779,12 @@ const MobileSearch = () => {
                             <button
                               onClick={clearFilters}
                               className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                              Clear All
+                              {t('Clear All')}
                             </button>
                             <button
                               onClick={() => setShowFilters(false)}
                               className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs hover:shadow-glow-green transition-all">
-                              Apply Filters
+                              {t('Apply Filters')}
                             </button>
                           </div>
                         </motion.div>
@@ -765,19 +806,19 @@ const MobileSearch = () => {
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full"
                   />
-                  <span className="text-sm">Loading products...</span>
+                  <span className="text-sm">{t('Loading products...')}</span>
                 </div>
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <FiSearch className="text-6xl text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No products found</h3>
-                <p className="text-gray-600 mb-6">Try adjusting your search or filters</p>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No products found')}</h3>
+                <p className="text-gray-600 mb-6">{t('Try adjusting your search or filters')}</p>
                 <button
                   onClick={clearFilters}
                   className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
                 >
-                  Clear Filters
+                  {t('Clear Filters')}
                 </button>
               </div>
             ) : viewMode === 'grid' ? (
@@ -804,7 +845,7 @@ const MobileSearch = () => {
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                           className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full"
                         />
-                        <span className="text-sm">Loading more products...</span>
+                        <span className="text-sm">{t('Loading more products...')}</span>
                       </div>
                     )}
                     <button
@@ -819,9 +860,9 @@ const MobileSearch = () => {
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                           />
-                          Loading...
+                          {t('Loading...')}
                         </span>
-                      ) : 'Load More'}
+                      ) : t('Load More')}
                     </button>
                   </div>
                 )}
@@ -847,7 +888,7 @@ const MobileSearch = () => {
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                           className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full"
                         />
-                        <span className="text-sm">Loading more products...</span>
+                        <span className="text-sm">{t('Loading more products...')}</span>
                       </div>
                     )}
                     <button
@@ -862,10 +903,10 @@ const MobileSearch = () => {
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                           />
-                          Loading...
+                          {t('Loading...')}
                         </span>
                       ) : (
-                        'Load More'
+                        t('Load More')
                       )}
                     </button>
                   </div>

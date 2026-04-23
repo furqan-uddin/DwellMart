@@ -11,6 +11,8 @@ import useInfiniteScroll from "../../../shared/hooks/useInfiniteScroll";
 import LazyImage from "../../../shared/components/LazyImage";
 import { getPlaceholderImage } from "../../../shared/utils/helpers";
 import api from "../../../shared/utils/api";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeBrand = (raw) => ({
     ...raw,
@@ -55,6 +57,36 @@ const sortProducts = (products = [], sortBy = "newest") => {
 };
 
 const Brand = () => {
+    const { getTranslatedText: t } = usePageTranslation([
+        "Loading brand...",
+        "Brand Not Found",
+        "Go Back Home",
+        "Search in brand...",
+        "available",
+        "Filters",
+        "Sort By",
+        "Newest",
+        "Most Popular",
+        "Top Rated",
+        "Price: Low to High",
+        "Price: High to Low",
+        "Price Range",
+        "Min Price",
+        "Max Price",
+        "Minimum Rating",
+        "Stars",
+        "Clear All",
+        "Apply Filters",
+        "No products found",
+        "There are no products available for this brand at the moment.",
+        "Loading more products...",
+        "Loading...",
+        "Load More",
+        "product",
+        "products"
+    ]);
+
+    const { translateObject, translateArray } = useDynamicTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const brandId = String(id ?? "").trim();
@@ -227,8 +259,11 @@ const Brand = () => {
                     sortBy
                 );
 
-                setRemoteBrand(matchedBrand);
-                setRemoteProducts(productList);
+                const translatedBrand = matchedBrand ? await translateObject(matchedBrand, ['name', 'description']) : null;
+                const translatedProducts = await translateArray(productList, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+
+                setRemoteBrand(translatedBrand);
+                setRemoteProducts(translatedProducts);
             } catch {
                 if (!active) return;
                 setRemoteBrand(null);
@@ -249,7 +284,7 @@ const Brand = () => {
             <PageTransition>
                 <MobileLayout showBottomNav={false} showCartBar={false}>
                     <div className="flex items-center justify-center min-h-[60vh] px-4">
-                        <p className="text-gray-600">Loading brand...</p>
+                        <p className="text-gray-600">{t('Loading brand...')}</p>
                     </div>
                 </MobileLayout>
             </PageTransition>
@@ -263,12 +298,12 @@ const Brand = () => {
                     <div className="flex items-center justify-center min-h-[60vh] px-4">
                         <div className="text-center">
                             <h2 className="text-xl font-bold text-gray-800 mb-4">
-                                Brand Not Found
+                                {t('Brand Not Found')}
                             </h2>
                             <button
                                 onClick={() => navigate("/home")}
                                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold">
-                                Go Back Home
+                                {t('Go Back Home')}
                             </button>
                         </div>
                     </div>
@@ -308,7 +343,7 @@ const Brand = () => {
                                         <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                                         <input
                                             type="text"
-                                            placeholder="Search in brand..."
+                                            placeholder={t("Search in brand...")}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="w-full pl-8 pr-8 py-2 bg-gray-100 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 shadow-inner"
@@ -323,8 +358,7 @@ const Brand = () => {
                                         )}
                                     </div>
                                     <p className="text-[10px] text-gray-500 mt-1">
-                                        {brandProducts.length} product
-                                        {brandProducts.length !== 1 ? "s" : ""} available
+                                        {brandProducts.length} {brandProducts.length !== 1 ? t("products") : t("product")} {t('available')}
                                     </p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -384,7 +418,7 @@ const Brand = () => {
                                                             <div className="flex items-center gap-1.5">
                                                                 <FiFilter className="text-sm text-gray-700" />
                                                                 <h3 className="text-sm font-bold text-gray-800">
-                                                                    Filters
+                                                                    {t('Filters')}
                                                                 </h3>
                                                             </div>
                                                             <button
@@ -397,31 +431,31 @@ const Brand = () => {
                                                         {/* Filter Content */}
                                                         <div className="max-h-[50vh] overflow-y-auto scrollbar-hide">
                                                             <div className="p-2 space-y-2">
-                                                                <div>
+                                                                 <div>
                                                                     <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                                                        Sort By
+                                                                        {t('Sort By')}
                                                                     </h4>
                                                                     <select
                                                                         value={sortBy}
                                                                         onChange={(e) => setSortBy(e.target.value)}
                                                                         className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-xs"
                                                                     >
-                                                                        <option value="newest">Newest</option>
-                                                                        <option value="popular">Most Popular</option>
-                                                                        <option value="rating">Top Rated</option>
-                                                                        <option value="price-asc">Price: Low to High</option>
-                                                                        <option value="price-desc">Price: High to Low</option>
+                                                                        <option value="newest">{t('Newest')}</option>
+                                                                        <option value="popular">{t('Most Popular')}</option>
+                                                                        <option value="rating">{t('Top Rated')}</option>
+                                                                        <option value="price-asc">{t('Price: Low to High')}</option>
+                                                                        <option value="price-desc">{t('Price: High to Low')}</option>
                                                                     </select>
                                                                 </div>
                                                                 {/* Price Range */}
-                                                                <div>
+                                                                 <div>
                                                                     <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                                                        Price Range
+                                                                        {t('Price Range')}
                                                                     </h4>
                                                                     <div className="space-y-1.5">
                                                                         <input
                                                                             type="number"
-                                                                            placeholder="Min Price"
+                                                                            placeholder={t("Min Price")}
                                                                             value={filters.minPrice}
                                                                             onChange={(e) =>
                                                                                 handleFilterChange(
@@ -433,7 +467,7 @@ const Brand = () => {
                                                                         />
                                                                         <input
                                                                             type="number"
-                                                                            placeholder="Max Price"
+                                                                            placeholder={t("Max Price")}
                                                                             value={filters.maxPrice}
                                                                             onChange={(e) =>
                                                                                 handleFilterChange(
@@ -449,7 +483,7 @@ const Brand = () => {
                                                                 {/* Rating Filter */}
                                                                 <div>
                                                                     <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                                                        Minimum Rating
+                                                                        {t('Minimum Rating')}
                                                                     </h4>
                                                                     <div className="space-y-0.5">
                                                                         {[4, 3, 2, 1].map((rating) => (
@@ -480,7 +514,7 @@ const Brand = () => {
                                                                                     }}
                                                                                 />
                                                                                 <span className="text-xs text-gray-700">
-                                                                                    {rating}+ Stars
+                                                                                    {rating}+ {t('Stars')}
                                                                                 </span>
                                                                             </label>
                                                                         ))}
@@ -490,16 +524,16 @@ const Brand = () => {
                                                         </div>
 
                                                         {/* Footer */}
-                                                        <div className="border-t border-gray-200 p-2 bg-gray-50 space-y-1.5">
+                                                         <div className="border-t border-gray-200 p-2 bg-gray-50 space-y-1.5">
                                                             <button
                                                                 onClick={clearFilters}
                                                                 className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                                                                Clear All
+                                                                {t('Clear All')}
                                                             </button>
                                                             <button
                                                                 onClick={() => setShowFilters(false)}
                                                                 className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs hover:shadow-glow-green transition-all">
-                                                                Apply Filters
+                                                                {t('Apply Filters')}
                                                             </button>
                                                         </div>
                                                     </motion.div>
@@ -520,11 +554,10 @@ const Brand = () => {
                                     <FiTag />
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-800 mb-2">
-                                    No products found
+                                    {t('No products found')}
                                 </h3>
                                 <p className="text-gray-600">
-                                    There are no products available for this brand at the
-                                    moment.
+                                    {t('There are no products available for this brand at the moment.')}
                                 </p>
                             </div>
                         ) : viewMode === "grid" ? (
@@ -548,7 +581,7 @@ const Brand = () => {
                                         {isLoading && (
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <span className="text-sm">
-                                                    Loading more products...
+                                                    {t('Loading more products...')}
                                                 </span>
                                             </div>
                                         )}
@@ -556,7 +589,7 @@ const Brand = () => {
                                             onClick={loadMore}
                                             disabled={isLoading}
                                             className="px-6 py-3 gradient-green text-white rounded-xl font-semibold hover:shadow-glow-green transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                                            {isLoading ? "Loading..." : "Load More"}
+                                            {isLoading ? t("Loading...") : t("Load More")}
                                         </button>
                                     </div>
                                 )}
@@ -580,7 +613,7 @@ const Brand = () => {
                                         {isLoading && (
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <span className="text-sm">
-                                                    Loading more products...
+                                                    {t('Loading more products...')}
                                                 </span>
                                             </div>
                                         )}
@@ -588,7 +621,7 @@ const Brand = () => {
                                             onClick={loadMore}
                                             disabled={isLoading}
                                             className="px-6 py-3 gradient-green text-white rounded-xl font-semibold hover:shadow-glow-green transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                                            {isLoading ? "Loading..." : "Load More"}
+                                            {isLoading ? t("Loading...") : t("Load More")}
                                         </button>
                                     </div>
                                 )}

@@ -7,6 +7,7 @@ import Coupon from '../../../models/Coupon.model.js';
 import Commission from '../../../models/Commission.model.js';
 import ReturnRequest from '../../../models/ReturnRequest.model.js';
 import Admin from '../../../models/Admin.model.js';
+import Vendor from '../../../models/Vendor.model.js';
 import { generateOrderId } from '../../../utils/generateOrderId.js';
 import { generateTrackingNumber } from '../../../utils/generateTrackingNumber.js';
 import mongoose from 'mongoose';
@@ -232,11 +233,33 @@ export const placeOrder = asyncHandler(async (req, res) => {
     const vendorMap = {};
 
     for (const item of items) {
-        const product = await Product.findById(item.productId).populate(
-            'vendorId',
-            'commissionRate storeName shippingEnabled defaultShippingRate freeShippingThreshold'
-        );
+        const product = await Product.findById(item.productId);
         if (!product) throw new ApiError(404, `Product not found: ${item.productId}`);
+        const linkedVendorId = String(product?.vendorId || '').trim();
+        const vendor = linkedVendorId
+            ? await Vendor.findById(linkedVendorId).select(
+                'commissionRate storeName shippingEnabled defaultShippingRate freeShippingThreshold'
+            )
+            : null;
+        if (!vendor?._id) {
+            await Product.updateOne(
+                { _id: product._id },
+                { $set: { isActive: false, isVisible: false } }
+            );
+            const productName = String(product?.name || '').trim();
+            const productLabel = productName
+                ? `Product "${productName}" (ID: ${String(product._id)})`
+                : `Product ID ${String(product._id)}`;
+            throw new ApiError(
+                409,
+                `${productLabel} is no longer available from its seller (Vendor ID: ${linkedVendorId || 'unknown'}). Please remove it from cart and try again.`,
+                [{
+                    code: 'PRODUCT_VENDOR_MISSING',
+                    productId: String(product._id),
+                    vendorId: linkedVendorId || null,
+                }]
+            );
+        }
         if (product.stock === 'out_of_stock') throw new ApiError(400, `${product.name} is out of stock.`);
         if (product.stockQuantity < item.quantity) throw new ApiError(400, `Only ${product.stockQuantity} units of ${product.name} available.`);
 
@@ -255,7 +278,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
                 : '';
         const enriched = {
             productId: product._id,
-            vendorId: product.vendorId._id,
+            vendorId: vendor._id,
             name: product.name,
             image: variantImage || product.image,
             price: itemPrice,
@@ -266,15 +289,15 @@ export const placeOrder = asyncHandler(async (req, res) => {
         enrichedItems.push(enriched);
 
         // Group by vendor
-        const vid = product.vendorId._id.toString();
+        const vid = vendor._id.toString();
         if (!vendorMap[vid]) {
             vendorMap[vid] = {
-                vendorId: product.vendorId._id,
-                vendorName: product.vendorId.storeName,
-                commissionRate: product.vendorId.commissionRate || 10,
-                shippingEnabled: product.vendorId.shippingEnabled !== false,
-                defaultShippingRate: product.vendorId.defaultShippingRate,
-                freeShippingThreshold: product.vendorId.freeShippingThreshold,
+                vendorId: vendor._id,
+                vendorName: vendor.storeName,
+                commissionRate: vendor.commissionRate || 10,
+                shippingEnabled: vendor.shippingEnabled !== false,
+                defaultShippingRate: vendor.defaultShippingRate,
+                freeShippingThreshold: vendor.freeShippingThreshold,
                 items: [],
                 subtotal: 0,
             };

@@ -95,12 +95,12 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`glass-card rounded-2xl p-3 mb-3 border border-white/40 shadow-sm hover:shadow-md transition-all ${isFlashSale ? "bg-red-50/20 border-red-100" : ""}`}>
-      <div className="flex gap-4">
+       transition={{ delay: index * 0.05 }}
+      className={`glass-card rounded-2xl p-2 mb-3 border border-white/40 shadow-sm hover:shadow-md transition-all ${isFlashSale ? "bg-red-50/20 border-red-100" : ""}`}>
+      <div className="flex gap-3">
         {/* Product Image Section */}
         <Link to={productLink} className="flex-shrink-0 relative group">
-          <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 p-2">
+          <div className="w-28 h-28 md:w-36 md:h-36 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 p-1.5">
             <LazyImage
               src={product.image}
               alt={product.name}
@@ -120,9 +120,9 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
         {/* Product Info Section */}
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Top Row: Name + Favorite */}
-          <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="flex items-start justify-between gap-2 mb-0">
             <Link to={productLink} className="flex-1 min-w-0">
-              <h3 className="font-bold text-gray-800 text-sm md:text-base mb-0 line-clamp-2 md:line-clamp-1 leading-snug group-hover:text-primary-600 transition-colors">
+              <h3 className="font-bold text-gray-800 text-sm md:text-base mb-0 line-clamp-2 md:line-clamp-1 leading-none group-hover:text-primary-600 transition-colors">
                 {product.name}
               </h3>
             </Link>
@@ -138,14 +138,14 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-0 leading-none">
             {product.rating && (
-              <div className="flex items-center bg-yellow-400/10 px-1.5 py-0.5 rounded-md">
-                <span className="text-[10px] md:text-xs font-bold text-yellow-700">⭐ {product.rating}</span>
-                <span className="text-[9px] text-gray-400 font-medium ml-1">({product.reviewCount || 0})</span>
+              <div className="flex items-center bg-yellow-400/10 px-1.5 py-0.5 rounded-md leading-none">
+                <span className="text-[10px] md:text-xs font-bold text-yellow-700 leading-none">⭐ {product.rating}</span>
+                <span className="text-[9px] text-gray-400 font-medium ml-1 leading-none">({product.reviewCount || 0})</span>
               </div>
             )}
-            <span className="text-[10px] md:text-xs text-gray-500 border-l border-gray-200 pl-2">{product.unit}</span>
+            <span className="text-[10px] md:text-xs text-gray-500 border-l border-gray-200 pl-2 leading-none">{product.unit}</span>
           </div>
 
           {/* Vendor */}
@@ -153,8 +153,8 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
 
           {/* Flash Sale Progress */}
           {isFlashSale && (
-            <div className="mb-2 space-y-1 max-w-[200px]">
-              <div className="flex justify-between text-[9px] font-bold">
+            <div className="mb-0.5 space-y-0.5 max-w-[200px]">
+              <div className="flex justify-between text-[8px] font-bold">
                 <span className="text-gray-400 uppercase">Stock Left</span>
                 <span className="text-orange-600">{soldPercentage}% Sold</span>
               </div>
@@ -168,13 +168,13 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
           )}
 
           {/* Bottom Row: Price + Add Button */}
-          <div className="mt-auto flex items-center justify-between gap-3 pt-2 border-t border-gray-50">
-            <div className="flex flex-col">
+          <div className="mt-auto flex items-center justify-between gap-3 pt-0.5 border-t border-gray-50 leading-none">
+            <div className="flex flex-col leading-none">
               <span className="text-base md:text-xl font-black text-gray-900 leading-none">
                 {formatPrice(product.price)}
               </span>
               {product.originalPrice && (
-                <span className="text-[10px] md:text-xs text-gray-400 line-through font-medium mt-0.5">
+                <span className="text-[10px] md:text-xs text-gray-400 line-through font-medium mt-0.5 leading-none">
                   {formatPrice(product.originalPrice)}
                 </span>
               )}

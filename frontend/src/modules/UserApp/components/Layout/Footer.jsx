@@ -10,26 +10,51 @@ import {
 import { motion } from "framer-motion";
 import { appLogo } from "../../../../data/logos";
 import api from "../../../../shared/utils/api";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../../hooks/useDynamicTranslation";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const [categories, setCategories] = useState([]);
+  const { translateObject } = useDynamicTranslation();
+  const { getTranslatedText: t } = usePageTranslation([
+    "Your one-stop destination for curated products from trusted vendors nationwide. We prioritize quality, security, and customer delight in every transaction.",
+    "Shop Categories",
+    "Customer Service",
+    "Quick Links",
+    "Contact Us",
+    "Track Your Order",
+    "Returns & Exchanges",
+    "Shipping Policy",
+    "FAQs",
+    "About Dwell Mart",
+    "Vendor Registration",
+    "Terms & Conditions",
+    "Privacy Policy",
+    "Become a Partner",
+    "All rights reserved."
+  ]);
 
   useEffect(() => {
     api.get("/categories/all")
-      .then((res) => {
+      .then(async (res) => {
         const data = res.data?.data || res.data || [];
         // Sort by order field, take first 5 active ones
         const sorted = data
           .filter((c) => c.isActive !== false)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
           .slice(0, 5);
-        setCategories(sorted);
+        
+        // Translate category names
+        const translated = await Promise.all(
+          sorted.map(cat => translateObject(cat, ['name']))
+        );
+        setCategories(translated);
       })
       .catch(() => {
         // Silently fail — footer still renders without categories
       });
-  }, []);
+  }, [translateObject]);
 
   const customerServiceLinks = [
     { label: "Contact Us", path: "/contact" },
@@ -61,7 +86,7 @@ const Footer = () => {
               )}
             </Link>
             <p className="text-sm leading-relaxed text-gray-400">
-              Your one-stop destination for curated products from trusted vendors nationwide. We prioritize quality, security, and customer delight in every transaction.
+              {t("Your one-stop destination for curated products from trusted vendors nationwide. We prioritize quality, security, and customer delight in every transaction.")}
             </p>
             <div className="flex items-center gap-4">
               {[
@@ -84,7 +109,7 @@ const Footer = () => {
 
           {/* Shop Categories — dynamic from DB */}
           <div className="space-y-6">
-            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Shop Categories</h4>
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">{t("Shop Categories")}</h4>
             <ul className="space-y-4">
               {categories.length > 0 ? (
                 categories.map((cat) => (
@@ -111,7 +136,7 @@ const Footer = () => {
 
           {/* Customer Service */}
           <div className="space-y-6">
-            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Customer Service</h4>
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">{t("Customer Service")}</h4>
             <ul className="space-y-4">
               {customerServiceLinks.map((link, i) => (
                 <li key={i}>
@@ -120,7 +145,7 @@ const Footer = () => {
                     className="group flex items-center gap-2 text-gray-400 hover:text-primary-400 transition-colors"
                   >
                     <FiChevronRight className="text-xs opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 </li>
               ))}
@@ -129,7 +154,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div className="space-y-6">
-            <h4 className="text-white font-bold tracking-wide uppercase text-sm">Quick Links</h4>
+            <h4 className="text-white font-bold tracking-wide uppercase text-sm">{t("Quick Links")}</h4>
             <ul className="space-y-4">
               {quickLinks.map((link, i) => (
                 <li key={i}>
@@ -138,7 +163,7 @@ const Footer = () => {
                     className="group flex items-center gap-2 text-gray-400 hover:text-primary-400 transition-colors"
                   >
                     <FiChevronRight className="text-xs opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 </li>
               ))}
@@ -149,7 +174,7 @@ const Footer = () => {
         {/* Bottom copyright */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mt-8 pt-8 border-t border-gray-800">
           <p className="text-sm text-gray-500">
-            &copy; {currentYear} <span className="text-white font-semibold">Dwell Mart</span>. All rights reserved.
+            &copy; {currentYear} <span className="text-white font-semibold">Dwell Mart</span>. {t("All rights reserved.")}
           </p>
           <div className="flex items-center gap-4 opacity-50">
             <img src="https://cdn.jsdelivr.net/gh/aaronfagan/svg-credit-card-payment-icons@master/flat/visa.svg" alt="Visa" className="h-5" />

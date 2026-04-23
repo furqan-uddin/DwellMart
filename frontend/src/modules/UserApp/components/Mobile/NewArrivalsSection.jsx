@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { FiTag } from "react-icons/fi";
 import LazyImage from "../../../../shared/components/LazyImage";
 import { getNewArrivals } from "../../data/catalogData";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const NewArrivalsSection = ({ products = null }) => {
+  const { getTranslatedText: t } = usePageTranslation(["New Arrivals", "Fresh products just added", "See All"]);
   const fallback = getNewArrivals(6);
   const newArrivals = Array.isArray(products) && products.length > 0
     ? products.slice(0, 6)
@@ -118,10 +120,10 @@ const NewArrivalsSection = ({ products = null }) => {
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}>
-                New Arrivals
+                {t("New Arrivals")}
               </motion.h2>
               <p className="text-xs text-white/90 font-medium">
-                Fresh products just added
+                {t("Fresh products just added")}
               </p>
             </motion.div>
           </div>
@@ -129,7 +131,7 @@ const NewArrivalsSection = ({ products = null }) => {
             <Link
               to="/new-arrivals"
               className="bg-white/20 backdrop-blur-sm text-white text-sm font-bold px-3 py-1.5 rounded-lg hover:bg-white/30 transition-all block">
-              See All
+              {t("See All")}
             </Link>
           </motion.div>
         </div>

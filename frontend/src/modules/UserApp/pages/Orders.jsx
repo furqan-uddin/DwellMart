@@ -9,8 +9,32 @@ import { useAuthStore } from '../../../shared/store/authStore';
 import PageTransition from '../../../shared/components/PageTransition';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import toast from 'react-hot-toast';
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const MobileOrders = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Orders refreshed",
+    "Failed to load more orders",
+    "My Orders",
+    "order",
+    "orders",
+    "All Orders",
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled",
+    "Loading orders...",
+    "No orders found",
+    "You haven't placed any orders yet",
+    "No orders",
+    "Start Shopping",
+    "Loading...",
+    "Load More Orders"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const navigate = useNavigate();
   const { getAllOrders, fetchUserOrders, isLoading, orderPagination } = useOrderStore();
   const { user } = useAuthStore();
@@ -18,13 +42,13 @@ const MobileOrders = () => {
   const [showFilter, setShowFilter] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const statusOptions = [
-    { value: 'all', label: 'All Orders' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'shipped', label: 'Shipped' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'cancelled', label: 'Cancelled' },
+   const statusOptions = [
+    { value: 'all', label: t('All Orders') },
+    { value: 'pending', label: t('Pending') },
+    { value: 'processing', label: t('Processing') },
+    { value: 'shipped', label: t('Shipped') },
+    { value: 'delivered', label: t('Delivered') },
+    { value: 'cancelled', label: t('Cancelled') },
   ];
 
   const allOrders = getAllOrders(user?.id || null);
@@ -44,7 +68,7 @@ const MobileOrders = () => {
   const handleRefresh = async () => {
     if (!user?.id) return;
     await fetchUserOrders(1, 20);
-    toast.success('Orders refreshed');
+    toast.success(t('Orders refreshed'));
   };
 
   const hasMore = orderPagination.page < orderPagination.pages;
@@ -55,7 +79,7 @@ const MobileOrders = () => {
     try {
       await fetchUserOrders(orderPagination.page + 1, 20);
     } catch {
-      toast.error('Failed to load more orders');
+      toast.error(t('Failed to load more orders'));
     } finally {
       setIsLoadingMore(false);
     }
@@ -81,9 +105,9 @@ const MobileOrders = () => {
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
                 <div className="flex-1">
-                  <h1 className="text-xl font-bold text-gray-800">My Orders</h1>
+                  <h1 className="text-xl font-bold text-gray-800">{t('My Orders')}</h1>
                   <p className="text-sm text-gray-600">
-                    {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
+                    {filteredOrders.length} {filteredOrders.length === 1 ? t('order') : t('orders')}
                   </p>
                 </div>
                 <button
@@ -127,22 +151,22 @@ const MobileOrders = () => {
             >
               {isLoading ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">Loading orders...</p>
+                  <p className="text-gray-600">{t('Loading orders...')}</p>
                 </div>
               ) : filteredOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl text-gray-300 mx-auto mb-4">📦</div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">No orders found</h3>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No orders found')}</h3>
                   <p className="text-gray-600 mb-6">
                     {selectedStatus === 'all'
-                      ? "You haven't placed any orders yet"
-                      : `No ${selectedStatus} orders`}
+                      ? t("You haven't placed any orders yet")
+                      : `${t('No')} ${t(selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1).toLowerCase())} ${t('orders')}`}
                   </p>
                   <button
                     onClick={() => navigate('/home')}
                     className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
                   >
-                    Start Shopping
+                    {t('Start Shopping')}
                   </button>
                 </div>
               ) : (
@@ -164,7 +188,7 @@ const MobileOrders = () => {
                         disabled={isLoadingMore}
                         className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-60"
                       >
-                        {isLoadingMore ? 'Loading...' : 'Load More Orders'}
+                        {isLoadingMore ? t('Loading...') : t('Load More Orders')}
                       </button>
                     </div>
                   )}

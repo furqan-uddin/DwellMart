@@ -4,6 +4,8 @@ import { useWishlistStore } from "../../../../shared/store/wishlistStore";
 import { useAuthStore } from "../../../../shared/store/authStore";
 import { appLogo } from "../../../../data/logos";
 import SearchBar from "../../../../shared/components/SearchBar";
+import LanguageSelector from "../../../../shared/components/LanguageSelector";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 import {
   FiHeart,
   FiShoppingBag,
@@ -23,6 +25,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
   const itemCount = useCartStore((state) => state.getItemCount());
   const wishlistCount = useWishlistStore((state) => state.getItemCount());
   const unreadCount = useUserNotificationStore((state) => state.unreadCount);
+  const { getTranslatedText: t } = usePageTranslation(["Home", "Shop", "Categories", "Offers", "Track Order", "Sell On DwellMart", "Profile", "Orders", "Logout", "Login"]);
   const ensureHydrated = useUserNotificationStore(
     (state) => state.ensureHydrated,
   );
@@ -86,28 +89,33 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           <Link
             to="/home"
             className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
-            Home
+            {t("Home")}
+          </Link>
+          <Link
+            to="/shop"
+            className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] flex items-center gap-1 transition-colors">
+            <FiShoppingBag className="md:hidden lg:inline-block" /> {t("Shop")}
           </Link>
           <Link
             to="/categories"
             className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] flex items-center gap-1 transition-colors">
-            <FiGrid /> Categories
+            <FiGrid /> {t("Categories")}
           </Link>
           <Link
             to="/offers"
             className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
-            Offers
+            {t("Offers")}
           </Link>
           <Link
             to={isAuthenticated ? "/orders" : "/login"}
             className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
-            Track Order
+            {t("Track Order")}
           </Link>
           {!hideSellButton && (
             <Link
               to="/sell-on-dwellmart"
               className="ml-1 rounded-lg border border-[#ffc101]/40 bg-[#ffc101]/12 px-2.5 lg:px-3 xl:px-4 py-2 text-[11px] lg:text-xs xl:text-sm font-semibold text-[#ffc101] transition-all hover:bg-[#ffc101] hover:text-black">
-              Sell On DwellMart
+              {t("Sell On DwellMart")}
             </Link>
           )}
         </nav>
@@ -119,6 +127,10 @@ const DesktopHeader = ({ hideSellButton = false }) => {
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3">
+          <div className="mr-2">
+            <LanguageSelector variant="desktop" />
+          </div>
+
           {/* Wishlist */}
           <Link
             to="/wishlist"
@@ -195,20 +207,20 @@ const DesktopHeader = ({ hideSellButton = false }) => {
                       onClick={() => setShowUserMenu(false)}
                       className="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors text-left w-full">
                       <FiUser className="text-gray-400" />
-                      <span className="text-gray-200 text-sm">Profile</span>
+                      <span className="text-gray-200 text-sm">{t("Profile")}</span>
                     </Link>
                     <Link
                       to="/orders"
                       onClick={() => setShowUserMenu(false)}
                       className="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors text-left w-full">
                       <FiShoppingBag className="text-gray-400" />
-                      <span className="text-gray-200 text-sm">Orders</span>
+                      <span className="text-gray-200 text-sm">{t("Orders")}</span>
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center gap-3 px-3 py-2 hover:bg-red-50 rounded-lg transition-colors text-left w-full text-red-600 mt-1">
                       <FiLogOut className="text-red-500" />
-                      <span className="text-sm">Logout</span>
+                      <span className="text-sm">{t("Logout")}</span>
                     </button>
                   </motion.div>
                 )}
@@ -218,7 +230,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
             <Link
               to="/login"
               className="px-3 lg:px-3.5 xl:px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm shadow-primary-200 text-xs lg:text-sm xl:text-base whitespace-nowrap">
-              Login
+              {t("Login")}
             </Link>
           )}
         </div>
@@ -228,3 +240,4 @@ const DesktopHeader = ({ hideSellButton = false }) => {
 };
 
 export default DesktopHeader;
+

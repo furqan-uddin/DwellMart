@@ -6,8 +6,24 @@ import toast from 'react-hot-toast';
 import MobileLayout from '../components/Layout/MobileLayout';
 import PageTransition from '../../../shared/components/PageTransition';
 import { useAuthStore } from '../../../shared/store/authStore';
+import { usePageTranslation } from '../../../hooks/usePageTranslation';
 
 const MobileResetPassword = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Session expired. Please start forgot password again.',
+    'Please fill both password fields.',
+    'Passwords do not match.',
+    'Password reset successful. Please login.',
+    'Reset Password',
+    'Set a new password for',
+    'your account',
+    'New Password',
+    'Enter new password',
+    'Confirm Password',
+    'Confirm new password',
+    'Resetting...',
+    'Back to Login'
+  ]);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -24,22 +40,22 @@ const MobileResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
-      toast.error('Session expired. Please start forgot password again.');
+      toast.error(t('Session expired. Please start forgot password again.'));
       navigate('/forgot-password', { replace: true });
       return;
     }
     if (!formData.password || !formData.confirmPassword) {
-      toast.error('Please fill both password fields.');
+      toast.error(t('Please fill both password fields.'));
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match.');
+      toast.error(t('Passwords do not match.'));
       return;
     }
 
     try {
       await resetPassword(email, formData.password, formData.confirmPassword);
-      toast.success('Password reset successful. Please login.');
+      toast.success(t('Password reset successful. Please login.'));
       navigate('/login', { replace: true });
     } catch {
       // Global API interceptor shows toast
@@ -58,22 +74,22 @@ const MobileResetPassword = () => {
           >
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Password</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('Reset Password')}</h1>
                 <p className="text-sm text-gray-600">
-                  Set a new password for <span className="font-medium text-gray-900">{email || 'your account'}</span>
+                  {t('Set a new password for')} <span className="font-medium text-gray-900">{email || t('your account')}</span>
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('New Password')}</label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                      placeholder="Enter new password"
+                      placeholder={t('Enter new password')}
                       className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:outline-none transition-colors text-base"
                       required
                       minLength={6}
@@ -89,14 +105,14 @@ const MobileResetPassword = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('Confirm Password')}</label>
                   <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                      placeholder="Confirm new password"
+                      placeholder={t('Confirm new password')}
                       className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:outline-none transition-colors text-base"
                       required
                       minLength={6}
@@ -116,14 +132,14 @@ const MobileResetPassword = () => {
                   disabled={isLoading}
                   className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Resetting...' : 'Reset Password'}
+                  {isLoading ? t('Resetting...') : t('Reset Password')}
                 </button>
               </form>
 
               <div className="text-center pt-6">
                 <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 font-medium">
                   <FiArrowLeft />
-                  Back to Login
+                  {t('Back to Login')}
                 </Link>
               </div>
             </div>

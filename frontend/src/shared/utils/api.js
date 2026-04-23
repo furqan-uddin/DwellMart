@@ -192,7 +192,11 @@ api.interceptors.response.use(
       error.response?.data?.message ||
       error.message ||
       'Something went wrong';
-    toast.error(message);
+    
+    // Auth components handle their own error UI (toasts)
+    if (!isExcludedAuthRequest(scope, originalRequest.url)) {
+      toast.error(message);
+    }
 
     if (error.response?.status === 401) {
       const activeScope = pathScope;

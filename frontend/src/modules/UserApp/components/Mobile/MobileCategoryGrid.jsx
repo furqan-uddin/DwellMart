@@ -4,11 +4,17 @@ import { motion } from "framer-motion";
 import { categories as fallbackCategories } from "../../../../data/categories";
 import LazyImage from "../../../../shared/components/LazyImage";
 import { useCategoryStore } from "../../../../shared/store/categoryStore";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../../hooks/useDynamicTranslation";
+import { useState } from "react";
 
 const normalizeId = (value) => String(value ?? "").trim();
 
 const MobileCategoryGrid = () => {
   const { categories, initialize, getRootCategories } = useCategoryStore();
+  const { translateObject } = useDynamicTranslation();
+  const { getTranslatedText: t } = usePageTranslation(["Browse Categories"]);
+  const [translatedCategories, setTranslatedCategories] = useState([]);
 
   useEffect(() => {
     initialize();
@@ -35,17 +41,28 @@ const MobileCategoryGrid = () => {
       });
     }
 
-
     return mapped;
   }, [categories, getRootCategories]);
+
+  useEffect(() => {
+    const translate = async () => {
+      if (displayCategories.length > 0) {
+        const translated = await Promise.all(
+          displayCategories.map(cat => translateObject(cat, ['name']))
+        );
+        setTranslatedCategories(translated);
+      }
+    };
+    translate();
+  }, [displayCategories, translateObject]);
 
   return (
     <div className="px-4 py-4">
       <h2 className="text-xl font-bold text-gray-800 mb-4">
-        Browse Categories
+        {t("Browse Categories")}
       </h2>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
-        {displayCategories.map((category, index) => (
+        {(translatedCategories.length > 0 ? translatedCategories : displayCategories).map((category, index) => (
           <motion.div
             key={category.id}
             initial={{ opacity: 0, scale: 0.9 }}

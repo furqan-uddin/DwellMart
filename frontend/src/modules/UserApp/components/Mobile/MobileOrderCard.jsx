@@ -4,17 +4,55 @@ import { MdCurrencyRupee } from 'react-icons/md';
 import { formatPrice } from '../../../../shared/utils/helpers';
 import { motion } from 'framer-motion';
 import { formatVariantLabel } from '../../../../shared/utils/variant';
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../../hooks/useDynamicTranslation";
+import { useState, useEffect } from "react";
 
 const MobileOrderCard = ({ order }) => {
-  const variantLabels = Array.isArray(order?.items)
-    ? order.items
-      .map((item) => formatVariantLabel(item?.variant))
-      .filter(Boolean)
-    : [];
+  const { getTranslatedText: t } = usePageTranslation([
+    "Order",
+    "Items",
+    "item",
+    "items",
+    "Variant",
+    "variant selections",
+    "Total",
+    "View Details",
+    "Vendor",
+    "Vendors",
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
+  const [translatedVariantLabels, setTranslatedVariantLabels] = useState([]);
+
+  useEffect(() => {
+    const translateVariants = async () => {
+      const rawLabels = Array.isArray(order?.items)
+        ? order.items.map((item) => formatVariantLabel(item?.variant)).filter(Boolean)
+        : [];
+      if (rawLabels.length > 0) {
+        const translated = await translateArray(rawLabels.map(l => ({ name: l })), ['name']);
+        setTranslatedVariantLabels(translated.map(item => item.name));
+      }
+    };
+    translateVariants();
+  }, [order, translateArray]);
+
+  const variantLabels = translatedVariantLabels.length > 0
+    ? translatedVariantLabels
+    : (Array.isArray(order?.items)
+      ? order.items.map((item) => formatVariantLabel(item?.variant)).filter(Boolean)
+      : []);
+
   const variantSummary = variantLabels.length === 1
     ? variantLabels[0]
     : variantLabels.length > 1
-      ? `${variantLabels.length} variant selections`
+      ? `${variantLabels.length} ${t("variant selections")}`
       : '';
 
   const getStatusColor = (status) => {
@@ -45,7 +83,7 @@ const MobileOrderCard = ({ order }) => {
               <FiPackage className="text-white text-xl" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-base">Order #{order.id}</h3>
+              <h3 className="font-bold text-gray-800 text-base">{t('Order')} #{order.id}</h3>
               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                 <FiCalendar className="text-xs" />
                 {new Date(order.date || order.createdAt).toLocaleDateString()}
@@ -61,19 +99,19 @@ const MobileOrderCard = ({ order }) => {
             <div className="flex items-center gap-2 px-2 py-1 bg-primary-50 rounded-lg mb-2">
               <FiShoppingBag className="text-primary-600 text-xs" />
               <span className="text-xs font-semibold text-primary-700">
-                {order.vendorItems.length} {order.vendorItems.length === 1 ? 'Vendor' : 'Vendors'}
+                {order.vendorItems.length} {order.vendorItems.length === 1 ? t('Vendor') : t('Vendors')}
               </span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Items</span>
+            <span className="text-sm text-gray-600">{t('Items')}</span>
             <span className="text-sm font-semibold text-gray-800">
-              {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
+              {order.items?.length || 0} {(order.items?.length || 0) === 1 ? t('item') : t('items')}
             </span>
           </div>
           {variantSummary && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Variant</span>
+              <span className="text-sm text-gray-600">{t('Variant')}</span>
               <span className="text-xs font-semibold text-gray-700 text-right max-w-[62%] truncate">
                 {variantSummary}
               </span>
@@ -82,7 +120,7 @@ const MobileOrderCard = ({ order }) => {
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600 flex items-center gap-1">
               <MdCurrencyRupee className="text-xs" />
-              Total
+              {t('Total')}
             </span>
             <span className="text-base font-bold text-primary-600">
               {formatPrice(order.total || order.amount || 0)}
@@ -96,9 +134,9 @@ const MobileOrderCard = ({ order }) => {
               order.status
             )}`}
           >
-            {order.status || 'Pending'}
+            {t(order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1).toLowerCase() : 'Pending')}
           </span>
-          <span className="text-xs text-gray-500">View Details</span>
+          <span className="text-xs text-gray-500">{t('View Details')}</span>
         </div>
       </Link>
     </motion.div>

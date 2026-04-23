@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX, FiClock } from 'react-icons/fi';
 import { getCatalogProducts } from '../../data/catalogData';
 import api from '../../../../shared/utils/api';
+import { usePageTranslation } from '../../../../hooks/usePageTranslation';
+import { useDynamicTranslation } from '../../../../hooks/useDynamicTranslation';
 
 const SearchSuggestions = ({
   query,
@@ -13,6 +15,13 @@ const SearchSuggestions = ({
   onDeleteRecent,
   onClearRecent,
 }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    'Recent Searches',
+    'Clear All',
+    'Suggestions',
+    'No suggestions found'
+  ]);
+  const { translateArray } = useDynamicTranslation();
   const panelRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
   const trimmedQuery = String(query || '').trim();
@@ -48,14 +57,16 @@ const SearchSuggestions = ({
         const payload = response?.data ?? response;
         const products = Array.isArray(payload?.products) ? payload.products : [];
         if (cancelled) return;
-        setSuggestions(
-          products.map((product) => ({
-            id: product?._id || product?.id,
-            name: product?.name || '',
-            image: product?.image || product?.images?.[0] || '',
-            price: Number(product?.price) || 0,
-          }))
-        );
+
+        const normalized = products.map((product) => ({
+          id: product?._id || product?.id,
+          name: product?.name || '',
+          image: product?.image || product?.images?.[0] || '',
+          price: Number(product?.price) || 0,
+        }));
+
+        const translated = await translateArray(normalized, ['name']);
+        setSuggestions(translated);
       } catch {
         if (cancelled) return;
         const fallback = getCatalogProducts()
@@ -63,7 +74,9 @@ const SearchSuggestions = ({
             String(product?.name || '').toLowerCase().includes(trimmedQuery.toLowerCase())
           )
           .slice(0, 5);
-        setSuggestions(fallback);
+        
+        const translatedFallback = await translateArray(fallback, ['name']);
+        setSuggestions(translatedFallback);
       }
     };
 
@@ -71,7 +84,7 @@ const SearchSuggestions = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, trimmedQuery]);
+  }, [isOpen, trimmedQuery, translateArray]);
 
   if (!isOpen) return null;
 
@@ -89,7 +102,7 @@ const SearchSuggestions = ({
           {recentSearches.length > 0 && trimmedQuery.length === 0 && (
             <div className="p-2">
               <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-xs font-semibold text-gray-600">Recent Searches</span>
+                <span className="text-xs font-semibold text-gray-600">{t('Recent Searches')}</span>
                 <button
                   onClick={() => {
                     if (onClearRecent) {
@@ -98,7 +111,7 @@ const SearchSuggestions = ({
                   }}
                   className="text-xs text-primary-600 font-medium"
                 >
-                  Clear All
+                  {t('Clear All')}
                 </button>
               </div>
               {recentSearches.map((search, index) => (
@@ -130,7 +143,7 @@ const SearchSuggestions = ({
           {trimmedQuery.length > 0 && suggestions.length > 0 && (
             <div className="p-2">
               <div className="px-3 py-2">
-                <span className="text-xs font-semibold text-gray-600">Suggestions</span>
+                <span className="text-xs font-semibold text-gray-600">{t('Suggestions')}</span>
               </div>
               {suggestions.map((product, index) => (
                 <motion.button
@@ -150,7 +163,7 @@ const SearchSuggestions = ({
 
           {suggestions.length === 0 && recentSearches.length === 0 && trimmedQuery.length > 0 && (
             <div className="p-4 text-center">
-              <p className="text-sm text-gray-500">No suggestions found</p>
+              <p className="text-sm text-gray-500">{t('No suggestions found')}</p>
             </div>
           )}
         </motion.div>
@@ -160,4 +173,5 @@ const SearchSuggestions = ({
 };
 
 export default SearchSuggestions;
+
 

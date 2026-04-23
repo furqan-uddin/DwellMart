@@ -28,6 +28,8 @@ import PageTransition from "../../../shared/components/PageTransition";
 import usePullToRefresh from "../hooks/usePullToRefresh";
 import toast from "react-hot-toast";
 import api from "../../../shared/utils/api";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 import heroSlide1 from "../../../../data/hero/slide1.png";
 import heroSlide2 from "../../../../data/hero/slide2.png";
 import heroSlide3 from "../../../../data/hero/slide3.png";
@@ -200,6 +202,25 @@ const isSafeInternalPath = (target) => String(target || "").startsWith("/");
 
 const MobileHome = () => {
   const navigate = useNavigate();
+  const { translateObject } = useDynamicTranslation();
+  const { getTranslatedText: t } = usePageTranslation([
+    "PREMIUM",
+    "Exclusive Collection",
+    "Shop Now",
+    "Most Popular",
+    "See All",
+    "Flash Sale",
+    "Limited time offers",
+    "Trending Now",
+    "Trusted Marketplace",
+    "Shop from 50+ Trusted Vendors Nationwide",
+    "Connecting you with the finest curated vendors, ensuring quality and trust in every single purchase.",
+    "Refresh failed. Showing available data.",
+    "Refreshed",
+    "Special Offer",
+    "Limited Time"
+  ]);
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -299,27 +320,40 @@ const MobileHome = () => {
         const normalizedProducts = productsSource
           .map(normalizeProduct)
           .filter((product) => product.id && product.isActive !== false);
-        setCatalogProducts(normalizedProducts);
+        
+        // Dynamic Translation for Products
+        const translatedProducts = await Promise.all(
+          normalizedProducts.map(p => translateObject(p, ['name', 'description']))
+        );
+        setCatalogProducts(translatedProducts);
       }
 
       if (vendorsRes.status === "fulfilled") {
         const payload = extractResponseData(vendorsRes.value);
         const vendorsSource = asList(payload?.vendors);
-        setHomeVendors(
-          vendorsSource
-            .map(normalizeVendor)
-            .filter((vendor) => vendor.id)
+        const normalizedVendors = vendorsSource
+          .map(normalizeVendor)
+          .filter((vendor) => vendor.id);
+        
+        // Dynamic Translation for Vendors
+        const translatedVendors = await Promise.all(
+          normalizedVendors.map(v => translateObject(v, ['storeName', 'description']))
         );
+        setHomeVendors(translatedVendors);
       }
 
       if (brandsRes.status === "fulfilled") {
         const payload = extractResponseData(brandsRes.value);
         const brandsSource = asList(payload);
-        setHomeBrands(
-          brandsSource
-            .map(normalizeBrand)
-            .filter((brand) => brand.id)
+        const normalizedBrands = brandsSource
+          .map(normalizeBrand)
+          .filter((brand) => brand.id);
+        
+        // Dynamic Translation for Brands
+        const translatedBrands = await Promise.all(
+          normalizedBrands.map(b => translateObject(b, ['name']))
         );
+        setHomeBrands(translatedBrands);
       }
 
       if (bannersRes.status === "fulfilled") {
@@ -328,7 +362,12 @@ const MobileHome = () => {
           (banner) => banner?.image && banner?.isActive !== false
         );
 
-        const bannerSlides = allBanners
+        // Dynamic Translation for Banners
+        const translatedBanners = await Promise.all(
+          allBanners.map(b => translateObject(b, ['title', 'subtitle', 'description']))
+        );
+
+        const bannerSlides = translatedBanners
           .filter((banner) =>
             ["home_slider", "hero"].includes(String(banner?.type || ""))
           )
@@ -341,7 +380,7 @@ const MobileHome = () => {
           }));
         setSlides(bannerSlides.length > 0 ? bannerSlides : DEFAULT_HERO_SLIDES);
 
-        const banners = allBanners
+        const banners = translatedBanners
           .filter((banner) => String(banner?.type || "") === "promotional")
           .sort((a, b) => toNumber(a.order, 0) - toNumber(b.order, 0))
           .map((banner, index) => ({
@@ -356,7 +395,7 @@ const MobileHome = () => {
           }));
         setPromoBanners(banners);
 
-        const mapped = allBanners
+        const mapped = translatedBanners
           .filter((banner) => String(banner?.type || "") === "side_banner")
           .sort((a, b) => toNumber(a.order, 0) - toNumber(b.order, 0))
           .map((banner, index) => ({
@@ -376,12 +415,16 @@ const MobileHome = () => {
       if (testimonialsRes.status === "fulfilled") {
         const payload = extractResponseData(testimonialsRes.value);
         const testimonialsSource = asList(payload);
-        setHomeTestimonials(
-          testimonialsSource
-            .map(normalizeTestimonial)
-            .filter((testimonial) => testimonial.id && testimonial.isActive)
-            .sort((a, b) => toNumber(a.order, 0) - toNumber(b.order, 0))
+        const normalizedTestimonials = testimonialsSource
+          .map(normalizeTestimonial)
+          .filter((testimonial) => testimonial.id && testimonial.isActive)
+          .sort((a, b) => toNumber(a.order, 0) - toNumber(b.order, 0));
+        
+        // Dynamic Translation for Testimonials
+        const translatedTestimonials = await Promise.all(
+          normalizedTestimonials.map(t => translateObject(t, ['name', 'designation', 'company', 'message']))
         );
+        setHomeTestimonials(translatedTestimonials);
       } else {
         setHomeTestimonials([]);
       }
@@ -389,7 +432,7 @@ const MobileHome = () => {
     } catch {
       return false;
     }
-  }, []);
+  }, [translateObject]);
 
   useEffect(() => {
     fetchHomeData();
@@ -502,10 +545,10 @@ const MobileHome = () => {
   const handleRefresh = async () => {
     const ok = await fetchHomeData();
     if (!ok) {
-      toast.error("Refresh failed. Showing available data.");
+      toast.error(t("Refresh failed. Showing available data."));
       return;
     }
-    toast.success("Refreshed");
+    toast.success(t("Refreshed"));
   };
 
   const {
@@ -607,17 +650,17 @@ const MobileHome = () => {
                 />
                 <div className="absolute inset-x-0 bottom-0 p-8 z-20 flex flex-col items-center text-center">
                   <span className="text-yellow-400 font-bold text-3xl mb-2 tracking-wider drop-shadow-lg">
-                    {sideBanner?.title || "PREMIUM"}
+                    {t(sideBanner?.title || "PREMIUM")}
                   </span>
                   <p className="text-gray-300 text-sm mb-6 font-medium">
-                    {sideBanner?.subtitle || "Exclusive Collection"}
+                    {t(sideBanner?.subtitle || "Exclusive Collection")}
                   </p>
                   <button
                     type="button"
                     onClick={() => handleBannerNavigation(sideBanner?.link || "/offers")}
                     className="bg-white text-gray-900 font-bold py-3.5 px-10 rounded-xl w-full hover:bg-gray-100 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl uppercase tracking-widest text-sm"
                   >
-                    Shop Now
+                    {t("Shop Now")}
                   </button>
                 </div>
               </div>
@@ -647,11 +690,11 @@ const MobileHome = () => {
           {/* Most Popular */}
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Most Popular</h2>
+              <h2 className="text-xl font-bold text-gray-800">{t("Most Popular")}</h2>
               <Link
                 to="/search"
                 className="text-sm text-primary-600 font-semibold">
-                See All
+                {t("See All")}
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
@@ -679,14 +722,14 @@ const MobileHome = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">
-                    Flash Sale
+                    {t("Flash Sale")}
                   </h2>
-                  <p className="text-xs text-gray-600">Limited time offers</p>
+                  <p className="text-xs text-gray-600">{t("Limited time offers")}</p>
                 </div>
                 <Link
                   to="/flash-sale"
                   className="text-sm text-primary-600 font-semibold">
-                  See All
+                  {t("See All")}
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
@@ -707,11 +750,11 @@ const MobileHome = () => {
           {/* Trending Items */}
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Trending Now</h2>
+              <h2 className="text-xl font-bold text-gray-800">{t("Trending Now")}</h2>
               <Link
                 to="/search"
                 className="text-sm text-primary-600 font-semibold">
-                See All
+                {t("See All")}
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
@@ -751,12 +794,11 @@ const MobileHome = () => {
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-50 border border-primary-100 text-primary-600 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 sm:mb-8"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse" />
-                Trusted Marketplace
+                {t("Trusted Marketplace")}
               </motion.div>
-
+ 
               <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-gray-900 leading-[1.15] mb-8 sm:mb-10 tracking-tight">
-                Shop from <span className="bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">50+ Trusted</span> 
-                <br className="hidden sm:block" /> Vendors Nationwide
+                {t("Shop from 50+ Trusted Vendors Nationwide")}
               </h2>
 
               <motion.div
@@ -782,7 +824,7 @@ const MobileHome = () => {
               </motion.div>
 
               <p className="mt-10 text-gray-400 text-sm sm:text-base font-medium max-w-lg mx-auto leading-relaxed italic">
-                "Connecting you with the finest curated vendors, ensuring quality and trust in every single purchase."
+                "{t("Connecting you with the finest curated vendors, ensuring quality and trust in every single purchase.")}"
               </p>
             </motion.div>
           </section>

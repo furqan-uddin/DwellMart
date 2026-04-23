@@ -10,6 +10,8 @@ import PageTransition from "../../../shared/components/PageTransition";
 import LazyImage from "../../../shared/components/LazyImage";
 import ProductCard from "../../../shared/components/ProductCard";
 import api from "../../../shared/utils/api";
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 
 const normalizeId = (value) => String(value ?? "").trim();
 
@@ -66,6 +68,26 @@ const normalizeProduct = (raw) => {
 };
 
 const MobileCategories = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "No Categories Available",
+    "There are no categories to display at the moment.",
+    "product",
+    "products",
+    "available",
+    "Filters",
+    "Price Range",
+    "Min Price",
+    "Max Price",
+    "Minimum Rating",
+    "Stars",
+    "Clear All",
+    "Apply Filters",
+    "Search in category...",
+    "No products found",
+    "There are no products available in this category at the moment."
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const navigate = useNavigate();
   const { categories, initialize, getCategoriesByParent, getRootCategories } =
     useCategoryStore();
@@ -77,33 +99,60 @@ const MobileCategories = () => {
 
   // Get root categories (categories without parent) and merge with fallback.
   // Backend category image should take priority when present.
-  const rootCategories = useMemo(() => {
-    const roots = getRootCategories().filter((cat) => cat.isActive !== false);
-    if (roots.length === 0) {
-      return fallbackCategories;
-    }
-    // Keep backend values as source of truth.
-    // Use fallback image only when backend category has no image.
-    return roots.map((cat) => {
-      const fallbackCat = fallbackCategories.find(
-        (fc) =>
-          normalizeId(fc.id) === normalizeId(cat.id) ||
-          fc.name?.toLowerCase() === cat.name?.toLowerCase()
-      );
-      if (fallbackCat) {
-        return {
-          ...fallbackCat,
-          ...cat,
-          image: cat.image || fallbackCat.image,
-        };
-      }
-      return cat;
-    });
-  }, [categories, getRootCategories]);
+   const [translatedRootCategories, setTranslatedRootCategories] = useState([]);
+  const [translatedSubcategories, setTranslatedSubcategories] = useState([]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState(
-    rootCategories[0]?.id || null
-  );
+  // Translate Root Categories
+  useEffect(() => {
+    const translateRoots = async () => {
+      const roots = getRootCategories().filter((cat) => cat.isActive !== false);
+      let list = roots;
+      if (roots.length === 0) {
+        list = fallbackCategories;
+      } else {
+        list = roots.map((cat) => {
+          const fallbackCat = fallbackCategories.find(
+            (fc) =>
+              normalizeId(fc.id) === normalizeId(cat.id) ||
+              fc.name?.toLowerCase() === cat.name?.toLowerCase()
+          );
+          if (fallbackCat) {
+            return {
+              ...fallbackCat,
+              ...cat,
+              image: cat.image || fallbackCat.image,
+            };
+          }
+          return cat;
+        });
+      }
+      const translated = await translateArray(list, ['name', 'description']);
+      setTranslatedRootCategories(translated);
+    };
+    translateRoots();
+  }, [categories, getRootCategories, translateArray]);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+
+  useEffect(() => {
+    if (translatedRootCategories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(translatedRootCategories[0].id);
+    }
+  }, [translatedRootCategories, selectedCategoryId]);
+
+  // Translate Subcategories
+  useEffect(() => {
+    const translateSubs = async () => {
+      if (!selectedCategoryId) {
+        setTranslatedSubcategories([]);
+        return;
+      }
+      const subcats = getCategoriesByParent(selectedCategoryId).filter((cat) => cat.isActive !== false);
+      const translated = await translateArray(subcats, ['name', 'description']);
+      setTranslatedSubcategories(translated);
+    };
+    translateSubs();
+  }, [selectedCategoryId, categories, getCategoriesByParent, translateArray]);
   const categoryListRef = useRef(null);
   const activeCategoryRef = useRef(null);
   const filterButtonRef = useRef(null);
@@ -125,28 +174,28 @@ const MobileCategories = () => {
     return subcats.filter((cat) => cat.isActive !== false);
   }, [selectedCategoryId, categories, getCategoriesByParent]);
 
-  useEffect(() => {
-    if (!rootCategories.length) return;
+   useEffect(() => {
+    if (!translatedRootCategories.length) return;
     if (!selectedCategoryId) {
-      setSelectedCategoryId(rootCategories[0].id);
+      setSelectedCategoryId(translatedRootCategories[0].id);
       return;
     }
-    const exists = rootCategories.some(
+    const exists = translatedRootCategories.some(
       (cat) => normalizeId(cat.id) === normalizeId(selectedCategoryId)
     );
     if (!exists) {
-      setSelectedCategoryId(rootCategories[0].id);
+      setSelectedCategoryId(translatedRootCategories[0].id);
     }
-  }, [rootCategories, selectedCategoryId]);
+  }, [translatedRootCategories, selectedCategoryId]);
 
-  // Reset selected subcategory when category changes
+   // Reset selected subcategory when category changes
   useEffect(() => {
-    if (subcategories.length > 0) {
-      setSelectedSubcategory(subcategories[0].id);
+    if (translatedSubcategories.length > 0) {
+      setSelectedSubcategory(translatedSubcategories[0].id);
     } else {
       setSelectedSubcategory(null);
     }
-  }, [selectedCategoryId, subcategories]);
+  }, [selectedCategoryId, translatedSubcategories]);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,9 +222,10 @@ const MobileCategories = () => {
         const products = Array.isArray(payload?.products) ? payload.products : [];
         if (cancelled) return;
 
-        setCategoryProductsFeed(
-          products.map(normalizeProduct).filter((product) => product.id)
-        );
+         const translated = await translateArray(products.map(normalizeProduct).filter((product) => product.id), ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        if (cancelled) return;
+
+        setCategoryProductsFeed(translated);
       } catch {
         if (cancelled) return;
         const selectedId = normalizeId(selectedCategoryId);
@@ -190,7 +240,9 @@ const MobileCategories = () => {
           if (selectedSubId) return productCategoryId === selectedSubId;
           return productCategoryId === selectedId || productParentId === selectedId;
         });
-        setCategoryProductsFeed(fallback);
+         const translated = await translateArray(fallback, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        if (cancelled) return;
+        setCategoryProductsFeed(translated);
       }
     };
 
@@ -314,7 +366,7 @@ const MobileCategories = () => {
     };
   }, [showFilters]);
 
-  const selectedCategory = rootCategories.find(
+   const selectedCategory = translatedRootCategories.find(
     (cat) => normalizeId(cat.id) === normalizeId(selectedCategoryId)
   );
 
@@ -325,8 +377,8 @@ const MobileCategories = () => {
   // Calculate available height for content (accounting for bottom nav and cart bar)
   const contentHeight = `calc(100vh - 80px)`;
 
-  // Handle empty categories
-  if (rootCategories.length === 0) {
+   // Handle empty categories
+  if (translatedRootCategories.length === 0) {
     return (
       <PageTransition>
         <MobileLayout showBottomNav={true} showCartBar={true}>
@@ -334,10 +386,10 @@ const MobileCategories = () => {
             <div className="text-center">
               <div className="text-6xl text-gray-300 mx-auto mb-4">📦</div>
               <h2 className="text-xl font-bold text-gray-800 mb-2">
-                No Categories Available
+                {t('No Categories Available')}
               </h2>
               <p className="text-gray-600">
-                There are no categories to display at the moment.
+                {t('There are no categories to display at the moment.')}
               </p>
             </div>
           </div>
@@ -370,9 +422,8 @@ const MobileCategories = () => {
                   <h2 className="text-lg font-bold text-gray-800">
                     {selectedCategory.name}
                   </h2>
-                  <p className="text-[10px] text-gray-500">
-                    {filteredProducts.length} product
-                    {filteredProducts.length !== 1 ? "s" : ""} available
+                   <p className="text-[10px] text-gray-500">
+                    {filteredProducts.length} {filteredProducts.length !== 1 ? t("products") : t("product")} {t('available')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 relative">
@@ -415,7 +466,7 @@ const MobileCategories = () => {
                               <div className="flex items-center gap-1.5">
                                 <FiFilter className="text-sm text-gray-700" />
                                 <h3 className="text-sm font-bold text-gray-800">
-                                  Filters
+                                  {t('Filters')}
                                 </h3>
                               </div>
                               <button
@@ -431,12 +482,12 @@ const MobileCategories = () => {
                                 {/* Price Range */}
                                 <div>
                                   <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                    Price Range
+                                    {t('Price Range')}
                                   </h4>
                                   <div className="space-y-1.5">
                                     <input
                                       type="number"
-                                      placeholder="Min Price"
+                                      placeholder={t("Min Price")}
                                       value={filters.minPrice}
                                       onChange={(e) =>
                                         handleFilterChange(
@@ -448,7 +499,7 @@ const MobileCategories = () => {
                                     />
                                     <input
                                       type="number"
-                                      placeholder="Max Price"
+                                      placeholder={t("Max Price")}
                                       value={filters.maxPrice}
                                       onChange={(e) =>
                                         handleFilterChange(
@@ -464,7 +515,7 @@ const MobileCategories = () => {
                                 {/* Rating Filter */}
                                 <div>
                                   <h4 className="font-semibold text-gray-700 mb-1 text-xs">
-                                    Minimum Rating
+                                    {t('Minimum Rating')}
                                   </h4>
                                   <div className="space-y-0.5">
                                     {[4, 3, 2, 1].map((rating) => (
@@ -495,7 +546,7 @@ const MobileCategories = () => {
                                           }}
                                         />
                                         <span className="text-xs text-gray-700">
-                                          {rating}+ Stars
+                                          {rating}+ {t('Stars')}
                                         </span>
                                       </label>
                                     ))}
@@ -509,12 +560,12 @@ const MobileCategories = () => {
                               <button
                                 onClick={clearFilters}
                                 className="w-full py-1.5 bg-gray-200 text-gray-700 rounded-md font-semibold text-xs hover:bg-gray-300 transition-colors">
-                                Clear All
+                                {t('Clear All')}
                               </button>
                               <button
                                 onClick={() => setShowFilters(false)}
                                 className="w-full py-1.5 gradient-green text-white rounded-md font-semibold text-xs hover:shadow-glow-green transition-all">
-                                Apply Filters
+                                {t('Apply Filters')}
                               </button>
                             </div>
                           </motion.div>
@@ -530,7 +581,7 @@ const MobileCategories = () => {
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
                 <input
                   type="text"
-                  placeholder="Search in category..."
+                  placeholder={t("Search in category...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 shadow-inner placeholder:text-gray-400"
@@ -561,7 +612,7 @@ const MobileCategories = () => {
                 maxHeight: `calc(${contentHeight} - ${headerSectionHeight}px)`,
               }}>
               <div className="pb-[190px]">
-                {rootCategories.map((category) => {
+                 {translatedRootCategories.map((category) => {
                   const isActive =
                     normalizeId(category.id) === normalizeId(selectedCategoryId);
                   return (
@@ -628,8 +679,8 @@ const MobileCategories = () => {
                         scrollBehavior: "smooth",
                         WebkitOverflowScrolling: "touch",
                       }}>
-                      <div className="flex gap-1.5">
-                        {subcategories.map((subcategory) => {
+                    <div className="flex gap-1.5">
+                        {translatedSubcategories.map((subcategory) => {
                           const isActive =
                             normalizeId(selectedSubcategory) ===
                             normalizeId(subcategory.id);
@@ -659,12 +710,11 @@ const MobileCategories = () => {
                     <div className="text-6xl text-gray-300 mx-auto mb-4">
                       📦
                     </div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">
-                      No products found
+                     <h3 className="text-lg font-bold text-gray-800 mb-2">
+                      {t('No products found')}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      There are no products available in this category at the
-                      moment.
+                      {t('There are no products available in this category at the moment.')}
                     </p>
                   </div>
                 ) : (

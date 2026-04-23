@@ -8,17 +8,56 @@ import { formatVariantLabel } from '../../../shared/utils/variant';
 import PageTransition from '../../../shared/components/PageTransition';
 import Badge from '../../../shared/components/Badge';
 import LazyImage from '../../../shared/components/LazyImage';
+import { usePageTranslation } from "../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
 import { useAuthStore } from '../../../shared/store/authStore';
 
 const MobileTrackOrder = () => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Loading order...",
+    "Order Not Found",
+    "Back to Orders",
+    "Go Home",
+    "Order Placed",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled",
+    "Returned",
+    "Track Order",
+    "Order Status",
+    "Tracking Number",
+    "Shipping Address",
+    "Order Items",
+    "Item details are not available for this tracking view.",
+    "Estimated Delivery",
+    "View Order Details",
+    "Continue Shopping",
+    "N/A",
+    "Order Placed"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { getOrder, fetchOrderById, fetchPublicTrackingOrder, lastError } = useOrderStore();
   const { user } = useAuthStore();
   const [isResolving, setIsResolving] = useState(true);
-  const order = getOrder(orderId);
+   const order = getOrder(orderId);
+  const [translatedOrderItems, setTranslatedOrderItems] = useState([]);
+
+  useEffect(() => {
+    const translateContent = async () => {
+      if (order?.items) {
+        const translated = await translateArray(order.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        setTranslatedOrderItems(translated);
+      }
+    };
+    translateContent();
+  }, [order, translateArray]);
+
   const shippingAddress = order?.shippingAddress || {};
-  const orderItems = Array.isArray(order?.items) ? order.items : [];
+  const orderItems = translatedOrderItems.length > 0 ? translatedOrderItems : (Array.isArray(order?.items) ? order.items : []);
   const normalizedStatus = String(order?.status || 'pending').toLowerCase();
   const displayOrderId = order?.id || order?.orderId || orderId;
   const hasShippingAddress = Boolean(
@@ -56,7 +95,7 @@ const MobileTrackOrder = () => {
       <PageTransition>
         <MobileLayout showBottomNav={false} showCartBar={false}>
           <div className="flex items-center justify-center min-h-[60vh] px-4">
-            <p className="text-gray-600">Loading order...</p>
+             <p className="text-gray-600">{t('Loading order...')}</p>
           </div>
         </MobileLayout>
       </PageTransition>
@@ -69,7 +108,7 @@ const MobileTrackOrder = () => {
         <MobileLayout showBottomNav={false} showCartBar={false}>
           <div className="flex items-center justify-center min-h-[60vh] px-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Order Not Found</h2>
+               <h2 className="text-xl font-bold text-gray-800 mb-4">{t('Order Not Found')}</h2>
               {lastError ? (
                 <p className="text-sm text-gray-500 mb-4">{lastError}</p>
               ) : null}
@@ -77,7 +116,7 @@ const MobileTrackOrder = () => {
                 onClick={() => navigate(user?.id ? '/orders' : '/home')}
                 className="gradient-green text-white px-6 py-3 rounded-xl font-semibold"
               >
-                {user?.id ? 'Back to Orders' : 'Go Home'}
+                 {user?.id ? t('Back to Orders') : t('Go Home')}
               </button>
             </div>
           </div>
@@ -86,10 +125,10 @@ const MobileTrackOrder = () => {
     );
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+   const formatDate = (dateString) => {
+    if (!dateString) return t('N/A');
     const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return 'N/A';
+    if (Number.isNaN(date.getTime())) return t('N/A');
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -104,36 +143,36 @@ const MobileTrackOrder = () => {
     const isShippedOrLater = ['shipped', 'delivered', 'returned'].includes(normalizedStatus);
     const isDelivered = normalizedStatus === 'delivered';
 
-    const steps = [
+     const steps = [
       {
-        label: 'Order Placed',
+        label: t('Order Placed'),
         completed: true,
         date: order?.date || order?.createdAt,
         icon: FiCheckCircle,
       },
-      {
-        label: 'Processing',
+       {
+        label: t('Processing'),
         completed: !isCancelled && isProcessingOrLater,
         date: order?.processingAt || null,
         icon: FiPackage,
       },
-      {
-        label: 'Shipped',
+       {
+        label: t('Shipped'),
         completed: !isCancelled && isShippedOrLater,
         date: order?.shippedAt || null,
         icon: FiTruck,
       },
-      {
-        label: 'Delivered',
+       {
+        label: t('Delivered'),
         completed: isDelivered,
         date: isDelivered ? (order?.deliveredAt || order?.estimatedDelivery) : null,
         icon: FiCheckCircle,
       },
     ];
 
-    if (isCancelled || isReturned) {
+     if (isCancelled || isReturned) {
       steps.push({
-        label: isCancelled ? 'Cancelled' : 'Returned',
+        label: isCancelled ? t('Cancelled') : t('Returned'),
         completed: true,
         date: order?.cancelledAt || order?.returnedAt || order?.updatedAt || order?.date || order?.createdAt,
         icon: FiClock,
@@ -158,17 +197,17 @@ const MobileTrackOrder = () => {
                   <FiArrowLeft className="text-xl text-gray-700" />
                 </button>
                 <div className="flex-1">
-                  <h1 className="text-xl font-bold text-gray-800">Track Order</h1>
-                  <p className="text-sm text-gray-600">Order #{displayOrderId}</p>
+                   <h1 className="text-xl font-bold text-gray-800">{t('Track Order')}</h1>
+                  <p className="text-sm text-gray-600">{t('Order')} #{displayOrderId}</p>
                 </div>
-                <Badge variant={normalizedStatus}>{normalizedStatus.toUpperCase()}</Badge>
+                 <Badge variant={normalizedStatus}>{t(normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase())}</Badge>
               </div>
             </div>
 
             <div className="px-4 py-4 space-y-4">
               {/* Tracking Timeline */}
               <div className="glass-card rounded-2xl p-4">
-                <h2 className="text-base font-bold text-gray-800 mb-4">Order Status</h2>
+                 <h2 className="text-base font-bold text-gray-800 mb-4">{t('Order Status')}</h2>
                 <div className="space-y-4">
                   {steps.map((step, index) => {
                     const Icon = step.icon;
@@ -196,7 +235,7 @@ const MobileTrackOrder = () => {
               {/* Tracking Number */}
               {order.trackingNumber && (
                 <div className="glass-card rounded-2xl p-4">
-                  <h2 className="text-base font-bold text-gray-800 mb-2">Tracking Number</h2>
+                   <h2 className="text-base font-bold text-gray-800 mb-2">{t('Tracking Number')}</h2>
                   <p className="text-lg font-bold text-primary-600">{order.trackingNumber}</p>
                 </div>
               )}
@@ -205,15 +244,15 @@ const MobileTrackOrder = () => {
               {hasShippingAddress ? (
                 <div className="glass-card rounded-2xl p-4">
                   <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <FiMapPin className="text-primary-600" />
-                    Shipping Address
+                     <FiMapPin className="text-primary-600" />
+                    {t('Shipping Address')}
                   </h2>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p className="font-semibold text-gray-800">{shippingAddress.name || 'N/A'}</p>
-                    <p>{shippingAddress.address || 'N/A'}</p>
+                     <p className="font-semibold text-gray-800">{shippingAddress.name || t('N/A')}</p>
+                    <p>{shippingAddress.address || t('N/A')}</p>
                     <p>
-                      {shippingAddress.city || 'N/A'}, {shippingAddress.state || 'N/A'}{' '}
-                      {shippingAddress.zipCode || 'N/A'}
+                      {shippingAddress.city || t('N/A')}, {shippingAddress.state || t('N/A')}{' '}
+                      {shippingAddress.zipCode || t('N/A')}
                     </p>
                   </div>
                 </div>
@@ -221,7 +260,7 @@ const MobileTrackOrder = () => {
 
               {/* Order Items */}
               <div className="glass-card rounded-2xl p-4">
-                <h2 className="text-base font-bold text-gray-800 mb-3">Order Items</h2>
+                 <h2 className="text-base font-bold text-gray-800 mb-3">{t('Order Items')}</h2>
                 <div className="space-y-3">
                   {orderItems.map((item) => (
                     <div key={item.id} className="flex items-center gap-3">
@@ -248,8 +287,8 @@ const MobileTrackOrder = () => {
                       </p>
                     </div>
                   ))}
-                  {orderItems.length === 0 && (
-                    <p className="text-sm text-gray-600">Item details are not available for this tracking view.</p>
+                   {orderItems.length === 0 && (
+                    <p className="text-sm text-gray-600">{t('Item details are not available for this tracking view.')}</p>
                   )}
                 </div>
               </div>
@@ -257,7 +296,7 @@ const MobileTrackOrder = () => {
               {/* Estimated Delivery */}
               {order.estimatedDelivery && (
                 <div className="glass-card rounded-2xl p-4">
-                  <h2 className="text-base font-bold text-gray-800 mb-2">Estimated Delivery</h2>
+                   <h2 className="text-base font-bold text-gray-800 mb-2">{t('Estimated Delivery')}</h2>
                   <p className="text-lg font-semibold text-primary-600">
                     {formatDate(order.estimatedDelivery)}
                   </p>
@@ -267,17 +306,17 @@ const MobileTrackOrder = () => {
               {/* Actions */}
               {user?.id ? (
                 <button
-                  onClick={() => navigate(`/orders/${displayOrderId}`)}
+                   onClick={() => navigate(`/orders/${displayOrderId}`)}
                   className="w-full py-3 gradient-green text-white rounded-xl font-semibold hover:shadow-glow-green transition-all"
                 >
-                  View Order Details
+                  {t('View Order Details')}
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/home')}
+                   onClick={() => navigate('/home')}
                   className="w-full py-3 gradient-green text-white rounded-xl font-semibold hover:shadow-glow-green transition-all"
                 >
-                  Continue Shopping
+                  {t('Continue Shopping')}
                 </button>
               )}
             </div>

@@ -56,6 +56,9 @@ const parseJsonFields = (req, res, next) => {
     next();
 };
 
+// Public Routes (No Auth)
+router.get('/plans/public', subscriptionController.getAvailablePlans);
+
 // Auth
 router.post(
     '/auth/register',

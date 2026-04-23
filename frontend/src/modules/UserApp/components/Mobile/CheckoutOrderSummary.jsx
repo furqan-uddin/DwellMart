@@ -1,13 +1,45 @@
+import { useState, useEffect } from "react";
 import { FiShoppingBag } from "react-icons/fi";
 import { formatPrice } from "../../../../shared/utils/helpers";
 import { formatVariantLabel, getVariantSignature } from "../../../../shared/utils/variant";
+import { usePageTranslation } from "../../../../hooks/usePageTranslation";
+import { useDynamicTranslation } from "../../../../hooks/useDynamicTranslation";
 
 const OrderSummary = ({ itemsByVendor, total, discount, shipping, tax, finalTotal }) => {
+  const { getTranslatedText: t } = usePageTranslation([
+    "Order Summary",
+    "Subtotal",
+    "Discount",
+    "Shipping",
+    "FREE",
+    "Tax",
+    "Total"
+  ]);
+
+  const { translateArray } = useDynamicTranslation();
+  const [translatedItemsByVendor, setTranslatedItemsByVendor] = useState([]);
+
+  useEffect(() => {
+    const translateContent = async () => {
+      const translated = await Promise.all(itemsByVendor.map(async (vendorGroup) => {
+        const translatedItems = await translateArray(vendorGroup.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
+        return {
+          ...vendorGroup,
+          vendorName: await translateArray([{ name: vendorGroup.vendorName }], ['name']).then(res => res[0]?.name || vendorGroup.vendorName),
+          items: translatedItems
+        };
+      }));
+      setTranslatedItemsByVendor(translated);
+    };
+    translateContent();
+  }, [itemsByVendor, translateArray]);
+
+  const displayGroups = translatedItemsByVendor.length > 0 ? translatedItemsByVendor : itemsByVendor;
   return (
     <div className="glass-card rounded-xl p-4">
-      <h3 className="text-base font-bold text-gray-800 mb-3">Order Summary</h3>
+      <h3 className="text-base font-bold text-gray-800 mb-3">{t('Order Summary')}</h3>
       <div className="space-y-3 mb-4">
-        {itemsByVendor.map((vendorGroup) => (
+        {displayGroups.map((vendorGroup) => (
           <div key={vendorGroup.vendorId} className="space-y-2 mb-4">
             <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200/50 shadow-sm">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
@@ -43,27 +75,27 @@ const OrderSummary = ({ itemsByVendor, total, discount, shipping, tax, finalTota
 
       <div className="space-y-2 text-sm">
         <div className="flex justify-between text-gray-600">
-          <span>Subtotal</span>
+          <span>{t('Subtotal')}</span>
           <span>{formatPrice(total)}</span>
         </div>
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
-            <span>Discount</span>
+            <span>{t('Discount')}</span>
             <span>-{formatPrice(discount)}</span>
           </div>
         )}
         <div className="flex justify-between text-gray-600">
-          <span>Shipping</span>
+          <span>{t('Shipping')}</span>
           <span>
-            {shipping === 0 ? <span className="text-green-600 font-semibold">FREE</span> : formatPrice(shipping)}
+            {shipping === 0 ? <span className="text-green-600 font-semibold">{t('FREE')}</span> : formatPrice(shipping)}
           </span>
         </div>
         <div className="flex justify-between text-gray-600">
-          <span>Tax</span>
+          <span>{t('Tax')}</span>
           <span>{formatPrice(tax)}</span>
         </div>
         <div className="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t border-gray-200">
-          <span>Total</span>
+          <span>{t('Total')}</span>
           <span className="text-primary-600">{formatPrice(finalTotal)}</span>
         </div>
       </div>
