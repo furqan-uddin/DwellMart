@@ -12,6 +12,8 @@ import ProductCard from "../../../shared/components/ProductCard";
 import api from "../../../shared/utils/api";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import ProductGridSkeleton from "../../../shared/components/Skeletons/ProductGridSkeleton";
+import PageSkeleton from "../../../shared/components/Skeletons/PageSkeleton";
 
 const normalizeId = (value) => String(value ?? "").trim();
 
@@ -99,35 +101,42 @@ const MobileCategories = () => {
 
   // Get root categories (categories without parent) and merge with fallback.
   // Backend category image should take priority when present.
-   const [translatedRootCategories, setTranslatedRootCategories] = useState([]);
+  const [translatedRootCategories, setTranslatedRootCategories] = useState([]);
   const [translatedSubcategories, setTranslatedSubcategories] = useState([]);
+  const [isTranslatingRoots, setIsTranslatingRoots] = useState(false);
+  const [isTranslatingSubs, setIsTranslatingSubs] = useState(false);
 
   // Translate Root Categories
   useEffect(() => {
     const translateRoots = async () => {
-      const roots = getRootCategories().filter((cat) => cat.isActive !== false);
-      let list = roots;
-      if (roots.length === 0) {
-        list = fallbackCategories;
-      } else {
-        list = roots.map((cat) => {
-          const fallbackCat = fallbackCategories.find(
-            (fc) =>
-              normalizeId(fc.id) === normalizeId(cat.id) ||
-              fc.name?.toLowerCase() === cat.name?.toLowerCase()
-          );
-          if (fallbackCat) {
-            return {
-              ...fallbackCat,
-              ...cat,
-              image: cat.image || fallbackCat.image,
-            };
-          }
-          return cat;
-        });
+      setIsTranslatingRoots(true);
+      try {
+        const roots = getRootCategories().filter((cat) => cat.isActive !== false);
+        let list = roots;
+        if (roots.length === 0) {
+          list = fallbackCategories;
+        } else {
+          list = roots.map((cat) => {
+            const fallbackCat = fallbackCategories.find(
+              (fc) =>
+                normalizeId(fc.id) === normalizeId(cat.id) ||
+                fc.name?.toLowerCase() === cat.name?.toLowerCase()
+            );
+            if (fallbackCat) {
+              return {
+                ...fallbackCat,
+                ...cat,
+                image: cat.image || fallbackCat.image,
+              };
+            }
+            return cat;
+          });
+        }
+        const translated = await translateArray(list, ['name', 'description']);
+        setTranslatedRootCategories(translated);
+      } finally {
+        setIsTranslatingRoots(false);
       }
-      const translated = await translateArray(list, ['name', 'description']);
-      setTranslatedRootCategories(translated);
     };
     translateRoots();
   }, [categories, getRootCategories, translateArray]);
@@ -147,9 +156,14 @@ const MobileCategories = () => {
         setTranslatedSubcategories([]);
         return;
       }
-      const subcats = getCategoriesByParent(selectedCategoryId).filter((cat) => cat.isActive !== false);
-      const translated = await translateArray(subcats, ['name', 'description']);
-      setTranslatedSubcategories(translated);
+      setIsTranslatingSubs(true);
+      try {
+        const subcats = getCategoriesByParent(selectedCategoryId).filter((cat) => cat.isActive !== false);
+        const translated = await translateArray(subcats, ['name', 'description']);
+        setTranslatedSubcategories(translated);
+      } finally {
+        setIsTranslatingSubs(false);
+      }
     };
     translateSubs();
   }, [selectedCategoryId, categories, getCategoriesByParent, translateArray]);
@@ -166,6 +180,7 @@ const MobileCategories = () => {
     minRating: "",
   });
   const [categoryProductsFeed, setCategoryProductsFeed] = useState([]);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   // Get subcategories for selected category
   const subcategories = useMemo(() => {
@@ -205,10 +220,12 @@ const MobileCategories = () => {
       if (!targetCategoryId) {
         if (!cancelled) {
           setCategoryProductsFeed([]);
+          setIsLoadingInitial(false);
         }
         return;
       }
 
+      setIsLoadingInitial(true);
       try {
         const response = await api.get("/products", {
           params: {
@@ -243,6 +260,10 @@ const MobileCategories = () => {
          const translated = await translateArray(fallback, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
         if (cancelled) return;
         setCategoryProductsFeed(translated);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInitial(false);
+        }
       }
     };
 
@@ -374,11 +395,19 @@ const MobileCategories = () => {
   const hasActiveFilters =
     filters.minPrice || filters.maxPrice || filters.minRating;
 
-  // Calculate available height for content (accounting for bottom nav and cart bar)
-  const contentHeight = `calc(100vh - 80px)`;
+  const { isLoading: isStoreLoading } = useCategoryStore();
 
    // Handle empty categories
   if (translatedRootCategories.length === 0) {
+    if (isStoreLoading || isTranslatingRoots) {
+      return (
+        <PageTransition>
+          <MobileLayout showBottomNav={true} showCartBar={true}>
+            <PageSkeleton />
+          </MobileLayout>
+        </PageTransition>
+      );
+    }
     return (
       <PageTransition>
         <MobileLayout showBottomNav={true} showCartBar={true}>
@@ -397,6 +426,9 @@ const MobileCategories = () => {
       </PageTransition>
     );
   }
+
+  // Calculate available height for content (accounting for bottom nav and cart bar)
+  const contentHeight = `calc(100vh - 80px)`;
 
   // Calculate header height for layout calculations
   const headerSectionHeight = 80;
@@ -705,16 +737,22 @@ const MobileCategories = () => {
                   </div>
                 )}
 
-                {filteredProducts.length === 0 ? (
+                {isLoadingInitial ? (
+                  <div className="p-2">
+                    <ProductGridSkeleton count={6} columns="grid-cols-2" />
+                  </div>
+                ) : filteredProducts.length === 0 ? (
                   <div key="empty" className="text-center py-12">
                     <div className="text-6xl text-gray-300 mx-auto mb-4">
                       📦
                     </div>
                      <h3 className="text-lg font-bold text-gray-800 mb-2">
-                      {t('No products found')}
+                      {searchQuery ? t('No matching products') : t('No products found')}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t('There are no products available in this category at the moment.')}
+                      {searchQuery 
+                        ? t('Try adjusting your search query.') 
+                        : t('There are no products available in this category at the moment.')}
                     </p>
                   </div>
                 ) : (
