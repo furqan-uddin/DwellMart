@@ -239,6 +239,9 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
     if (Number(plan.price_inr || 0) === 0 && Number(plan.price_usd || 0) === 0) {
         const internalSubscription = await activateInternalSubscription({ vendor, plan, gateway });
         
+        // Notify admins for free plan activation during onboarding
+        await rememberSubscribedVendor(vendor, plan._id);
+
         // Notify vendor for free plan activation during onboarding
         if (vendor.onboardingStatus === 'subscription_active') {
             await notifyVendorOfOnboardingCompletion(vendor, plan, {
