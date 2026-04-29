@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import ProductGridSkeleton from '../../../shared/components/Skeletons/ProductGridSkeleton';
 
 const normalizeId = (value) => String(value ?? '').trim();
 
@@ -799,16 +800,7 @@ const MobileSearch = ({ isShopPage = false }) => {
           {/* Products List */}
           <div className="px-4 py-4 lg:p-6">
             {isLoadingResults ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full"
-                  />
-                  <span className="text-sm">{t('Loading products...')}</span>
-                </div>
-              </div>
+              <ProductGridSkeleton count={8} columns={viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1'} />
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <FiSearch className="text-6xl text-gray-300 mx-auto mb-4" />

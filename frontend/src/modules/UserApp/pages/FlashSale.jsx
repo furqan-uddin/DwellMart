@@ -12,6 +12,7 @@ import api from "../../../shared/utils/api";
 import { useCategoryStore } from "../../../shared/store/categoryStore";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import ProductGridSkeleton from "../../../shared/components/Skeletons/ProductGridSkeleton";
 
 const normalizeProduct = (raw) => {
   const categoryObj =
@@ -52,6 +53,7 @@ const MobileFlashSale = () => {
     maxPrice: "",
     minRating: "",
   });
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   useEffect(() => {
     initializeCategories();
@@ -74,6 +76,7 @@ const MobileFlashSale = () => {
     let cancelled = false;
 
     const loadFlashSale = async () => {
+      setIsLoadingInitial(true);
       try {
         const campaignList = await api.get("/campaigns", {
           params: { type: "flash_sale", limit: 20 },
@@ -113,6 +116,8 @@ const MobileFlashSale = () => {
         if (!cancelled) setAllFlashSale(products);
       } catch {
         if (!cancelled) setAllFlashSale([]);
+      } finally {
+        if (!cancelled) setIsLoadingInitial(false);
       }
     };
 
@@ -277,7 +282,9 @@ const MobileFlashSale = () => {
           </div>
 
           <div className="px-4 py-4">
-            {filteredProducts.length === 0 ? (
+            {isLoadingInitial ? (
+              <ProductGridSkeleton count={6} columns={viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1'} />
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl text-gray-300 mx-auto mb-4">[ ]</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No flash sale items')}</h3>

@@ -12,6 +12,7 @@ import api from "../../../shared/utils/api";
 import { useCategoryStore } from "../../../shared/store/categoryStore";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import ProductGridSkeleton from "../../../shared/components/Skeletons/ProductGridSkeleton";
 
 const normalizeProduct = (raw) => {
   const categoryObj =
@@ -52,6 +53,7 @@ const MobileDailyDeals = () => {
     maxPrice: "",
     minRating: "",
   });
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   useEffect(() => {
     initializeCategories();
@@ -74,6 +76,7 @@ const MobileDailyDeals = () => {
     let cancelled = false;
 
     const loadDeals = async () => {
+      setIsLoadingInitial(true);
       try {
         const campaignList = await api.get("/campaigns", {
           params: { type: "daily_deal", limit: 20 },
@@ -86,7 +89,10 @@ const MobileDailyDeals = () => {
           : [];
 
         if (!slugs.length) {
-          if (!cancelled) setAllDeals([]);
+          if (!cancelled) {
+            setAllDeals([]);
+            setIsLoadingInitial(false);
+          }
           return;
         }
 
@@ -110,6 +116,8 @@ const MobileDailyDeals = () => {
         if (!cancelled) setAllDeals(Array.from(map.values()));
       } catch {
         if (!cancelled) setAllDeals([]);
+      } finally {
+        if (!cancelled) setIsLoadingInitial(false);
       }
     };
 
@@ -306,7 +314,9 @@ const MobileDailyDeals = () => {
           </div>
 
           <div className="px-4 py-4">
-            {filteredProducts.length === 0 ? (
+            {isLoadingInitial ? (
+              <ProductGridSkeleton count={6} columns={viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1'} />
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl text-gray-300 mx-auto mb-4">[ ]</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{t('No deals found')}</h3>
