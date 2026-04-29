@@ -4,6 +4,8 @@ import asyncHandler from '../../../utils/asyncHandler.js';
 import ApiResponse from '../../../utils/ApiResponse.js';
 import ApiError from '../../../utils/ApiError.js';
 import Vendor from '../../../models/Vendor.model.js';
+import EmailVerification from '../../../models/EmailVerification.model.js';
+import crypto from 'crypto';
 import { generateTokens } from '../../../utils/generateToken.js';
 import { isMockOTP, isOTPMatch, sendOTP } from '../../../services/otp.service.js';
 import { sendEmail } from '../../../services/email.service.js';
@@ -130,6 +132,11 @@ export const register = asyncHandler(async (req, res) => {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const existing = await Vendor.findOne({ email: normalizedEmail }).populate('selectedPlan');
 
+    const verificationRecord = await EmailVerification.findOne({ email: normalizedEmail, isVerified: true });
+    if (!verificationRecord) {
+        throw new ApiError(400, 'Email not verified. Please verify your email first.');
+    }
+
     if (existing) {
         const onboarding = await getVendorOnboardingState(existing);
         if (
@@ -139,7 +146,10 @@ export const register = asyncHandler(async (req, res) => {
         ) {
             existing.selectedPlan = plan._id;
             existing.country = String(address?.country || existing.country || '').trim();
+            existing.isVerified = true;
+            existing.onboardingStatus = 'plan_selected';
             await existing.save({ validateBeforeSave: false });
+            await EmailVerification.deleteOne({ email: normalizedEmail });
 
             return res.status(200).json(
                 new ApiResponse(
@@ -147,12 +157,10 @@ export const register = asyncHandler(async (req, res) => {
                     {
                         email: existing.email,
                         resume: true,
-                        onboardingStatus: onboarding.onboardingStatus,
-                        nextStep: onboarding.nextStep,
+                        onboardingStatus: 'plan_selected',
+                        nextStep: 'complete_payment',
                     },
-                    onboarding.nextStep === 'verify_email'
-                        ? 'Account already exists. Please verify your email to continue onboarding.'
-                        : 'Account already exists. Please continue your onboarding.'
+                    'Account recovered. Email verified.'
                 )
             );
         }
@@ -176,12 +184,14 @@ export const register = asyncHandler(async (req, res) => {
         status: 'pending',
         agreedToTerms: true,
         agreedToTermsAt: new Date(),
-        onboardingStatus: 'registered',
+        onboardingStatus: 'plan_selected',
         selectedPlan: plan._id,
         documents,
+        isVerified: true, // Already verified inline
     });
 
-    await sendOTP(vendor, 'vendor_verification');
+    // Clean up verification record
+    await EmailVerification.deleteOne({ email: normalizedEmail });
 
     res.status(201).json(
         new ApiResponse(
@@ -189,10 +199,69 @@ export const register = asyncHandler(async (req, res) => {
             {
                 email: vendor.email,
                 selectedPlan: serializePlan(plan, vendor.country),
+                onboardingStatus: 'plan_selected',
+                nextStep: 'complete_payment',
             },
-            'Registration submitted. Please verify your email to continue onboarding.'
+            'Registration successful. Email verified.'
         )
     );
+});
+
+export const requestRegistrationOTP = asyncHandler(async (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) throw new ApiError(400, 'Email is required.');
+
+    // Check if vendor already exists and is verified
+    const existingVendor = await Vendor.findOne({ email });
+    if (existingVendor && existingVendor.isVerified) {
+        throw new ApiError(409, 'Email is already registered and verified. Please login.');
+    }
+
+    const useMockOTP = process.env.NODE_ENV !== 'production' && ['true', '1'].includes(process.env.USE_MOCK_OTP);
+    const otp = useMockOTP ? (process.env.MOCK_OTP || '123456') : crypto.randomInt(100000, 999999).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await EmailVerification.findOneAndUpdate(
+        { email },
+        { otp, otpExpiry, isVerified: false },
+        { upsate: true, new: true, setDefaultsOnInsert: true, upsert: true }
+    );
+
+    if (!useMockOTP) {
+        try {
+            await sendEmail({
+                to: email,
+                subject: 'Your registration verification code',
+                text: `Your verification code is ${otp}. It expires in 10 minutes.`,
+                html: `<p>Your verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
+            });
+        } catch (err) {
+            console.warn(`[Registration OTP] Email send failed for ${email}: ${err.message}`);
+        }
+    } else {
+        console.log(`[Registration OTP] Mock OTP ${otp} generated for ${email}`);
+    }
+
+    res.status(200).json(new ApiResponse(200, null, 'Verification code sent to your email.'));
+});
+
+export const verifyRegistrationOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    const record = await EmailVerification.findOne({ email: normalizedEmail });
+    if (!record) throw new ApiError(400, 'No verification requested for this email.');
+
+    const useMockOTP = process.env.NODE_ENV !== 'production' && ['true', '1'].includes(process.env.USE_MOCK_OTP);
+    const isMatch = useMockOTP && otp === process.env.MOCK_OTP ? true : record.otp === String(otp).trim();
+
+    if (!isMatch) throw new ApiError(400, 'Invalid verification code.');
+    if (record.otpExpiry < Date.now()) throw new ApiError(400, 'Verification code has expired.');
+
+    record.isVerified = true;
+    await record.save();
+
+    res.status(200).json(new ApiResponse(200, { email: normalizedEmail, isVerified: true }, 'Email verified successfully.'));
 });
 
 export const getOnboardingStatus = asyncHandler(async (req, res) => {

@@ -29,7 +29,9 @@ import {
     logoutSchema,
     forgotPasswordSchema,
     verifyResetOtpSchema,
-    resetPasswordSchema
+    resetPasswordSchema,
+    requestRegistrationOtpSchema,
+    verifyRegistrationOtpSchema
 } from '../validators/auth.validator.js';
 import { changePlanSchema } from '../validators/subscription.validator.js';
 import {
@@ -71,6 +73,8 @@ router.post(
 router.post('/auth/onboarding-status', validate(onboardingStatusSchema), authController.getOnboardingStatus);
 router.post('/auth/verify-otp', validate(verifyOtpSchema), authController.verifyOTP);
 router.post('/auth/resend-otp', validate(resendOtpSchema), authController.resendOTP);
+router.post('/auth/request-registration-otp', validate(requestRegistrationOtpSchema), authController.requestRegistrationOTP);
+router.post('/auth/verify-registration-otp', validate(verifyRegistrationOtpSchema), authController.verifyRegistrationOTP);
 router.post('/auth/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/auth/verify-reset-otp', authLimiter, validate(verifyResetOtpSchema), authController.verifyResetOTP);
 router.post('/auth/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);

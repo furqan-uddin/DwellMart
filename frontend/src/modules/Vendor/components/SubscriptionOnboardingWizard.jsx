@@ -97,7 +97,8 @@ const SubscriptionOnboardingWizard = ({
     'This onboarding cannot continue. Please contact support.',
     'Authorization received. Waiting for billing confirmation.',
     'Payment window was closed.', 'Unable to start payment.',
-    'Please verify your email first.', 'Please select a subscription plan first.'
+    'Please verify your email first.', 'Please select a subscription plan first.',
+    'Verify', 'Sending...', 'Resend', 'Confirm', 'Verified', 'Verify email first', 'Verification code sent to your email.', 'Email verified successfully.', 'Please enter a valid email address.', 'Please enter a valid 6-digit code.'
   ]);
 
   const { translateArray, translateText, translateBatch, translateObject } = useDynamicTranslation();
@@ -123,6 +124,11 @@ const SubscriptionOnboardingWizard = ({
   const [documentFile, setDocumentFile] = useState(null);
   const [documentType, setDocumentType] = useState('tradeLicense');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -286,6 +292,7 @@ const SubscriptionOnboardingWizard = ({
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    if (name === 'email' && isEmailVerified) return;
     if (name.startsWith('address.')) {
       const field = name.split('.')[1];
       setFormData((prev) => ({
@@ -295,6 +302,44 @@ const SubscriptionOnboardingWizard = ({
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRequestOtp = async () => {
+    const email = formData.email?.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error(t('Please enter a valid email address.'));
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      await api.post('/vendor/auth/request-registration-otp', { email });
+      setShowOtpInput(true);
+      toast.success(t('Verification code sent to your email.'));
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const otp = emailOtp.trim();
+    if (!/^\d{6}$/.test(otp)) {
+      toast.error(t('Please enter a valid 6-digit code.'));
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      await api.post('/vendor/auth/verify-registration-otp', {
+        email: formData.email,
+        otp,
+      });
+      setIsEmailVerified(true);
+      setShowOtpInput(false);
+      toast.success(t('Email verified successfully.'));
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   const handleSelectPlan = async (plan) => {
@@ -357,17 +402,17 @@ const SubscriptionOnboardingWizard = ({
         setSelectedPlan(responseData.selectedPlan);
       }
 
-      if (responseData.resume) {
-        await syncFromStatus(email, plans, { resetPaymentState: true });
+      if (responseData.resume || responseData.nextStep === 'complete_payment') {
+        setStep(2);
         return;
       }
 
-      navigate('/vendor/verification', {
-        state: {
-          email,
-          returnTo,
-        },
-      });
+      if (responseData.nextStep === 'awaiting_admin_approval') {
+        setStep(3);
+        setPaymentState('confirmed');
+        clearStorage();
+        return;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -527,10 +572,61 @@ const SubscriptionOnboardingWizard = ({
                     <FiShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input name="storeName" value={formData.storeName} onChange={handleChange} required placeholder={t('Store name')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
                   </label>
-                  <label className="relative">
-                    <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={t('Email')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
-                  </label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <label className="relative flex-1">
+                        <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          readOnly={isEmailVerified}
+                          required
+                          placeholder={t('Email')}
+                          className={`w-full rounded-2xl border py-3 pl-10 pr-4 text-sm outline-none ${
+                            isEmailVerified ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 focus:border-teal-500'
+                          }`}
+                        />
+                        {isEmailVerified && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600">
+                            <FiCheck className="stroke-[3]" />
+                          </div>
+                        )}
+                      </label>
+                      {!isEmailVerified && (
+                        <button
+                          type="button"
+                          onClick={handleRequestOtp}
+                          disabled={isSendingOtp || !formData.email}
+                          className="rounded-2xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                        >
+                          {isSendingOtp ? t('Sending...') : showOtpInput ? t('Resend') : t('Verify')}
+                        </button>
+                      )}
+                    </div>
+
+                    {showOtpInput && !isEmailVerified && (
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={emailOtp}
+                          onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                          placeholder="6-digit code"
+                          className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-center text-sm font-bold tracking-widest text-slate-800 focus:border-teal-500 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={isVerifyingOtp || emailOtp.length !== 6}
+                          className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50"
+                        >
+                          {isVerifyingOtp ? '...' : t('Confirm')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <label className="relative">
                     <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input name="phone" value={formData.phone} onChange={handleChange} required placeholder={t('Phone')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none focus:border-teal-500" />
@@ -563,10 +659,14 @@ const SubscriptionOnboardingWizard = ({
                     <span>{t('I agree to the')} <button type="button" onClick={() => setShowTerms(true)} className="font-semibold text-teal-700 underline">{t('Terms & Conditions')}</button></span>
                   </label>
                 </div>
-                <button type="submit" disabled={isLoading} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60">
-                  {isLoading ? <FiLoader className="animate-spin" /> : <FiMail />}
-                  {t('Register and verify email')}
-                </button>
+                 <button
+                   type="submit"
+                   disabled={isLoading || !isEmailVerified}
+                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60"
+                 >
+                   {isLoading ? <FiLoader className="animate-spin" /> : null}
+                   {!isEmailVerified ? t('Verify email first') : t('Register')}
+                 </button>
               </form>
             </motion.div>
           ) : null}

@@ -50,6 +50,15 @@ export const resendOtpSchema = Joi.object({
     email: Joi.string().email().lowercase().required(),
 });
 
+export const requestRegistrationOtpSchema = Joi.object({
+    email: Joi.string().email().lowercase().required(),
+});
+
+export const verifyRegistrationOtpSchema = Joi.object({
+    email: Joi.string().email().lowercase().required(),
+    otp: Joi.string().pattern(/^\d{6}$/).required(),
+});
+
 export const refreshTokenSchema = Joi.object({
     refreshToken: Joi.string().required(),
 });
