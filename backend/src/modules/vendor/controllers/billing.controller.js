@@ -7,6 +7,7 @@ import SubscriptionPlan from '../../../models/SubscriptionPlan.model.js';
 import VendorSubscription from '../../../models/VendorSubscription.model.js';
 import Vendor from '../../../models/Vendor.model.js';
 import { createNotification } from '../../../services/notification.service.js';
+import { sendVendorOnboardingSuccessEmail } from '../../../services/email.service.js';
 import {
     constructStripeWebhookEvent,
     createStripeSubscriptionForPlan,
@@ -61,6 +62,14 @@ const rememberSubscribedVendor = async (vendor, planId) => {
                 })
             )
         );
+    }
+};
+
+const notifyVendorOfOnboardingCompletion = async (vendor, plan, payment) => {
+    try {
+        await sendVendorOnboardingSuccessEmail(vendor, plan, payment);
+    } catch (err) {
+        console.warn(`[Onboarding Email] Failed to send email to ${vendor.email}: ${err.message}`);
     }
 };
 
@@ -229,6 +238,16 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
 
     if (Number(plan.price_inr || 0) === 0 && Number(plan.price_usd || 0) === 0) {
         const internalSubscription = await activateInternalSubscription({ vendor, plan, gateway });
+        
+        // Notify vendor for free plan activation during onboarding
+        if (vendor.onboardingStatus === 'subscription_active') {
+            await notifyVendorOfOnboardingCompletion(vendor, plan, {
+                amount: 0,
+                currency: vendor.country === 'IN' ? 'INR' : 'USD',
+                transactionId: 'FREE_PLAN',
+            });
+        }
+
         return res.status(200).json(
             new ApiResponse(
                 200,
@@ -361,6 +380,15 @@ export const handleStripeWebhook = asyncHandler(async (req, res) => {
                     invoiceId: invoice.id,
                     raw: invoice,
                 });
+
+                // Notify vendor if this is the first payment (onboarding)
+                if (synced.vendor.onboardingStatus === 'subscription_active') {
+                    await notifyVendorOfOnboardingCompletion(synced.vendor, synced.plan, {
+                        amount: Number(invoice.amount_paid || 0) / 100,
+                        currency: String(invoice.currency || 'usd').toUpperCase(),
+                        transactionId: String(invoice.payment_intent || invoice.charge || invoice.id),
+                    });
+                }
             }
             break;
         }
@@ -452,6 +480,15 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
                     invoiceId: paymentEntity.invoice_id || subscriptionEntity?.id,
                     raw: paymentEntity,
                 });
+
+                // Notify vendor if this is the first payment (onboarding)
+                if (synced.vendor.onboardingStatus === 'subscription_active') {
+                    await notifyVendorOfOnboardingCompletion(synced.vendor, synced.plan, {
+                        amount: Number(paymentEntity.amount || 0) / 100,
+                        currency: String(paymentEntity.currency || 'INR').toUpperCase(),
+                        transactionId: paymentEntity.id,
+                    });
+                }
             }
             break;
         }
