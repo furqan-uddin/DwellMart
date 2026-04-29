@@ -25,6 +25,7 @@ import {
 } from "../data/catalogData";
 import api from "../../../shared/utils/api";
 import { formatPrice } from "../../../shared/utils/helpers";
+import Price from "../../../shared/components/Price";
 import toast from "react-hot-toast";
 import MobileLayout from "../components/Layout/MobileLayout";
 import ImageGallery from "../../../shared/components/Product/ImageGallery";
@@ -686,16 +687,11 @@ const MobileProductDetail = () => {
                     </div>
                   )}
 
-                  {/* Price */}
                   <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
                     <div className="flex items-end gap-3 mb-2">
-                      <span className="text-4xl font-extrabold text-gray-900">
-                        {formatPrice(currentPrice)}
-                      </span>
+                      <Price amount={currentPrice} className="text-4xl font-extrabold text-gray-900" />
                       {product.originalPrice && (
-                        <span className="text-xl text-gray-400 line-through font-medium mb-1.5">
-                          {formatPrice(product.originalPrice)}
-                        </span>
+                        <Price amount={product.originalPrice} className="text-xl text-gray-400 line-through font-medium mb-1.5" />
                       )}
                     </div>
                     {product.originalPrice && (

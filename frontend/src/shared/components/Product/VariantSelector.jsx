@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { FiCheck } from "react-icons/fi";
 import { formatPrice } from "../../utils/helpers";
+import Price from "../Price";
 import { getVariantSignature } from "../../utils/variant";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
@@ -200,7 +201,9 @@ const VariantSelector = ({ variants, onVariantChange, currentPrice }) => {
       {getVariantPrice() !== Number(currentPrice || 0) && (
          <div className="p-4 bg-primary-50 rounded-xl border border-primary-200">
           <p className="text-sm text-gray-600 mb-1">{t('Selected variant price:')}</p>
-          <p className="text-xl font-bold text-primary-700">{formatPrice(getVariantPrice())}</p>
+          <p className="text-xl font-bold text-primary-700">
+            <Price amount={getVariantPrice()} />
+          </p>
         </div>
       )}
     </div>

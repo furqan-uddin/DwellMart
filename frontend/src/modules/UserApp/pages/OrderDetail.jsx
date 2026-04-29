@@ -6,6 +6,7 @@ import MobileLayout from "../components/Layout/MobileLayout";
 import { useOrderStore } from '../../../shared/store/orderStore';
 import { useCartStore } from '../../../shared/store/useStore';
 import { formatPrice } from '../../../shared/utils/helpers';
+import Price from '../../../shared/components/Price';
 import { formatVariantLabel, getVariantSignature } from '../../../shared/utils/variant';
 import toast from 'react-hot-toast';
 import PageTransition from '../../../shared/components/PageTransition';
@@ -276,7 +277,7 @@ const MobileOrderDetail = () => {
                             {vendorGroup.vendorName}
                           </span>
                           <span className="text-xs font-semibold text-primary-600 bg-white px-2 py-0.5 rounded-md">
-                            {formatPrice(vendorGroup.subtotal)}
+                            <Price amount={vendorGroup.subtotal} />
                           </span>
                         </div>
                         {/* Vendor Items */}
@@ -293,7 +294,7 @@ const MobileOrderDetail = () => {
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-gray-800 text-sm mb-1">{item.name}</h3>
                                 <p className="text-xs text-gray-600">
-                                  {formatPrice(item.price)} x {item.quantity}
+                                  <Price amount={item.price} /> x {item.quantity}
                                 </p>
                                 {formatVariantLabel(item?.variant) && (
                                   <p className="text-[11px] text-gray-500">
@@ -302,7 +303,7 @@ const MobileOrderDetail = () => {
                                 )}
                               </div>
                               <p className="font-bold text-gray-800 text-sm">
-                                {formatPrice(item.price * item.quantity)}
+                                <Price amount={item.price * item.quantity} />
                               </p>
                             </div>
                           ))}
@@ -324,7 +325,7 @@ const MobileOrderDetail = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-800 text-sm mb-1">{item.name}</h3>
                           <p className="text-xs text-gray-600">
-                            {formatPrice(item.price)} x {item.quantity}
+                            <Price amount={item.price} /> x {item.quantity}
                           </p>
                           {formatVariantLabel(item?.variant) && (
                                   <p className="text-[11px] text-gray-500">
@@ -333,7 +334,7 @@ const MobileOrderDetail = () => {
                                 )}
                         </div>
                         <p className="font-bold text-gray-800 text-sm">
-                          {formatPrice(item.price * item.quantity)}
+                          <Price amount={item.price * item.quantity} />
                         </p>
                       </div>
                     ))}
@@ -394,25 +395,25 @@ const MobileOrderDetail = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>{t('Subtotal')}</span>
-                    <span>{formatPrice(order.subtotal)}</span>
+                    <Price amount={order.subtotal} />
                   </div>
                   {order.discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>{t('Discount')}</span>
-                      <span>-{formatPrice(order.discount)}</span>
+                      <Price amount={order.discount} prefix="-" />
                     </div>
                   )}
                   <div className="flex justify-between text-gray-600">
                     <span>{t('Shipping')}</span>
-                    <span>{formatPrice(order.shipping)}</span>
+                    <Price amount={order.shipping} />
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>{t('Tax')}</span>
-                    <span>{formatPrice(order.tax)}</span>
+                    <Price amount={order.tax} />
                   </div>
                   <div className="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t border-gray-200">
                     <span>{t('Total')}</span>
-                    <span className="text-primary-600">{formatPrice(order.total)}</span>
+                    <Price amount={order.total} className="text-primary-600" />
                   </div>
                 </div>
               </div>

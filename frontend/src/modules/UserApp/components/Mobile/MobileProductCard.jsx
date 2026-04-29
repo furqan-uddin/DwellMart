@@ -9,6 +9,7 @@ import {
 } from "../../../../shared/utils/helpers";
 import toast from "react-hot-toast";
 import LazyImage from "../../../../shared/components/LazyImage";
+import Price from "../../../../shared/components/Price";
 import { useState, useRef } from "react";
 import useLongPress from "../../hooks/useLongPress";
 import LongPressMenu from "./LongPressMenu";
@@ -240,15 +241,10 @@ const MobileProductCard = ({ product }) => {
               </div>
             )}
 
-            {/* Price */}
             <div className="flex items-center gap-2 mb-0.5 leading-none">
-              <span className="text-lg font-bold text-gray-800 leading-none">
-                {formatPrice(product.price)}
-              </span>
+              <Price amount={product.price} className="text-lg font-bold text-gray-800 leading-none" />
               {product.originalPrice && (
-                <span className="text-xs text-gray-400 line-through font-medium leading-none">
-                  {formatPrice(product.originalPrice)}
-                </span>
+                <Price amount={product.originalPrice} className="text-xs text-gray-400 line-through font-medium leading-none" />
               )}
             </div>
 

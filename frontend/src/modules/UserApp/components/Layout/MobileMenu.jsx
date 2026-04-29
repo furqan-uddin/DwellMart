@@ -8,6 +8,7 @@ import { useWishlistStore } from "../../../../shared/store/wishlistStore";
 import { useUserNotificationStore } from "../../store/userNotificationStore";
 import { appLogo } from "../../../../data/logos";
 import LanguageSelector from "../../../../shared/components/LanguageSelector";
+import CurrencySelector from "../../../../shared/components/CurrencySelector";
 import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 
 const MobileMenu = ({ isOpen, onClose }) => {
@@ -126,9 +127,15 @@ const MobileMenu = ({ isOpen, onClose }) => {
             </div>
 
             {/* Language Settings Drawer/Section */}
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-2">
               <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Language</p>
               <LanguageSelector variant="mobile" />
+            </div>
+
+            {/* Currency Settings Section */}
+            <div className="px-4 pb-4">
+              <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Currency</p>
+              <CurrencySelector variant="mobile" />
             </div>
 
             {/* Scrollable Nav - Fixed scroll bleed */}

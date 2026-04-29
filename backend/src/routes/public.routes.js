@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import asyncHandler from '../utils/asyncHandler.js';
+import axios from 'axios';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import ApiResponse from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
 import Product from '../models/Product.model.js';
@@ -694,6 +698,68 @@ router.get('/pages/:slug', asyncHandler(async (req, res) => {
         content: setting?.value?.content || '',
         lastUpdated: setting?.updatedAt || null,
     }, 'Page fetched.'));
+}));
+
+
+// Simple persistence for exchange rates
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CACHE_FILE = path.join(__dirname, '../data/currency_cache.json');
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// GET /api/currencies (public)
+router.get('/currencies', asyncHandler(async (req, res) => {
+    const now = Date.now();
+    const apiKey = process.env.EXCHANGERATE_API_KEY;
+    
+    // Currency metadata
+    const currencyMeta = [
+        { code: 'INR', symbol: '₹', name: 'Indian Rupee', locale: 'en-IN' },
+        { code: 'USD', symbol: '$', name: 'US Dollar', locale: 'en-US' },
+        { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', locale: 'ar-AE' },
+        { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', locale: 'ar-SA' },
+        { code: 'EUR', symbol: '€', name: 'Euro', locale: 'de-DE' },
+        { code: 'GBP', symbol: '£', name: 'British Pound', locale: 'en-GB' },
+    ];
+
+    let cacheData = { lastUpdated: 0 };
+    try {
+        const fileContent = await fs.readFile(CACHE_FILE, 'utf-8');
+        cacheData = JSON.parse(fileContent);
+    } catch (err) {
+        console.log('No cache file found, will initialize on success');
+    }
+
+    // If cache is expired and we have an API key, try to fetch new rates
+    if (now - (cacheData.lastUpdated || 0) > CACHE_DURATION && apiKey && apiKey !== 'your_api_key_here') {
+        try {
+            // Using ExchangeRate-API v6
+            const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/INR`;
+            const response = await axios.get(url);
+            
+            if (response.data && response.data.result === 'success' && response.data.conversion_rates) {
+                const liveRates = response.data.conversion_rates;
+                liveRates['lastUpdated'] = now;
+                
+                // Save to file for persistence
+                await fs.writeFile(CACHE_FILE, JSON.stringify(liveRates, null, 4));
+                cacheData = liveRates;
+                console.log('Live rates updated from ExchangeRate-API');
+            }
+        } catch (error) {
+            console.error('ExchangeRate-API failed, using last known cache:', error.message);
+        }
+    } else if (!apiKey || apiKey === 'your_api_key_here') {
+        console.warn('EXCHANGERATE_API_KEY is missing or not set. Using cached/fallback rates.');
+    }
+
+    // Combine metadata with cached rates
+    const finalCurrencies = currencyMeta.map(curr => ({
+        ...curr,
+        rate: cacheData[curr.code] || (curr.code === 'INR' ? 1 : null) 
+    })).filter(c => c.rate !== null);
+
+    res.status(200).json(new ApiResponse(200, finalCurrencies, 'Currencies fetched successfully.'));
 }));
 
 // Legacy support: GET /api/:id (only ObjectId-like values to avoid swallowing unknown routes)

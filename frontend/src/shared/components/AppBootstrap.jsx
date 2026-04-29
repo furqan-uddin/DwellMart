@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import api from "../utils/api";
+import useCurrencyStore from "../store/currencyStore";
 
 const PRODUCTS_CACHE_KEY = "user-catalog-products-cache";
 const VENDORS_CACHE_KEY = "user-catalog-vendors-cache";
@@ -38,6 +39,12 @@ const normalizeBrand = (raw) => ({
 });
 
 const AppBootstrap = () => {
+  const { fetchCurrencies } = useCurrencyStore();
+
+  useEffect(() => {
+    fetchCurrencies();
+  }, [fetchCurrencies]);
+
   useEffect(() => {
     let cancelled = false;
 

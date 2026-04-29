@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { useCartStore } from "../../store/useStore";
 import { useWishlistStore } from "../../store/wishlistStore";
 import { formatPrice } from "../../utils/helpers";
+import Price from "../Price";
 import { formatVariantLabel } from "../../utils/variant";
 import useSwipeGesture from "../../../modules/UserApp/hooks/useSwipeGesture";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
@@ -144,9 +145,7 @@ const SwipeableCartItem = ({ item, index }) => {
                     <h3 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-2">
                         {item.name}
                     </h3>
-                    <p className="text-sm font-bold text-primary-600 mb-2">
-                        {formatPrice(item.price)}
-                    </p>
+                    <Price amount={item.price} className="text-sm font-bold text-primary-600 mb-2" />
                     {formatVariantLabel(item?.variant) && (
                         <p className="text-xs text-gray-500 mb-2">
                             {formatVariantLabel(item?.variant)}

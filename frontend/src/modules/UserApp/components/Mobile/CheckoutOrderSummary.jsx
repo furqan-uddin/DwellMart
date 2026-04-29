@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { FiShoppingBag } from "react-icons/fi";
 import { formatPrice } from "../../../../shared/utils/helpers";
+import Price from "../../../../shared/components/Price";
 import { formatVariantLabel, getVariantSignature } from "../../../../shared/utils/variant";
 import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../../hooks/useDynamicTranslation";
@@ -47,7 +48,7 @@ const OrderSummary = ({ itemsByVendor, total, discount, shipping, tax, finalTota
               </div>
               <span className="text-sm font-bold text-primary-700 flex-1">{vendorGroup.vendorName}</span>
               <span className="text-xs font-semibold text-primary-600 bg-white px-2 py-0.5 rounded-md">
-                {formatPrice(vendorGroup.subtotal)}
+                <Price amount={vendorGroup.subtotal} />
               </span>
             </div>
             <div className="space-y-2 pl-2">
@@ -60,7 +61,7 @@ const OrderSummary = ({ itemsByVendor, total, discount, shipping, tax, finalTota
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 truncate text-xs">{item.name}</p>
                     <p className="text-gray-600 text-xs">
-                      {formatPrice(item.price)} x {item.quantity}
+                      <Price amount={item.price} /> x {item.quantity}
                     </p>
                     {formatVariantLabel(item?.variant) && (
                       <p className="text-[11px] text-gray-500">{formatVariantLabel(item?.variant)}</p>
@@ -76,27 +77,27 @@ const OrderSummary = ({ itemsByVendor, total, discount, shipping, tax, finalTota
       <div className="space-y-2 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>{t('Subtotal')}</span>
-          <span>{formatPrice(total)}</span>
+          <Price amount={total} />
         </div>
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
             <span>{t('Discount')}</span>
-            <span>-{formatPrice(discount)}</span>
+            <Price amount={discount} prefix="-" />
           </div>
         )}
         <div className="flex justify-between text-gray-600">
           <span>{t('Shipping')}</span>
           <span>
-            {shipping === 0 ? <span className="text-green-600 font-semibold">{t('FREE')}</span> : formatPrice(shipping)}
+            {shipping === 0 ? <span className="text-green-600 font-semibold">{t('FREE')}</span> : <Price amount={shipping} />}
           </span>
         </div>
         <div className="flex justify-between text-gray-600">
           <span>{t('Tax')}</span>
-          <span>{formatPrice(tax)}</span>
+          <Price amount={tax} />
         </div>
         <div className="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t border-gray-200">
           <span>{t('Total')}</span>
-          <span className="text-primary-600">{formatPrice(finalTotal)}</span>
+          <Price amount={finalTotal} className="text-primary-600" />
         </div>
       </div>
     </div>

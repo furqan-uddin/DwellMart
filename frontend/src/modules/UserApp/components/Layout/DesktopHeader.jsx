@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../../shared/store/authStore";
 import { appLogo } from "../../../../data/logos";
 import SearchBar from "../../../../shared/components/SearchBar";
 import LanguageSelector from "../../../../shared/components/LanguageSelector";
+import CurrencySelector from "../../../../shared/components/CurrencySelector";
 import { usePageTranslation } from "../../../../hooks/usePageTranslation";
 import {
   FiHeart,
@@ -127,8 +128,9 @@ const DesktopHeader = ({ hideSellButton = false }) => {
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3">
-          <div className="mr-2">
+          <div className="flex items-center gap-2 mr-2">
             <LanguageSelector variant="desktop" />
+            <CurrencySelector variant="desktop" />
           </div>
 
           {/* Wishlist */}

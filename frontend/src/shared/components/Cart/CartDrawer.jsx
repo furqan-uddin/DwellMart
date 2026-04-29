@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore, useUIStore } from "../../store/useStore";
 import { useAuthStore } from "../../store/authStore";
 import { formatPrice } from "../../utils/helpers";
+import Price from "../Price";
 import { Link } from "react-router-dom";
 import SwipeableCartItem from "./SwipeableCartItem";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
@@ -155,7 +156,7 @@ const CartDrawer = () => {
                             {vendorGroup.vendorName}
                           </span>
                           <span className="text-xs font-semibold text-primary-600 bg-white px-2 py-1 rounded-md">
-                            {formatPrice(vendorGroup.subtotal)}
+                            <Price amount={vendorGroup.subtotal} />
                           </span>
                         </div>
                         {/* Vendor Items */}
@@ -183,7 +184,7 @@ const CartDrawer = () => {
                     {t('Total:')}
                   </span>
                   <span className="text-lg sm:text-2xl font-bold text-primary-600">
-                    {formatPrice(total)}
+                    <Price amount={total} />
                   </span>
                 </div>
                 <div className="flex flex-col gap-1.5 sm:gap-2">

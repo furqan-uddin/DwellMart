@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCartStore, useUIStore } from "../store/useStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import { formatPrice, getPlaceholderImage } from "../utils/helpers";
+import Price from "./Price";
 import toast from "react-hot-toast";
 import LazyImage from "./LazyImage";
 import { useState, useRef } from "react";
@@ -294,15 +295,10 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
             </div>
           )}
 
-          {/* Price */}
           <div className="flex flex-col items-start gap-0 md:flex-row md:items-end md:gap-2 mb-0.5 mt-auto leading-none">
-            <span className={`text-xs md:text-xl font-black leading-none ${isFlashSale ? "text-red-600" : "text-gray-900"}`}>
-              {formatPrice(product.price)}
-            </span>
+            <Price amount={product.price} className={`text-xs md:text-xl font-black leading-none ${isFlashSale ? "text-red-600" : "text-gray-900"}`} />
             {product.originalPrice && (
-              <span className="text-[9px] md:text-xs text-gray-400 line-through font-medium leading-none mb-0.5">
-                {formatPrice(product.originalPrice)}
-              </span>
+              <Price amount={product.originalPrice} className="text-[9px] md:text-xs text-gray-400 line-through font-medium leading-none mb-0.5" />
             )}
           </div>
 
