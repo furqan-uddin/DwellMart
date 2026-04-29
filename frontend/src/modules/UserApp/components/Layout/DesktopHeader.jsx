@@ -56,7 +56,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
   };
 
   return (
-    <header className="hidden md:block sticky top-0 z-[999] bg-black shadow-lg border-b border-gray-800">
+    <header className="hidden md:block sticky top-0 z-[999] bg-black shadow-lg border-b border-gray-800 overflow-visible">
       <div className="max-w-[1920px] mx-auto px-4 md:px-5 lg:px-8 xl:px-12 h-20 flex items-center gap-3 lg:gap-4 xl:gap-6">
         {/* Logo */}
         <Link to="/home" className="flex-shrink-0 flex items-center gap-2 overflow-visible relative z-20">
@@ -76,7 +76,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-16 lg:h-20 xl:h-24 w-auto max-w-[160px] lg:max-w-[190px] xl:max-w-[220px] object-contain transition-all drop-shadow-md"
+                className="h-24 lg:h-32 xl:h-36 w-auto max-w-[200px] lg:max-w-[240px] xl:max-w-[280px] object-contain transition-all drop-shadow-lg scale-110"
               />
             ) : (
               <span className="text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>

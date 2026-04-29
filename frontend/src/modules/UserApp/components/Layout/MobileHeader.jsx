@@ -310,7 +310,7 @@ const MobileHeader = ({ hideSellButton = false }) => {
                   <img
                     src={appLogo.src}
                     alt={appLogo.alt}
-                    className="h-28 sm:h-32 w-auto max-w-[200px] sm:max-w-[250px] object-contain origin-left relative z-[10004] filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)] transition-all duration-300 scale-110 sm:scale-100"
+                    className="h-32 sm:h-36 w-auto max-w-[220px] sm:max-w-[280px] object-contain origin-left relative z-[10004] filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)] transition-all duration-300 scale-125 sm:scale-110"
                     onError={(e) => {
                       // Hide image if logo doesn't exist
                       e.target.style.display = "none";
