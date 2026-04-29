@@ -603,6 +603,11 @@ export const createCampaign = asyncHandler(async (req, res) => {
         productIds: payload.productIds,
     });
     payload.productIds = exclusivityResult.normalizedProductIds;
+    
+    // Ensure status is synced with isActive if not provided
+    if (payload.status === undefined) {
+        payload.status = payload.isActive !== false ? 'active' : 'draft';
+    }
 
     const campaign = await Campaign.create(payload);
     await syncCampaignBanner(campaign);
@@ -634,6 +639,11 @@ export const updateCampaign = asyncHandler(async (req, res) => {
     });
     if (payload.productIds !== undefined || payload.type !== undefined) {
         payload.productIds = exclusivityResult.normalizedProductIds;
+    }
+
+    // Ensure status is synced with isActive if updated
+    if (payload.isActive !== undefined && payload.status === undefined) {
+        payload.status = payload.isActive ? 'active' : 'draft';
     }
 
     const campaign = await Campaign.findByIdAndUpdate(req.params.id, payload, { new: true });

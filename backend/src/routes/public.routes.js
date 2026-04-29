@@ -24,7 +24,7 @@ const router = Router();
 const listCache = cacheResponse({ ttlSeconds: 30, maxEntries: 1000 });
 const detailCache = cacheResponse({ ttlSeconds: 60, maxEntries: 1000 });
 const catalogCache = cacheResponse({ ttlSeconds: 300, maxEntries: 200 });
-const marketingCache = cacheResponse({ ttlSeconds: 120, maxEntries: 300 });
+const marketingCache = cacheResponse({ ttlSeconds: 30, maxEntries: 300 });
 const PRODUCT_LIST_SELECT = '-faqs -relatedProducts -__v';
 const EXCLUSIVE_SALE_CAMPAIGN_TYPES = ['flash_sale', 'daily_deal', 'special_offer', 'festival'];
 
@@ -103,13 +103,21 @@ const resolveVariantPrice = (product, selectedVariant) => {
     return basePrice;
 };
 
-const activeCampaignWindowQuery = (now = new Date()) => ({
-    isActive: true,
-    $and: [
-        { $or: [{ startDate: null }, { startDate: { $exists: false } }, { startDate: { $lte: now } }] },
-        { $or: [{ endDate: null }, { endDate: { $exists: false } }, { endDate: { $gte: now } }] }
-    ]
-});
+const activeCampaignWindowQuery = (now = new Date()) => {
+    // Be more inclusive: check if it's within the day
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    return {
+        isActive: true,
+        $and: [
+            { $or: [{ startDate: null }, { startDate: { $exists: false } }, { startDate: { $lte: endOfToday } }] },
+            { $or: [{ endDate: null }, { endDate: { $exists: false } }, { endDate: { $gte: startOfToday } }] }
+        ]
+    };
+};
 
 const collectCampaignProductIds = (campaigns = []) => {
     const idSet = new Set();
@@ -618,13 +626,9 @@ router.get('/campaigns/:slug', detailCache, asyncHandler(async (req, res) => {
             .map((value) => String(value || '').trim())
             .filter((value) => value && /^[a-fA-F0-9]{24}$/.test(value))
         : [];
-    if (EXCLUSIVE_SALE_CAMPAIGN_TYPES.includes(String(campaign.type || '').trim())) {
-        const activeSaleProductIds = await getActiveSaleProductIds();
-        if (activeSaleProductIds.length) {
-            const activeSaleSet = new Set(activeSaleProductIds);
-            productIds = productIds.filter((id) => activeSaleSet.has(id));
-        }
-    }
+
+    // Removed redundant getActiveSaleProductIds filtering here to ensure products assigned to this campaign 
+    // are visible as long as the campaign itself is active and within its own date window.
 
     const products = await Product.find({
         _id: { $in: productIds },

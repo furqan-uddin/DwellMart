@@ -456,11 +456,18 @@ const CampaignForm = ({ campaign, onClose, onSave }) => {
     }
 
     try {
+      const startDate = new Date(formData.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(formData.endDate);
+      endDate.setHours(23, 59, 59, 999);
+
       const campaignData = {
         ...formData,
         slug: formData.slug || generatedSlug,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        status: formData.isActive !== false ? 'active' : 'draft',
         discountValue: parseFloat(formData.discountValue),
         productIds: formData.productIds.map((id) => String(id)),
       };
