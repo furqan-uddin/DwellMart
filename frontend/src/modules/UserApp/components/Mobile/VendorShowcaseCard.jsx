@@ -61,7 +61,7 @@ const VendorShowcaseCard = ({ vendor, index = 0 }) => {
               ))}
             </div>
             <span className="text-xs text-gray-600 font-medium">
-              {vendor.rating.toFixed(1)}
+              {(vendor.rating || 0).toFixed(1)}
             </span>
           </div>
         )}

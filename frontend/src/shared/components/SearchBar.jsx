@@ -265,7 +265,7 @@ const SearchBar = () => {
                   />
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold text-gray-800">{suggestion.name}</p>
-                    <p className="text-xs text-gray-600">${suggestion.price.toFixed(2)}</p>
+                    <p className="text-xs text-gray-600">${(suggestion.price || 0).toFixed(2)}</p>
                   </div>
                 </button>
               ))}

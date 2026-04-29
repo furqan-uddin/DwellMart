@@ -656,7 +656,7 @@ router.get('/orders/track/:id', detailCache, asyncHandler(async (req, res) => {
 // GET /api/public/subscription-plans — list active plans for public display
 router.get('/subscription-plans', catalogCache, asyncHandler(async (req, res) => {
     const country = String(req.query.country || '').trim();
-    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
+    const plans = await SubscriptionPlan.find({ isActive: true }).sort({ sortOrder: 1 });
     res.status(200).json(
         new ApiResponse(
             200,

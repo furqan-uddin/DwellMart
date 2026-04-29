@@ -127,7 +127,7 @@ const VendorRegister = () => {
       setSelectedPlan(plan);
       setCurrentStep(2);
       toast.success(
-        plan?.price > 0 && !plan?.isTrial
+        !plan?.isFree && !plan?.isTrial
           ? 'Resume your onboarding by completing payment.'
           : 'Resume your onboarding by completing the final step.'
       );
@@ -424,20 +424,25 @@ const VendorRegister = () => {
                         </div>
                       )}
                       <h3 className="text-lg font-bold">{plan.name}</h3>
-                      <div className="mt-3 flex items-baseline gap-1">
-                        <span className="text-3xl font-extrabold">
-                          {plan.price === 0 ? 'FREE' : `${plan.price.toFixed(2)}`}
-                        </span>
-                        {plan.price > 0 && (
-                          <span className="text-sm text-white/60">{plan.currency || 'AED'}</span>
+                      <div className="mt-3 flex flex-col gap-0">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-extrabold">
+                            {plan.isFree ? 'FREE' : `Rs. ${Number(plan.pricing?.inr || 0).toFixed(0)}`}
+                          </span>
+                          {!plan.isFree && (
+                            <span className="text-sm text-white/60">/ {plan.intervalLabel}</span>
+                          )}
+                        </div>
+                        {!plan.isFree && (
+                          <div className="text-base font-semibold text-white/80">
+                            $ {Number(plan.pricing?.usd || 0).toFixed(2)} USD
+                          </div>
                         )}
                       </div>
-                      <p className="mt-1 text-sm text-white/60">
-                        for {plan.durationDays} day{plan.durationDays > 1 ? 's' : ''}
-                      </p>
-                      {plan.features?.length > 0 && (
+
+                      {plan.featureHighlights?.length > 0 && (
                         <ul className="mt-5 space-y-2">
-                          {plan.features.map((feature, index) => (
+                          {plan.featureHighlights.map((feature, index) => (
                             <li key={`${plan._id}-${index}`} className="flex items-start gap-2 text-sm text-white/80">
                               <FiCheck className="mt-0.5 flex-shrink-0 text-[#ffd042]" />
                               {feature}
@@ -491,7 +496,7 @@ const VendorRegister = () => {
                 {selectedPlan && (
                   <div className="mb-6 rounded-xl border border-[#ffc101]/30 bg-[#ffc101]/10 p-4 text-sm text-[#5a3a00]">
                     Selected plan: <strong>{selectedPlan.name}</strong>
-                    {selectedPlan.price > 0 ? ` (${selectedPlan.price} ${selectedPlan.currency || 'AED'})` : ' (Free)'}
+                    {selectedPlan.isFree ? ' (Free)' : ` (Rs. ${Number(selectedPlan.pricing?.inr || 0).toFixed(0)} / $${Number(selectedPlan.pricing?.usd || 0).toFixed(2)})`}
                   </div>
                 )}
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -785,16 +790,23 @@ const VendorRegister = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-500">Amount</p>
-                        <p className="text-2xl font-extrabold text-gray-900">
-                          {selectedPlan.price > 0 ? `${selectedPlan.price.toFixed(2)} ${selectedPlan.currency || 'AED'}` : 'FREE'}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-2xl font-extrabold text-gray-900">
+                            {selectedPlan.isFree ? 'FREE' : `Rs. ${Number(selectedPlan.pricing?.inr || 0).toFixed(0)}`}
+                          </p>
+                          {!selectedPlan.isFree && (
+                            <p className="text-base font-bold text-gray-700">
+                              $ {Number(selectedPlan.pricing?.usd || 0).toFixed(2)} USD
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 <div className="mt-6 flex flex-col gap-3">
-                  {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? (
+                  {!selectedPlan?.isFree && !selectedPlan?.isTrial ? (
                     <button
                       type="button"
                       onClick={() => {
