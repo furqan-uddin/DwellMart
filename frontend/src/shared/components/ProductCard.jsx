@@ -214,7 +214,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
 
           {/* Product Image */}
           <Link to={productLink} className="block">
-            <div className="w-full h-36 md:h-48 lg:h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative group-hover:bg-gray-200/50 transition-colors p-2">
+            <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden relative group-hover:bg-gray-200/50 transition-colors">
               {product.originalPrice && (
                 <div className={`absolute top-0 left-0 text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-br-lg z-10 shadow-sm ${isFlashSale ? "bg-gradient-to-r from-red-600 to-orange-500" : "bg-red-500"}`}>
                   {Math.round(
@@ -234,10 +234,9 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
               <LazyImage
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                style={{ scale: 1.15, willChange: "transform", transform: "translateZ(0)" }}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 onError={(e) => {
-                  e.target.src = getPlaceholderImage(300, 300, "Product Image");
+                  e.target.src = getPlaceholderImage(400, 400, "Product Image");
                 }}
               />
             </div>
@@ -259,7 +258,7 @@ const ProductCard = ({ product, hideRating = false, isFlashSale = false }) => {
 
           {/* Rating */}
           <div className="flex items-center justify-between mb-0.5">
-            {product.rating && !hideRating && (
+            {!!product.rating && !hideRating && (
               <div className="flex items-center gap-1">
                 <div className="flex items-center bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
                   <span className="text-[9px] md:text-xs font-bold text-yellow-700 mr-0.5">{product.rating}</span>

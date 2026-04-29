@@ -4,6 +4,7 @@ import {
 } from "../../../data/products";
 import { vendors as staticVendors } from "../../../data/vendors";
 import { brands as staticBrands } from "../../../data/brands";
+import { getImageUrl } from "../../../shared/utils/helpers";
 
 const PRODUCTS_CACHE_KEY = "user-catalog-products-cache";
 const VENDORS_CACHE_KEY = "user-catalog-vendors-cache";
@@ -23,6 +24,8 @@ const parseCache = (key) => {
 };
 
 const normalizeProduct = (raw) => {
+  if (!raw) return null;
+
   const vendorObj =
     raw?.vendor && typeof raw.vendor === "object"
       ? raw.vendor
@@ -49,28 +52,34 @@ const normalizeProduct = (raw) => {
     categoryObj?._id || categoryObj?.id || raw?.categoryId
   );
 
-  const image = raw?.image || raw?.images?.[0] || "";
-  const images = Array.isArray(raw?.images)
-    ? raw.images
-    : image
-      ? [image]
-      : [];
+  const rawImage = raw?.image || raw?.mainImage || raw?.thumbnail || raw?.images?.[0] || "";
+  const image = getImageUrl(rawImage);
+  const images = (Array.isArray(raw?.images) ? raw.images : [rawImage])
+    .filter(Boolean)
+    .map(img => getImageUrl(img));
+
+  const price = Number(raw?.price) || 0;
+  const originalPrice = raw?.originalPrice !== undefined ? Number(raw.originalPrice) : undefined;
+  
+  // Ensure original price is always >= selling price for display logic
+  const validOriginalPrice = originalPrice && originalPrice > price ? originalPrice : undefined;
 
   return {
     ...raw,
     id,
     _id: id,
     vendorId,
+    vendor: vendorObj ? normalizeVendor(vendorObj) : null,
     vendorName: raw?.vendorName || vendorObj?.storeName || vendorObj?.name || "",
     brandId,
+    brand: brandObj ? normalizeBrand(brandObj) : null,
     brandName: raw?.brandName || brandObj?.name || "",
     categoryId,
     categoryName: raw?.categoryName || categoryObj?.name || "",
     image,
     images,
-    price: Number(raw?.price) || 0,
-    originalPrice:
-      raw?.originalPrice !== undefined ? Number(raw.originalPrice) : undefined,
+    price,
+    originalPrice: validOriginalPrice,
     rating: Number(raw?.rating) || 0,
     reviewCount: Number(raw?.reviewCount) || 0,
     isActive: raw?.isActive !== false,
@@ -81,10 +90,12 @@ const normalizeProduct = (raw) => {
 
 const normalizeVendor = (raw) => {
   const id = normalizeId(raw?.id || raw?._id);
+  const storeLogo = getImageUrl(raw?.storeLogo || raw?.logo || raw?.image);
   return {
     ...raw,
     id,
     _id: id,
+    storeLogo,
     isVerified: !!raw?.isVerified,
     rating: Number(raw?.rating) || 0,
     reviewCount: Number(raw?.reviewCount) || 0,
@@ -95,37 +106,32 @@ const normalizeVendor = (raw) => {
 
 const normalizeBrand = (raw) => {
   const id = normalizeId(raw?.id || raw?._id);
+  const logo = getImageUrl(raw?.logo || raw?.image || raw?.brandLogo);
   return {
     ...raw,
     id,
     _id: id,
     name: raw?.name || "",
-    logo: raw?.logo || "",
+    logo,
   };
 };
 
 export const getCatalogProducts = () => {
   const cached = parseCache(PRODUCTS_CACHE_KEY);
-  if (Array.isArray(cached) && cached.length > 0) {
-    return cached.map(normalizeProduct).filter((p) => p.id);
-  }
-  return staticProducts;
+  const source = (Array.isArray(cached) && cached.length > 0) ? cached : staticProducts;
+  return source.map(normalizeProduct).filter((p) => p.id);
 };
 
 export const getCatalogVendors = () => {
   const cached = parseCache(VENDORS_CACHE_KEY);
-  if (Array.isArray(cached) && cached.length > 0) {
-    return cached.map(normalizeVendor).filter((v) => v.id);
-  }
-  return staticVendors;
+  const source = (Array.isArray(cached) && cached.length > 0) ? cached : staticVendors;
+  return source.map(normalizeVendor).filter((v) => v.id);
 };
 
 export const getCatalogBrands = () => {
   const cached = parseCache(BRANDS_CACHE_KEY);
-  if (Array.isArray(cached) && cached.length > 0) {
-    return cached.map(normalizeBrand).filter((b) => b.id);
-  }
-  return staticBrands;
+  const source = (Array.isArray(cached) && cached.length > 0) ? cached : staticBrands;
+  return source.map(normalizeBrand).filter((b) => b.id);
 };
 
 export const getProductById = (id) =>

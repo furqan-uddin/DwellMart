@@ -70,11 +70,12 @@ const MobileOrderDetail = () => {
   const [returnReason, setReturnReason] = useState('Product issue');
   const [returnVendorId, setReturnVendorId] = useState('');
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
-   const order = getOrder(orderId);
+   const order = useMemo(() => getOrder(orderId), [getOrder, orderId]);
   const [translatedVendorGroups, setTranslatedVendorGroups] = useState([]);
   const [translatedOrderItems, setTranslatedOrderItems] = useState([]);
 
   useEffect(() => {
+    let active = true;
     const translateContent = async () => {
       if (order?.vendorItems) {
         const groups = await Promise.all(order.vendorItems.map(async (group) => {
@@ -86,14 +87,15 @@ const MobileOrderDetail = () => {
             items
           };
         }));
-        setTranslatedVendorGroups(groups);
+        if (active) setTranslatedVendorGroups(groups);
       }
       if (order?.items) {
         const items = await translateArray(order.items, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
-        setTranslatedOrderItems(items);
+        if (active) setTranslatedOrderItems(items);
       }
     };
     translateContent();
+    return () => { active = false; };
   }, [order, translateArray]);
 
   const shippingAddress = order?.shippingAddress || {};

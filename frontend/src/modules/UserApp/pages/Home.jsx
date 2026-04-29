@@ -35,6 +35,7 @@ import heroSlide2 from "../../../../data/hero/slide2.png";
 import heroSlide3 from "../../../../data/hero/slide3.png";
 import heroSlide4 from "../../../../data/hero/slide4.png";
 import stylishWatchImg from "../../../../data/products/stylish watch.png";
+import { getImageUrl, calculateDiscount } from "../../../shared/utils/helpers";
 
 const normalizeId = (value) => String(value ?? "").trim();
 const toNumber = (value, fallback = 0) => {
@@ -43,6 +44,7 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const normalizeProduct = (raw) => {
+  if (!raw) return null;
   const vendorObj =
     raw?.vendor && typeof raw.vendor === "object"
       ? raw.vendor
@@ -68,23 +70,32 @@ const normalizeProduct = (raw) => {
   const categoryId = normalizeId(
     categoryObj?._id || categoryObj?.id || raw?.categoryId
   );
-  const image = raw?.image || raw?.images?.[0] || "";
+  const rawImage = raw?.image || raw?.mainImage || raw?.thumbnail || raw?.images?.[0] || "";
+  const image = getImageUrl(rawImage);
+  const images = (Array.isArray(raw?.images) ? raw.images : [rawImage])
+    .filter(Boolean)
+    .map(img => getImageUrl(img));
+
+  const price = toNumber(raw?.price, 0);
+  const originalPrice = raw?.originalPrice !== undefined ? toNumber(raw.originalPrice, undefined) : undefined;
+  const validOriginalPrice = originalPrice && originalPrice > price ? originalPrice : undefined;
 
   return {
     ...raw,
     id,
     _id: id,
     vendorId,
+    vendor: vendorObj ? normalizeVendor(vendorObj) : null,
     vendorName: raw?.vendorName || vendorObj?.storeName || vendorObj?.name || "",
     brandId,
+    brand: brandObj ? normalizeBrand(brandObj) : null,
     brandName: raw?.brandName || brandObj?.name || "",
     categoryId,
     categoryName: raw?.categoryName || categoryObj?.name || "",
     image,
-    images: Array.isArray(raw?.images) ? raw.images : image ? [image] : [],
-    price: toNumber(raw?.price, 0),
-    originalPrice:
-      raw?.originalPrice !== undefined ? toNumber(raw.originalPrice, undefined) : undefined,
+    images,
+    price,
+    originalPrice: validOriginalPrice,
     rating: toNumber(raw?.rating, 0),
     reviewCount: toNumber(raw?.reviewCount, 0),
     isActive: raw?.isActive !== false,
@@ -93,23 +104,30 @@ const normalizeProduct = (raw) => {
   };
 };
 
-const normalizeVendor = (raw) => ({
-  ...raw,
-  id: normalizeId(raw?.id || raw?._id),
-  _id: normalizeId(raw?.id || raw?._id),
-  isVerified: !!raw?.isVerified,
-  rating: toNumber(raw?.rating, 0),
-  reviewCount: toNumber(raw?.reviewCount, 0),
-  status: raw?.status || "approved",
-});
+const normalizeVendor = (raw) => {
+  const id = normalizeId(raw?.id || raw?._id);
+  return {
+    ...raw,
+    id,
+    _id: id,
+    storeLogo: getImageUrl(raw?.storeLogo || raw?.logo || raw?.image),
+    isVerified: !!raw?.isVerified,
+    rating: toNumber(raw?.rating, 0),
+    reviewCount: toNumber(raw?.reviewCount, 0),
+    status: raw?.status || "approved",
+  };
+};
 
-const normalizeBrand = (raw) => ({
-  ...raw,
-  id: normalizeId(raw?.id || raw?._id),
-  _id: normalizeId(raw?.id || raw?._id),
-  name: raw?.name || "",
-  logo: raw?.logo || "",
-});
+const normalizeBrand = (raw) => {
+  const id = normalizeId(raw?.id || raw?._id);
+  return {
+    ...raw,
+    id,
+    _id: id,
+    name: raw?.name || "",
+    logo: getImageUrl(raw?.logo || raw?.image || raw?.brandLogo),
+  };
+};
 
 const normalizeTestimonial = (raw) => ({
   ...raw,

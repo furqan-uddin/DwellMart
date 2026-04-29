@@ -24,7 +24,7 @@ import {
   getBrandById,
 } from "../data/catalogData";
 import api from "../../../shared/utils/api";
-import { formatPrice } from "../../../shared/utils/helpers";
+import { formatPrice, getImageUrl, calculateDiscount } from "../../../shared/utils/helpers";
 import Price from "../../../shared/components/Price";
 import toast from "react-hot-toast";
 import MobileLayout from "../components/Layout/MobileLayout";
@@ -38,6 +38,7 @@ import ProductCard from "../../../shared/components/ProductCard";
 import { getVariantSignature } from "../../../shared/utils/variant";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import LazyImage from "../../../shared/components/LazyImage";
 
 const resolveVariantPrice = (product, selectedVariant) => {
   const basePrice = Number(product?.price) || 0;
@@ -122,8 +123,19 @@ const normalizeProduct = (raw) => {
   const vendorId = String(vendorObj?._id || vendorObj?.id || raw?.vendorId || "").trim();
   const brandId = String(brandObj?._id || brandObj?.id || raw?.brandId || "").trim();
   const categoryId = String(categoryObj?._id || categoryObj?.id || raw?.categoryId || "").trim();
-  const image = raw?.image || raw?.images?.[0] || "";
-  const images = Array.isArray(raw?.images) ? raw.images.filter(Boolean) : image ? [image] : [];
+  const rawImage = raw?.image || raw?.mainImage || raw?.thumbnail || raw?.images?.[0] || "";
+  const image = getImageUrl(rawImage);
+  const images = (Array.isArray(raw?.images) ? raw.images : [rawImage])
+    .filter(Boolean)
+    .map(img => getImageUrl(img));
+
+  const price = Number(raw?.price) || 0;
+  const originalPrice = raw?.originalPrice !== undefined && raw?.originalPrice !== null
+    ? Number(raw.originalPrice)
+    : undefined;
+
+  // Ensure original price is always >= selling price for display logic
+  const validOriginalPrice = originalPrice && originalPrice > price ? originalPrice : undefined;
 
   return {
     ...raw,
@@ -134,13 +146,11 @@ const normalizeProduct = (raw) => {
     categoryId,
     image,
     images,
-    price: Number(raw?.price) || 0,
-    originalPrice:
-      raw?.originalPrice !== undefined && raw?.originalPrice !== null
-        ? Number(raw.originalPrice)
-        : undefined,
+    price,
+    originalPrice: validOriginalPrice,
     rating: Number(raw?.rating) || 0,
     reviewCount: Number(raw?.reviewCount) || 0,
+    isActive: raw?.isActive !== false,
     stockQuantity: Number(raw?.stockQuantity) || 0,
     vendorName: raw?.vendorName || vendorObj?.storeName || vendorObj?.name || "",
     brandName: raw?.brandName || brandObj?.name || "",
@@ -149,12 +159,14 @@ const normalizeProduct = (raw) => {
       ? {
         ...vendorObj,
         id: String(vendorObj?.id || vendorObj?._id || vendorId),
+        storeLogo: getImageUrl(vendorObj?.storeLogo || vendorObj?.logo || vendorObj?.image),
       }
       : null,
     brand: brandObj
       ? {
         ...brandObj,
         id: String(brandObj?.id || brandObj?._id || brandId),
+        logo: getImageUrl(brandObj?.logo || brandObj?.image || brandObj?.brandLogo),
       }
       : null,
     stock:
@@ -242,6 +254,19 @@ const MobileProductDetail = () => {
     return getBrandById(product.brandId);
   }, [product]);
 
+  // Stable logos to prevent flashing during re-renders/translations
+  const stableBrandLogo = useMemo(() => {
+    if (!brand) return null;
+    const catalogBrand = getBrandById(brand.id);
+    return catalogBrand?.logo || brand.logo;
+  }, [brand]);
+
+  const stableVendorLogo = useMemo(() => {
+    if (!vendor) return null;
+    const catalogVendor = getVendorById(vendor.id);
+    return catalogVendor?.storeLogo || vendor.storeLogo;
+  }, [vendor]);
+
   const isFavorite = product ? isInWishlist(product.id) : false;
   const selectedVariantSignature = getVariantSignature(selectedVariant || {});
   const isInCart = product
@@ -251,7 +276,9 @@ const MobileProductDetail = () => {
         getVariantSignature(item.variant || {}) === selectedVariantSignature
     )
     : false;
-  const productReviews = product ? sortReviews(product.id, "newest") : [];
+  const productReviews = useMemo(() => {
+    return product ? sortReviews(product.id, "newest") : [];
+  }, [product, sortReviews]);
 
   useEffect(() => {
     let active = true;
@@ -288,24 +315,25 @@ const MobileProductDetail = () => {
         const translatedProduct = await translateObject(resolvedProduct, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
         const translatedSimilar = await translateArray(resolvedSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
 
+        if (!active) return;
         setProduct(translatedProduct);
         if (translatedSimilar.length > 0) {
           setSimilarProducts(translatedSimilar);
         } else if (translatedProduct?.id) {
           const localSimilar = getSimilarProducts(translatedProduct.id, 5);
           const translatedLocalSimilar = await translateArray(localSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
-          setSimilarProducts(translatedLocalSimilar);
+          if (active) setSimilarProducts(translatedLocalSimilar);
         } else {
           setSimilarProducts([]);
         }
       } catch {
         if (!active) return;
         const translatedFallback = await translateObject(localFallbackProduct, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
-        setProduct(translatedFallback);
+        if (active) setProduct(translatedFallback);
         if (translatedFallback?.id) {
           const localSimilar = getSimilarProducts(translatedFallback.id, 5);
           const translatedLocalSimilar = await translateArray(localSimilar, ['name', 'description', 'unit', 'categoryName', 'brandName', 'vendorName']);
-          setSimilarProducts(translatedLocalSimilar);
+          if (active) setSimilarProducts(translatedLocalSimilar);
         } else {
           setSimilarProducts([]);
         }
@@ -492,40 +520,58 @@ const MobileProductDetail = () => {
     return eligibleOrder?._id || null;
   }, [isAuthenticated, user?.id, product?.id, getAllOrders]);
 
-  const translatedVendor = useMemo(() => {
-    if (!vendor) return null;
-    return translateObject(vendor, ['storeName', 'name', 'storeDescription']);
-  }, [vendor, translateObject]);
+  const [translatedVendor, setTranslatedVendor] = useState(null);
+  const [translatedBrand, setTranslatedBrand] = useState(null);
 
-  const translatedBrand = useMemo(() => {
-    if (!brand) return null;
-    return translateObject(brand, ['name', 'description']);
-  }, [brand, translateObject]);
+  useEffect(() => {
+    let active = true;
+    const translateVendorAndBrand = async () => {
+      if (vendor) {
+        const translated = await translateObject(vendor, ['storeName', 'name', 'storeDescription']);
+        if (active) setTranslatedVendor(translated);
+      } else {
+        if (active) setTranslatedVendor(null);
+      }
+
+      if (brand) {
+        const translated = await translateObject(brand, ['name', 'description']);
+        if (active) setTranslatedBrand(translated);
+      } else {
+        if (active) setTranslatedBrand(null);
+      }
+    };
+    translateVendorAndBrand();
+    return () => { active = false; };
+  }, [vendor, brand, translateObject]);
 
   const [translatedProductReviews, setTranslatedProductReviews] = useState([]);
   useEffect(() => {
+    let active = true;
     const translateReviews = async () => {
       if (productReviews.length > 0) {
         const translated = await translateArray(productReviews, ['comment', 'user', 'vendorResponse']);
-        setTranslatedProductReviews(translated);
+        if (active) setTranslatedProductReviews(translated);
       } else {
-        setTranslatedProductReviews([]);
+        if (active) setTranslatedProductReviews([]);
       }
     };
     translateReviews();
+    return () => { active = false; };
   }, [productReviews, translateArray]);
 
   const [translatedFaqs, setTranslatedFaqs] = useState([]);
   useEffect(() => {
+    let active = true;
     const translateFaqs = async () => {
       if (productFaqs.length > 0) {
         const translated = await translateArray(productFaqs, ['question', 'answer']);
-        setTranslatedFaqs(translated);
+        if (active) setTranslatedFaqs(translated);
       } else {
-        setTranslatedFaqs([]);
+        if (active) setTranslatedFaqs([]);
       }
     };
     translateFaqs();
+    return () => { active = false; };
   }, [productFaqs, translateArray]);
 
   const handleSubmitReview = async (reviewData) => {
@@ -614,22 +660,26 @@ const MobileProductDetail = () => {
                       <Link
                         to={`/seller/${vendor.id}`}
                         className="inline-flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-full transition-all duration-300 border border-gray-200 group">
-                        {vendor.storeLogo ? (
-                          <div className="w-6 h-6 rounded-full overflow-hidden bg-white border border-gray-200 flex-shrink-0">
+                        {/* Vendor Logo */}
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center">
+                          {stableVendorLogo ? (
                             <img
-                              src={vendor.storeLogo}
-                              alt={vendor.storeName || vendor.name}
+                              src={stableVendorLogo}
+                              alt={translatedVendor?.storeName || vendor.storeName || vendor.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.style.display = "none";
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextSibling.style.display = "flex";
                               }}
                             />
+                          ) : null}
+                          <div
+                            className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-[10px] font-bold"
+                            style={{ display: stableVendorLogo ? "none" : "flex" }}>
+                            <FiShoppingBag />
                           </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
-                            <FiShoppingBag className="text-white text-xs" />
-                          </div>
-                        )}
+                        </div>
+
                         <span className="font-medium text-sm group-hover:text-primary-600 transition-colors">
                           {translatedVendor?.storeName || translatedVendor?.name || product.vendorName}
                         </span>
@@ -648,15 +698,23 @@ const MobileProductDetail = () => {
                       <Link
                         to={`/brand/${brand.id}`}
                         className="inline-flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-full transition-all duration-300 border border-gray-200 group">
-                        <div className="w-6 h-6 rounded-full overflow-hidden bg-white border border-gray-200 flex-shrink-0">
-                          <img
-                            src={brand.logo}
-                            alt={brand.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center">
+                          {stableBrandLogo ? (
+                            <img
+                              src={stableBrandLogo}
+                              alt={translatedBrand?.name || brand.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextSibling.style.display = "flex";
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-full h-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-[10px]"
+                            style={{ display: stableBrandLogo ? "none" : "flex" }}>
+                            {(translatedBrand?.name || brand.name)?.[0]?.toUpperCase()}
+                          </div>
                         </div>
                         <span className="font-medium text-sm group-hover:text-primary-600 transition-colors">
                           {translatedBrand?.name || product.brandName}
@@ -671,7 +729,7 @@ const MobileProductDetail = () => {
                   </h1>
 
                   {/* Rating & Reviews */}
-                  {product.rating && (
+                  {!!product.rating && (
                     <div className="flex items-center gap-4 mb-6">
                       <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
                         <span className="font-bold text-yellow-700">{product.rating}</span>
@@ -697,11 +755,7 @@ const MobileProductDetail = () => {
                     {product.originalPrice && (
                       <div className="flex items-center gap-2">
                         <span className="text-accent-600 font-bold bg-accent-50 px-3 py-1 rounded-full text-sm">
-                          {Math.round(
-                            ((product.originalPrice - currentPrice) /
-                              product.originalPrice) *
-                            100
-                          )}% {t('OFF')}
+                          {calculateDiscount(product.originalPrice, currentPrice)}% {t('OFF')}
                         </span>
                         <span className="text-sm text-gray-500">{t('Best price guaranteed')}</span>
                       </div>

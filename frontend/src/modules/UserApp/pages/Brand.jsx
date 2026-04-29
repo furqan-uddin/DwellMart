@@ -13,27 +13,45 @@ import { getPlaceholderImage } from "../../../shared/utils/helpers";
 import api from "../../../shared/utils/api";
 import { usePageTranslation } from "../../../hooks/usePageTranslation";
 import { useDynamicTranslation } from "../../../hooks/useDynamicTranslation";
+import { getImageUrl, calculateDiscount } from "../../../shared/utils/helpers";
 
-const normalizeBrand = (raw) => ({
-    ...raw,
-    id: String(raw?.id || raw?._id || ""),
-    _id: String(raw?.id || raw?._id || ""),
-    name: raw?.name || "",
-    logo: raw?.logo || "",
-});
+const normalizeBrand = (raw) => {
+    const id = String(raw?.id || raw?._id || "");
+    return {
+        ...raw,
+        id,
+        _id: id,
+        name: raw?.name || "",
+        logo: getImageUrl(raw?.logo || raw?.image || raw?.brandLogo),
+    };
+};
 
-const normalizeProduct = (raw) => ({
-    ...raw,
-    id: String(raw?.id || raw?._id || ""),
-    _id: String(raw?.id || raw?._id || ""),
-    vendorId: String(raw?.vendorId?._id || raw?.vendorId || ""),
-    brandId: String(raw?.brandId?._id || raw?.brandId || ""),
-    image: raw?.image || raw?.images?.[0] || "",
-    images: Array.isArray(raw?.images) ? raw.images : raw?.image ? [raw.image] : [],
-    price: Number(raw?.price) || 0,
-    rating: Number(raw?.rating) || 0,
-    reviewCount: Number(raw?.reviewCount) || 0,
-});
+const normalizeProduct = (raw) => {
+    const id = String(raw?.id || raw?._id || "");
+    const rawImage = raw?.image || raw?.mainImage || raw?.thumbnail || raw?.images?.[0] || "";
+    const image = getImageUrl(rawImage);
+    const images = (Array.isArray(raw?.images) ? raw.images : [rawImage])
+        .filter(Boolean)
+        .map(img => getImageUrl(img));
+
+    const price = Number(raw?.price) || 0;
+    const originalPrice = raw?.originalPrice !== undefined ? Number(raw.originalPrice) : undefined;
+    const validOriginalPrice = originalPrice && originalPrice > price ? originalPrice : undefined;
+
+    return {
+        ...raw,
+        id,
+        _id: id,
+        vendorId: String(raw?.vendorId?._id || raw?.vendorId || ""),
+        brandId: String(raw?.brandId?._id || raw?.brandId || ""),
+        image,
+        images,
+        price,
+        originalPrice: validOriginalPrice,
+        rating: Number(raw?.rating) || 0,
+        reviewCount: Number(raw?.reviewCount) || 0,
+    };
+};
 
 const sortProducts = (products = [], sortBy = "newest") => {
     const list = Array.isArray(products) ? [...products] : [];

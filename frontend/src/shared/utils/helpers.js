@@ -56,9 +56,28 @@ export const isValidPhone = (phone) => {
  * Get image URL (with fallback)
  */
 export const getImageUrl = (image, fallback = "/placeholder.jpg") => {
-  if (!image) return fallback;
-  if (image.startsWith("http")) return image;
-  return `${import.meta.env.VITE_IMAGE_BASE_URL || ""}${image}`;
+  if (!image || typeof image !== "string") return fallback;
+  
+  // If it's already a full URL or a data URI, return as is
+  if (image.startsWith("data:") || image.startsWith("http")) return image;
+  
+  // Skip prepending for local frontend assets (Vite dev server or public folder)
+  // Check for common Vite patterns and relative paths
+  if (
+    image.startsWith("/src/") || 
+    image.startsWith("/assets/") || 
+    image.startsWith("/@fs/") || 
+    image.startsWith("/@vite/") ||
+    image.startsWith("../") || 
+    image.startsWith("./")
+  ) {
+    return image;
+  }
+
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || "http://localhost:5000";
+  // Clean up the image path - only prepend if it doesn't look like a frontend-only path
+  const cleanPath = image.startsWith("/") ? image.substring(1) : image;
+  return `${baseUrl}/${cleanPath}`;
 };
 
 /**
