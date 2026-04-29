@@ -23,16 +23,13 @@ const MobileMenu = ({ isOpen, onClose }) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.height = '100vh';
-      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
       document.body.style.height = '';
-      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
       document.body.style.height = '';
-      document.body.style.touchAction = '';
     };
   }, [isOpen]);
 
@@ -126,20 +123,19 @@ const MobileMenu = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {/* Language Settings Drawer/Section */}
-            <div className="px-4 pb-2">
-              <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Language</p>
-              <LanguageSelector variant="mobile" />
-            </div>
-
-            {/* Currency Settings Section */}
-            <div className="px-4 pb-4">
-              <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Currency</p>
-              <CurrencySelector variant="mobile" />
-            </div>
-
             {/* Scrollable Nav - Fixed scroll bleed */}
-            <div className="flex-1 overflow-y-auto pt-2 pb-10 scrollbar-hide px-4" style={{ overscrollBehavior: 'contain' }}>
+            <div className="flex-1 overflow-y-auto pt-2 pb-10 scrollbar-hide px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* Language Settings Drawer/Section */}
+              <div className="pb-2">
+                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Language</p>
+                <LanguageSelector variant="mobile" />
+              </div>
+
+              {/* Currency Settings Section */}
+              <div className="pb-4">
+                <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 scale-95 origin-left">Currency</p>
+                <CurrencySelector variant="mobile" />
+              </div>
               {/* Main Links */}
               <div className="space-y-1 mb-10">
                 {mainLinks.map((link) => (

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FiShoppingBag, FiHeart, FiTrash2 } from "react-icons/fi";
 import { useCartStore, useUIStore } from "../../../../shared/store/useStore";
 import { useWishlistStore } from "../../../../shared/store/wishlistStore";
-import { formatPrice } from "../../../../shared/utils/helpers";
+import Price from "../../../../shared/components/Price";
 import toast from "react-hot-toast";
 import LazyImage from '../../../../shared/components/LazyImage';
 import VendorBadge from "../../../Vendor/components/VendorBadge";
@@ -170,13 +170,15 @@ const ProductListItem = ({ product, index, isFlashSale = false }) => {
           {/* Bottom Row: Price + Add Button */}
           <div className="mt-auto flex items-center justify-between gap-3 pt-0.5 border-t border-gray-50 leading-none">
             <div className="flex flex-col leading-none">
-              <span className="text-base md:text-xl font-black text-gray-900 leading-none">
-                {formatPrice(product.price)}
-              </span>
+              <Price 
+                amount={product.price} 
+                className="text-base md:text-xl font-black text-gray-900 leading-none" 
+              />
               {product.originalPrice && (
-                <span className="text-[10px] md:text-xs text-gray-400 line-through font-medium mt-0.5 leading-none">
-                  {formatPrice(product.originalPrice)}
-                </span>
+                <Price 
+                  amount={product.originalPrice} 
+                  className="text-[10px] md:text-xs text-gray-400 line-through font-medium mt-0.5 leading-none" 
+                />
               )}
             </div>
 

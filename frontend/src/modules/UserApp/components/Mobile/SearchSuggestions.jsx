@@ -5,6 +5,7 @@ import { getCatalogProducts } from '../../data/catalogData';
 import api from '../../../../shared/utils/api';
 import { usePageTranslation } from '../../../../hooks/usePageTranslation';
 import { useDynamicTranslation } from '../../../../hooks/useDynamicTranslation';
+import Price from '../../../../shared/components/Price';
 
 const SearchSuggestions = ({
   query,
@@ -155,7 +156,10 @@ const SearchSuggestions = ({
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 rounded-lg transition-colors text-left"
                 >
                   <FiSearch className="text-gray-400 text-sm" />
-                  <span className="text-sm text-gray-700">{product.name}</span>
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{product.name}</span>
+                    <Price amount={product.price} className="text-xs text-gray-500" />
+                  </div>
                 </motion.button>
               ))}
             </div>

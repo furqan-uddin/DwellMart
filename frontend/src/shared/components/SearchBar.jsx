@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FiSearch, FiClock, FiTrendingUp } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCatalogProducts } from '../../modules/UserApp/data/catalogData';
+import Price from './Price';
 import api from '../utils/api';
 
 const RECENT_SEARCHES_KEY = 'recent-searches';
@@ -265,7 +266,7 @@ const SearchBar = () => {
                   />
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold text-gray-800">{suggestion.name}</p>
-                    <p className="text-xs text-gray-600">${(suggestion.price || 0).toFixed(2)}</p>
+                    <Price amount={suggestion.price} className="text-xs text-gray-600" />
                   </div>
                 </button>
               ))}
