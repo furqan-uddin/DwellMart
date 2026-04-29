@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
+import StripeSubscriptionForm from '../components/StripeSubscriptionForm';
 
 const STEPS = ['Plans', 'Registration', 'Payment', 'Thank You'];
 const ONBOARDING_STORAGE_KEY = 'vendor-onboarding-email:/vendor/register';
@@ -50,6 +51,8 @@ const VendorRegister = () => {
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [tempSelectedPlan, setTempSelectedPlan] = useState(null);
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripeConfig, setStripeConfig] = useState({ clientSecret: '', publishableKey: '' });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -263,18 +266,23 @@ const VendorRegister = () => {
     const plan = tempSelectedPlan;
     setShowPaymentModal(false);
     try {
-      const response = await api.post('/subscription/create-order', { planId: plan._id });
-      const { orderId, amount, currency, keyId } = response.data;
+      const response = await api.post('/subscription/initiate', {
+        email: onboardingEmail || formData.email,
+        selectedPlanId: plan._id,
+      });
+      const { checkout } = response.data;
+      const { subscriptionId, keyId } = checkout;
+
       const options = {
         key: keyId,
-        amount,
-        currency,
+        amount: plan.isFree ? 0 : Math.round(Number(plan.pricing?.inr || 0) * 100),
+        currency: 'INR',
         name: 'DwellMart',
         description: `Subscription: ${plan.name}`,
-        order_id: orderId,
+        subscription_id: subscriptionId,
         handler: async (responseData) => {
           const paymentPayload = {
-            razorpay_order_id: responseData.razorpay_order_id,
+            razorpay_order_id: responseData.razorpay_order_id || '',
             razorpay_payment_id: responseData.razorpay_payment_id,
             razorpay_signature: responseData.razorpay_signature,
           };
@@ -307,16 +315,20 @@ const VendorRegister = () => {
     setShowPaymentModal(false);
     setIsLoading(true);
     try {
-      const response = await api.post('/subscription/create-stripe-session', {
-        planId: plan._id,
-        returnPath: window.location.pathname,
+      const response = await api.post('/subscription/initiate', {
+        email: onboardingEmail || formData.email,
+        selectedPlanId: plan._id,
       });
-      if (response.data.url) {
-        window.location.href = response.data.url;
-      }
+      const { checkout } = response.data;
+      setStripeConfig({
+        clientSecret: checkout.clientSecret,
+        publishableKey: checkout.publishableKey,
+      });
+      setShowStripeModal(true);
     } catch (error) {
       console.error('Stripe Error:', error);
       toast.error('Could not initiate payment.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -1086,6 +1098,21 @@ const VendorRegister = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <StripeSubscriptionForm
+        open={showStripeModal}
+        clientSecret={stripeConfig.clientSecret}
+        publishableKey={stripeConfig.publishableKey}
+        onClose={() => setShowStripeModal(false)}
+        onSubmitted={() => {
+          setShowStripeModal(false);
+          completeOnboarding({
+            plan: tempSelectedPlan,
+            method: 'stripe',
+            stripePayload: { stripe_session_id: 'payment_intent_confirmed' },
+          });
+        }}
+      />
     </div>
   );
 };
