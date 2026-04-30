@@ -435,10 +435,22 @@ const SubscriptionOnboardingWizard = ({
         contact: formData.phone,
       },
       theme: { color: '#0f766e' },
-      handler: async () => {
-        setPaymentState('processing');
-        toast.success(t('Authorization received. Waiting for billing confirmation.'));
-        await pollStatus(paymentEmail);
+      handler: async (responseData) => {
+        try {
+          setPaymentState('processing');
+          await api.post('/subscription/confirm', {
+            email: paymentEmail,
+            gateway: 'razorpay',
+            subscriptionId: checkout.subscriptionId,
+            paymentId: responseData?.razorpay_payment_id,
+            signature: responseData?.razorpay_signature,
+          });
+          toast.success(t('Authorization received. Waiting for billing confirmation.'));
+          await pollStatus(paymentEmail);
+        } catch (error) {
+          setPaymentState('failed');
+          toast.error(error?.message || t('Billing could not be confirmed. Please retry the payment step.'));
+        }
       },
       modal: {
         ondismiss: () => {

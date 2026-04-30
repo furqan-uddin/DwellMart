@@ -15,6 +15,9 @@ import {
 } from '../../../services/billing/stripeBilling.service.js';
 import {
     createRazorpaySubscriptionForPlan,
+    fetchRazorpayPayment,
+    fetchRazorpaySubscription,
+    verifyRazorpayPaymentSignature,
     verifyRazorpayWebhookSignature,
 } from '../../../services/billing/razorpayBilling.service.js';
 import { createPlanSelection, resolvePlanSelection } from '../../../services/billing/planSelection.service.js';
@@ -66,8 +69,20 @@ const rememberSubscribedVendor = async (vendor, planId) => {
 };
 
 const notifyVendorOfOnboardingCompletion = async (vendor, plan, payment) => {
+    if (!vendor || vendor.onboardingEmailSentAt) {
+        return;
+    }
+
     try {
         await sendVendorOnboardingSuccessEmail(vendor, plan, payment);
+        vendor.onboardingEmailSentAt = new Date();
+        vendor.onboardingEmailInvoiceId = String(
+            payment?.invoiceId
+            || payment?.transactionId
+            || vendor.onboardingEmailInvoiceId
+            || ''
+        ) || null;
+        await vendor.save({ validateBeforeSave: false });
     } catch (err) {
         console.warn(`[Onboarding Email] Failed to send email to ${vendor.email}: ${err.message}`);
     }
@@ -247,7 +262,11 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
             await notifyVendorOfOnboardingCompletion(vendor, plan, {
                 amount: 0,
                 currency: vendor.country === 'IN' ? 'INR' : 'USD',
+                gateway,
+                status: 'paid',
                 transactionId: 'FREE_PLAN',
+                invoiceId: `${internalSubscription.gateway_subscription_id}_invoice`,
+                createdAt: new Date(),
             });
         }
 
@@ -341,6 +360,92 @@ export const initiateOnboardingSubscription = asyncHandler(async (req, res) => {
     );
 });
 
+export const confirmOnboardingPayment = asyncHandler(async (req, res) => {
+    const {
+        email,
+        gateway,
+        subscriptionId = '',
+        paymentId = '',
+        signature = '',
+    } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const vendor = await Vendor.findOne({ email: normalizedEmail });
+
+    if (!vendor) throw new ApiError(404, 'Vendor not found.');
+    if (!vendor.isVerified) throw new ApiError(403, 'Please verify your email first.');
+
+    if (gateway !== 'razorpay') {
+        throw new ApiError(400, 'Direct payment confirmation is currently supported for Razorpay only.');
+    }
+
+    const isValidSignature = verifyRazorpayPaymentSignature({
+        paymentId: String(paymentId || '').trim(),
+        subscriptionId: String(subscriptionId || '').trim(),
+        signature: String(signature || '').trim(),
+    });
+
+    if (!isValidSignature) {
+        throw new ApiError(400, 'Invalid Razorpay payment signature.');
+    }
+
+    const [subscriptionEntity, paymentEntity] = await Promise.all([
+        fetchRazorpaySubscription(String(subscriptionId || '').trim()),
+        fetchRazorpayPayment(String(paymentId || '').trim()),
+    ]);
+
+    const paymentSucceeded = ['captured', 'authorized'].includes(String(paymentEntity?.status || '').toLowerCase());
+    const synced = await syncRazorpaySubscriptionState(
+        subscriptionEntity,
+        paymentSucceeded ? 'paid' : 'pending'
+    );
+
+    if (!synced) {
+        throw new ApiError(404, 'Unable to reconcile Razorpay subscription for this vendor.');
+    }
+
+    const paymentRecord = await upsertPaymentRecord({
+        vendorId: synced.vendor._id,
+        subscriptionId: synced.subscription._id,
+        gateway: 'razorpay',
+        amount: Number(paymentEntity?.amount || 0) / 100,
+        currency: String(paymentEntity?.currency || 'INR').toUpperCase(),
+        status: paymentSucceeded ? 'paid' : 'pending',
+        transactionId: paymentEntity?.id || String(paymentId || '').trim(),
+        invoiceId: paymentEntity?.invoice_id || subscriptionEntity?.id || String(subscriptionId || '').trim(),
+        raw: {
+            source: 'direct_confirmation',
+            payment: paymentEntity,
+            subscription: subscriptionEntity,
+        },
+    });
+
+    if (paymentSucceeded && synced.vendor.onboardingStatus === 'subscription_active') {
+        await notifyVendorOfOnboardingCompletion(synced.vendor, synced.plan, {
+            amount: paymentRecord.amount,
+            currency: paymentRecord.currency,
+            gateway: paymentRecord.gateway,
+            status: paymentRecord.status,
+            transactionId: paymentRecord.transaction_id,
+            invoiceId: paymentRecord.invoice_id,
+            createdAt: paymentRecord.createdAt,
+        });
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                gateway: 'razorpay',
+                confirmed: paymentSucceeded,
+                subscription: await serializeSubscription(synced.subscription),
+            },
+            paymentSucceeded
+                ? 'Payment confirmed and onboarding synchronized.'
+                : 'Payment verification received but gateway confirmation is still pending.'
+        )
+    );
+});
+
 export const handleStripeWebhook = asyncHandler(async (req, res) => {
     console.log('🔥 Stripe webhook hit');
     console.log(req.headers);
@@ -372,7 +477,7 @@ export const handleStripeWebhook = asyncHandler(async (req, res) => {
             const synced = await syncStripeSubscriptionState(stripeSubscription, 'paid');
 
             if (synced) {
-                await upsertPaymentRecord({
+                const paymentRecord = await upsertPaymentRecord({
                     vendorId: synced.vendor._id,
                     subscriptionId: synced.subscription._id,
                     gateway: 'stripe',
@@ -387,9 +492,13 @@ export const handleStripeWebhook = asyncHandler(async (req, res) => {
                 // Notify vendor if this is the first payment (onboarding)
                 if (synced.vendor.onboardingStatus === 'subscription_active') {
                     await notifyVendorOfOnboardingCompletion(synced.vendor, synced.plan, {
-                        amount: Number(invoice.amount_paid || 0) / 100,
-                        currency: String(invoice.currency || 'usd').toUpperCase(),
-                        transactionId: String(invoice.payment_intent || invoice.charge || invoice.id),
+                        amount: paymentRecord.amount,
+                        currency: paymentRecord.currency,
+                        gateway: paymentRecord.gateway,
+                        status: paymentRecord.status,
+                        transactionId: paymentRecord.transaction_id,
+                        invoiceId: paymentRecord.invoice_id,
+                        createdAt: paymentRecord.createdAt,
                     });
                 }
             }
@@ -472,7 +581,7 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
             const synced = await syncRazorpaySubscriptionState(subscriptionEntity, 'paid');
 
             if (synced && paymentEntity) {
-                await upsertPaymentRecord({
+                const paymentRecord = await upsertPaymentRecord({
                     vendorId: synced.vendor._id,
                     subscriptionId: synced.subscription._id,
                     gateway: 'razorpay',
@@ -487,9 +596,13 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
                 // Notify vendor if this is the first payment (onboarding)
                 if (synced.vendor.onboardingStatus === 'subscription_active') {
                     await notifyVendorOfOnboardingCompletion(synced.vendor, synced.plan, {
-                        amount: Number(paymentEntity.amount || 0) / 100,
-                        currency: String(paymentEntity.currency || 'INR').toUpperCase(),
-                        transactionId: paymentEntity.id,
+                        amount: paymentRecord.amount,
+                        currency: paymentRecord.currency,
+                        gateway: paymentRecord.gateway,
+                        status: paymentRecord.status,
+                        transactionId: paymentRecord.transaction_id,
+                        invoiceId: paymentRecord.invoice_id,
+                        createdAt: paymentRecord.createdAt,
                     });
                 }
             }

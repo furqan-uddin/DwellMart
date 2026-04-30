@@ -53,6 +53,7 @@ const VendorRegister = () => {
   const [tempSelectedPlan, setTempSelectedPlan] = useState(null);
   const [showStripeModal, setShowStripeModal] = useState(false);
   const [stripeConfig, setStripeConfig] = useState({ clientSecret: '', publishableKey: '' });
+  const [paymentState, setPaymentState] = useState('idle');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -71,44 +72,14 @@ const VendorRegister = () => {
     },
   });
 
-  const completeOnboarding = async ({
-    plan,
-    method = null,
-    razorpayPayload = null,
-    stripePayload = null,
-  }) => {
-    const email = onboardingEmail || sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || '';
+  const paymentEmail = onboardingEmail || sessionStorage.getItem(ONBOARDING_STORAGE_KEY) || formData.email.trim().toLowerCase();
+  const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+  const syncFromStatus = async (email, availablePlans = plans, { suppressToast = false } = {}) => {
     if (!email) {
-      toast.error('Please verify your email first.');
-      return;
+      return false;
     }
 
-    setIsLoading(true);
-    try {
-      await api.post('/vendor/auth/complete-onboarding', {
-        email,
-        selectedPlanId: plan._id,
-        payment_method: method,
-        razorpay_order_id: razorpayPayload?.razorpay_order_id || '',
-        razorpay_payment_id: razorpayPayload?.razorpay_payment_id || '',
-        razorpay_signature: razorpayPayload?.razorpay_signature || '',
-        stripe_session_id: stripePayload?.stripe_session_id || '',
-      });
-      setSelectedPlan(plan);
-      setPaymentMethod(method);
-      setRazorpayData(razorpayPayload);
-      setStripeData(stripePayload);
-      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
-      setOnboardingEmail('');
-      toast.success('Onboarding completed! Please await admin approval.');
-      setCurrentStep(3);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resumeOnboarding = async (email, availablePlans = plans) => {
-    if (!email) return;
     const response = await api.post('/vendor/auth/onboarding-status', { email });
     const data = response?.data || {};
 
@@ -117,50 +88,76 @@ const VendorRegister = () => {
         replace: true,
         state: { email, returnTo: '/vendor/register' },
       });
-      return;
+      return false;
     }
 
     if (data.nextStep === 'choose_plan') {
       sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
       setOnboardingEmail(email);
       setSelectedPlan(null);
+      setPaymentState('idle');
       setCurrentStep(0);
-      toast.success('Resume your onboarding by choosing a subscription plan.');
-      return;
+      if (!suppressToast) {
+        toast.success('Resume your onboarding by choosing a subscription plan.');
+      }
+      return false;
     }
 
     if (data.nextStep === 'complete_payment') {
-      const plan = availablePlans.find((item) => item._id === data.selectedPlanId) || null;
+      const plan = data.selectedPlan || availablePlans.find((item) => item._id === data.selectedPlanId) || null;
       sessionStorage.setItem(ONBOARDING_STORAGE_KEY, email);
       setOnboardingEmail(email);
       setSelectedPlan(plan);
       setCurrentStep(2);
-      toast.success(
-        !plan?.isFree && !plan?.isTrial
-          ? 'Resume your onboarding by completing payment.'
-          : 'Resume your onboarding by completing the final step.'
-      );
-      return;
+      return false;
     }
 
     if (data.nextStep === 'awaiting_admin_approval') {
       sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
-      toast.success('Your application is already complete and awaiting admin approval.');
-      navigate('/vendor/login', { replace: true });
-      return;
+      setOnboardingEmail('');
+      setPaymentState('confirmed');
+      setCurrentStep(3);
+      if (!suppressToast) {
+        toast.success('Onboarding completed! Please await admin approval.');
+      }
+      return true;
     }
 
     if (data.nextStep === 'approved') {
       sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
       toast.success('Your vendor account is already active. Please login.');
       navigate('/vendor/login', { replace: true });
-      return;
+      return true;
     }
 
     if (data.nextStep === 'rejected' || data.nextStep === 'suspended') {
       sessionStorage.removeItem(ONBOARDING_STORAGE_KEY);
       toast.error('This vendor account cannot continue onboarding. Please contact support.');
+      return true;
     }
+
+    return false;
+  };
+
+  const pollStatus = async (email, availablePlans = plans, attempt = 0) => {
+    if (!email) return false;
+
+    const done = await syncFromStatus(email, availablePlans, { suppressToast: attempt > 0 });
+    if (done) {
+      return true;
+    }
+
+    if (attempt >= 8) {
+      setPaymentState('pending');
+      return false;
+    }
+
+    await wait(3000);
+    return pollStatus(email, availablePlans, attempt + 1);
+  };
+
+  const resumeOnboarding = async (email, availablePlans = plans) => {
+    await syncFromStatus(email, availablePlans);
   };
 
   useEffect(() => {
@@ -180,17 +177,14 @@ const VendorRegister = () => {
         }
 
         const queryParams = new URLSearchParams(window.location.search);
-        if (queryParams.get('success') === 'true' && queryParams.get('session_id')) {
-          const sessionId = queryParams.get('session_id');
-          const planId = queryParams.get('plan_id');
-          const plan = fetchedPlans.find((item) => item._id === planId);
-          if (plan && (savedEmail || resumeEmail)) {
-            await completeOnboarding({
-              plan,
-              method: 'stripe',
-              stripePayload: { stripe_session_id: sessionId },
-            });
-          }
+        if (
+          (queryParams.get('payment') === 'processing'
+            || queryParams.get('redirect_status')
+            || queryParams.get('success') === 'true')
+          && (savedEmail || resumeEmail)
+        ) {
+          setPaymentState('processing');
+          await pollStatus(savedEmail || resumeEmail, fetchedPlans);
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (queryParams.get('canceled') === 'true') {
           toast.error('Payment was canceled.');
@@ -281,16 +275,24 @@ const VendorRegister = () => {
         description: `Subscription: ${plan.name}`,
         subscription_id: subscriptionId,
         handler: async (responseData) => {
-          const paymentPayload = {
-            razorpay_order_id: responseData.razorpay_order_id || '',
-            razorpay_payment_id: responseData.razorpay_payment_id,
-            razorpay_signature: responseData.razorpay_signature,
-          };
-          await completeOnboarding({
-            plan,
-            method: 'razorpay',
-            razorpayPayload: paymentPayload,
-          });
+          try {
+            setPaymentMethod('razorpay');
+            setRazorpayData(responseData);
+            setPaymentState('processing');
+            await api.post('/subscription/confirm', {
+              email: paymentEmail,
+              gateway: 'razorpay',
+              subscriptionId,
+              paymentId: responseData.razorpay_payment_id,
+              signature: responseData.razorpay_signature,
+            });
+            toast.success('Payment confirmed. Finalizing your onboarding.');
+            await pollStatus(paymentEmail, plans);
+          } catch (error) {
+            console.error('Razorpay confirmation error:', error);
+            setPaymentState('failed');
+            toast.error(error?.message || 'Payment confirmation failed.');
+          }
         },
         prefill: {
           name: formData.name,
@@ -299,13 +301,18 @@ const VendorRegister = () => {
         },
         theme: { color: '#ffc101' },
         modal: {
-          ondismiss: () => toast.error('Payment cancelled.'),
+          ondismiss: () => {
+            setPaymentState('idle');
+            toast.error('Payment cancelled.');
+          },
         },
       };
+      setPaymentState('checkout_open');
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
       console.error('Razorpay Error:', error);
+      setPaymentState('failed');
       toast.error('Could not initiate payment.');
     }
   };
@@ -324,10 +331,40 @@ const VendorRegister = () => {
         clientSecret: checkout.clientSecret,
         publishableKey: checkout.publishableKey,
       });
+      setPaymentMethod('stripe');
       setShowStripeModal(true);
     } catch (error) {
       console.error('Stripe Error:', error);
+      setPaymentState('failed');
       toast.error('Could not initiate payment.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFreePlanActivation = async () => {
+    if (!selectedPlan?._id) {
+      toast.error('Please select a subscription plan.');
+      return;
+    }
+
+    setIsLoading(true);
+    setPaymentState('processing');
+    try {
+      const response = await api.post('/subscription/initiate', {
+        email: paymentEmail,
+        selectedPlanId: selectedPlan._id,
+      });
+      const data = response?.data || {};
+      if (data.status === 'active' || data.alreadyActive) {
+        await syncFromStatus(paymentEmail, plans);
+        return;
+      }
+      await pollStatus(paymentEmail, plans);
+    } catch (error) {
+      console.error('Free plan activation error:', error);
+      setPaymentState('failed');
+      toast.error('Could not complete onboarding.');
     } finally {
       setIsLoading(false);
     }
@@ -875,12 +912,12 @@ const VendorRegister = () => {
                     <FiCreditCard />
                   </div>
                   <h2 className="text-2xl font-bold">
-                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial ? 'Complete Your Payment' : 'Complete Your Onboarding'}
+                    {!selectedPlan?.isFree && !selectedPlan?.isTrial ? 'Complete Your Payment' : 'Complete Your Onboarding'}
                   </h2>
                   <p className="mt-2 text-gray-500">
-                    {selectedPlan?.price > 0 && !selectedPlan?.isTrial
+                    {!selectedPlan?.isFree && !selectedPlan?.isTrial
                       ? 'Your registration is saved. Pay now to finish onboarding.'
-                      : 'Your registration is saved. Finish onboarding to submit your application.'}
+                      : 'Your registration is saved. Finish onboarding to submit your application. Activation happens after payment confirmation.'}
                   </p>
                 </div>
 
@@ -911,6 +948,24 @@ const VendorRegister = () => {
                   </div>
                 )}
 
+                {paymentState === 'processing' && (
+                  <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Waiting for payment confirmation from the gateway. This page will update automatically.
+                  </div>
+                )}
+
+                {paymentState === 'pending' && (
+                  <div className="mt-6 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                    Payment is still pending confirmation. Please wait a moment, then try the payment step again if needed.
+                  </div>
+                )}
+
+                {paymentState === 'failed' && (
+                  <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    We could not confirm the payment yet. Please retry the payment step.
+                  </div>
+                )}
+
                 <div className="mt-6 flex flex-col gap-3">
                   {!selectedPlan?.isFree && !selectedPlan?.isTrial ? (
                     <button
@@ -919,19 +974,19 @@ const VendorRegister = () => {
                         setTempSelectedPlan(selectedPlan);
                         setShowPaymentModal(true);
                       }}
-                      disabled={isLoading}
+                      disabled={isLoading || paymentState === 'processing'}
                       className="w-full rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Choose Payment Method
+                      {isLoading ? 'Preparing Checkout...' : paymentState === 'processing' ? 'Checking Payment Status...' : paymentState === 'checkout_open' ? 'Payment Window Open' : 'Choose Payment Method'}
                     </button>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => completeOnboarding({ plan: selectedPlan })}
-                      disabled={isLoading || !selectedPlan}
+                      onClick={handleFreePlanActivation}
+                      disabled={isLoading || !selectedPlan || paymentState === 'processing'}
                       className="w-full rounded-xl bg-[#ffc101] py-3 font-semibold text-black hover:bg-[#ffd042] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isLoading ? 'Completing...' : 'Complete Onboarding'}
+                      {isLoading ? 'Completing...' : paymentState === 'processing' ? 'Checking Payment Status...' : 'Complete Onboarding'}
                     </button>
                   )}
 
@@ -1103,14 +1158,17 @@ const VendorRegister = () => {
         open={showStripeModal}
         clientSecret={stripeConfig.clientSecret}
         publishableKey={stripeConfig.publishableKey}
-        onClose={() => setShowStripeModal(false)}
-        onSubmitted={() => {
+        onClose={() => {
           setShowStripeModal(false);
-          completeOnboarding({
-            plan: tempSelectedPlan,
-            method: 'stripe',
-            stripePayload: { stripe_session_id: 'payment_intent_confirmed' },
-          });
+          if (paymentState !== 'processing') {
+            setPaymentState('idle');
+          }
+        }}
+        onSubmitted={async () => {
+          setShowStripeModal(false);
+          setStripeData({ confirmed: true });
+          setPaymentState('processing');
+          await pollStatus(paymentEmail, plans);
         }}
       />
     </div>

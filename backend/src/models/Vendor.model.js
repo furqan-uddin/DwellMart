@@ -72,6 +72,8 @@ const vendorSchema = new mongoose.Schema(
         },
         onboardingStartedAt: { type: Date, default: Date.now },
         onboardingCompletedAt: { type: Date },
+        onboardingEmailSentAt: { type: Date, default: null },
+        onboardingEmailInvoiceId: { type: String, trim: true, default: null },
         selectedPlan: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
         billing: {
             stripeCustomerId: { type: String, trim: true, default: null },
