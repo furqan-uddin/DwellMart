@@ -92,6 +92,7 @@ const getChildRoute = (parentRoute, childName) => {
     "/admin/offers": {
       "Home Sliders": "/admin/offers/home-sliders",
       "Festival Offers": "/admin/offers/festival-offers",
+      "Campaigns": "/admin/campaigns",
     },
     "/admin/notifications": {
       "All Notifications": "/admin/notifications",

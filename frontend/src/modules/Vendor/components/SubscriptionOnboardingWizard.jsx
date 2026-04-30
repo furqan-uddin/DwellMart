@@ -81,13 +81,13 @@ const SubscriptionOnboardingWizard = ({
     'Store description', 'Street', 'City', 'State', 'Zip code', 'Country',
     'Password', 'Confirm password', 'Hide', 'Show', 'Trade Licence', 'GST',
     'I agree to the', 'Terms & Conditions', 'Register and verify email',
-    'Complete your subscription',
+    'Complete your subscription', 'Activate your free trial', 'Start your free trial without any payment required.',
     'Billing becomes active only after webhook confirmation updates MongoDB.',
     'Waiting for billing confirmation. This page will keep checking automatically.',
     'Payment is still pending confirmation. Please give the gateway a moment and retry if needed.',
     'Billing could not be confirmed. Please retry the payment step.',
     'Preparing checkout...', 'Checking payment status...', 'Payment window open',
-    'Start secure payment', 'Back to registration',
+    'Start secure payment', 'Activate free plan', 'Activating...', 'Back to registration',
     'Subscription submitted successfully',
     'Your billing is synced from the gateway and your vendor account is now awaiting admin approval.',
     'Go to vendor login', 'DwellMart Vendor Billing', 'No terms are configured yet.',
@@ -687,9 +687,15 @@ const SubscriptionOnboardingWizard = ({
             <motion.div key="payment" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto max-w-2xl">
               <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-xl">
                 <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-teal-700"><FiCreditCard size={28} /></div>
-                  <h2 className="text-2xl font-bold text-slate-900">{t('Complete your subscription')}</h2>
-                  <p className="mt-2 text-sm text-slate-500">{t('Billing becomes active only after webhook confirmation updates MongoDB.')}</p>
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+                    {selectedPlan?.isFree ? <FiStar size={28} /> : <FiCreditCard size={28} />}
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    {selectedPlan?.isFree ? t('Activate your free trial') : t('Complete your subscription')}
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {selectedPlan?.isFree ? t('Start your free trial without any payment required.') : t('Billing becomes active only after webhook confirmation updates MongoDB.')}
+                  </p>
                 </div>
                 {selectedPlan ? <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-center text-slate-700">{selectedPlan.name} | {formatPrice(selectedPlan, t)} | {t('per')} {getIntervalLabel(selectedPlan, t)}</div> : null}
                 {paymentState === 'processing' ? <div className="mt-6 rounded-3xl border border-teal-200 bg-teal-50 px-4 py-4 text-sm text-teal-800">{t('Waiting for billing confirmation. This page will keep checking automatically.')}</div> : null}
@@ -697,8 +703,8 @@ const SubscriptionOnboardingWizard = ({
                 {paymentState === 'failed' ? <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">{t('Billing could not be confirmed. Please retry the payment step.')}</div> : null}
                 <div className="mt-6 flex flex-col gap-3">
                   <button type="button" onClick={handlePayment} disabled={isLoading || paymentState === 'processing'} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
-                    {isLoading ? <FiLoader className="animate-spin" /> : <FiCreditCard />}
-                    {isLoading ? t('Preparing checkout...') : paymentState === 'processing' ? t('Checking payment status...') : paymentState === 'checkout_open' ? t('Payment window open') : t('Start secure payment')}
+                    {isLoading ? <FiLoader className="animate-spin" /> : (selectedPlan?.isFree ? <FiCheck /> : <FiCreditCard />)}
+                    {isLoading ? (selectedPlan?.isFree ? t('Activating...') : t('Preparing checkout...')) : paymentState === 'processing' ? t('Checking payment status...') : paymentState === 'checkout_open' ? t('Payment window open') : (selectedPlan?.isFree ? t('Activate free plan') : t('Start secure payment'))}
                   </button>
                   <button type="button" onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-100">{t('Back to registration')}</button>
                 </div>

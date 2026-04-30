@@ -77,7 +77,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
               <img
                 src={appLogo.src}
                 alt={appLogo.alt}
-                className="h-24 lg:h-32 xl:h-36 w-auto max-w-[200px] lg:max-w-[240px] xl:max-w-[280px] object-contain transition-all drop-shadow-lg scale-110"
+                className="h-32 lg:h-40 xl:h-48 w-auto max-w-[260px] lg:max-w-[320px] xl:max-w-[380px] object-contain transition-all drop-shadow-lg scale-[1.35]"
               />
             ) : (
               <span className="text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-400 to-primary-600 bg-clip-text text-transparent drop-shadow-sm">Dwell Mart</span>
@@ -86,7 +86,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
         </Link>
 
         {/* Navigation Links */}
-        <nav className="flex min-w-0 items-center gap-2 lg:gap-3 xl:gap-4 whitespace-nowrap">
+        <nav className="flex min-w-0 items-center gap-2 lg:gap-3 xl:gap-4 whitespace-nowrap mr-auto">
           <Link
             to="/home"
             className="text-gray-300 hover:text-primary-400 font-medium text-xs lg:text-sm xl:text-[15px] transition-colors">
@@ -121,13 +121,21 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           )}
         </nav>
 
-        {/* Search Bar */}
-        <div className="min-w-0 flex-1 max-w-[180px] lg:max-w-[230px] xl:max-w-[300px] 2xl:max-w-[360px] ml-auto">
-          <SearchBar />
-        </div>
+        {/* Right Section: Search and Actions */}
+        <div className="flex-1 flex items-center justify-end min-w-0 group/search ml-[44px] lg:ml-[68px] xl:ml-[84px]">
+          {/* Search Bar Wrapper */}
+          <div className="relative flex items-center mr-1 lg:mr-2 ml-2 sm:ml-4 lg:ml-6">
+            {/* Spacer to reserve space for the Search Bar when closed */}
+            <div className="w-[40px] shrink-0 pointer-events-none transition-all duration-500"></div>
 
-        {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3">
+            {/* Search Bar - Absolutely positioned overlay expanding to the right */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[40px] transition-all duration-500 ease-in-out group-focus-within/search:w-[280px] md:group-focus-within/search:w-[350px] lg:group-focus-within/search:w-[450px] xl:group-focus-within/search:w-[500px] 2xl:group-focus-within/search:w-[600px] z-[60] [&_input]:!h-[40px] [&_input]:!py-0 [&_input]:!rounded-full [&_input]:!px-0 group-focus-within/search:[&_input]:!pl-12 group-focus-within/search:[&_input]:!pr-4 [&_input]:!text-transparent [&_input]:placeholder:!text-transparent group-focus-within/search:[&_input]:!text-gray-700 group-focus-within/search:[&_input]:placeholder:!text-gray-400 [&_svg]:!left-1/2 [&_svg]:!-translate-x-1/2 group-focus-within/search:[&_svg]:!left-4 group-focus-within/search:[&_svg]:!translate-x-0">
+              <SearchBar />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3 transition-all duration-500 group-focus-within/search:opacity-0 group-focus-within/search:translate-x-4 group-focus-within/search:pointer-events-none">
           <div className="flex items-center gap-2 mr-2">
             <LanguageSelector variant="desktop" />
             <CurrencySelector variant="desktop" />
@@ -235,6 +243,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
               {t("Login")}
             </Link>
           )}
+        </div>
         </div>
       </div>
     </header>

@@ -184,7 +184,13 @@ const listProducts = asyncHandler(async (req, res) => {
     if (minPrice || maxPrice) filter.price = { ...(minPrice && { $gte: Number(minPrice) }), ...(maxPrice && { $lte: Number(maxPrice) }) };
     if (minRating) filter.rating = { $gte: Number(minRating) };
     const searchQuery = String(search || q || '').trim();
-    if (searchQuery) filter.$text = { $search: searchQuery };
+    if (searchQuery) {
+        const safeRegex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [
+            { name: safeRegex },
+            { tags: safeRegex }
+        ];
+    }
 
     const activeSaleProductIds = await getActiveSaleProductIds();
     if (activeSaleProductIds.length) {
@@ -215,15 +221,24 @@ router.get('/products', listCache, listProducts);
 // GET /api/products/flash-sale
 router.get('/flash-sale', marketingCache, asyncHandler(async (req, res) => {
     const flashSaleProductIds = await getActiveSaleProductIds('flash_sale');
-    if (!flashSaleProductIds.length) {
-        return res.status(200).json(new ApiResponse(200, [], 'Flash sale products.'));
+    
+    const filter = {
+        isActive: true,
+        $or: [
+            { flashSale: true }
+        ]
+    };
+    
+    if (flashSaleProductIds.length > 0) {
+        filter.$or.push({ _id: { $in: flashSaleProductIds } });
     }
 
-    const products = await Product.find({ isActive: true, _id: { $in: flashSaleProductIds } })
+    const products = await Product.find(filter)
         .select(PRODUCT_LIST_SELECT)
         .sort({ createdAt: -1 })
         .limit(20)
         .lean();
+        
     res.status(200).json(new ApiResponse(200, products, 'Flash sale products.'));
 }));
 
@@ -246,7 +261,13 @@ router.get('/new-arrivals', listCache, asyncHandler(async (req, res) => {
 
     const filter = { isActive: true, isNewArrival: true };
     const searchQuery = String(search || q || '').trim();
-    if (searchQuery) filter.$text = { $search: searchQuery };
+    if (searchQuery) {
+        const safeRegex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [
+            { name: safeRegex },
+            { tags: safeRegex }
+        ];
+    }
     if (minPrice || maxPrice) {
         filter.price = {
             ...(minPrice ? { $gte: Number(minPrice) } : {}),

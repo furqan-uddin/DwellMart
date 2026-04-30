@@ -84,7 +84,8 @@
     "route": "/admin/offers",
     "children": [
       "Home Sliders",
-      "Festival Offers"
+      "Festival Offers",
+      "Campaigns"
     ]
   },
   {
