@@ -122,9 +122,9 @@ const DesktopHeader = ({ hideSellButton = false }) => {
         </nav>
 
         {/* Right Section: Search and Actions */}
-        <div className="flex-1 flex items-center justify-end min-w-0 group/search ml-[44px] lg:ml-[68px] xl:ml-[84px]">
+        <div className="flex-1 flex items-center justify-end min-w-0 ml-[44px] lg:ml-[68px] xl:ml-[84px]">
           {/* Search Bar Wrapper */}
-          <div className="relative flex items-center mr-1 lg:mr-2 ml-2 sm:ml-4 lg:ml-6">
+          <div className="relative flex items-center mr-1 lg:mr-2 ml-2 sm:ml-4 lg:ml-6 group/search peer/search">
             {/* Spacer to reserve space for the Search Bar when closed */}
             <div className="w-[40px] shrink-0 pointer-events-none transition-all duration-500"></div>
 
@@ -135,7 +135,7 @@ const DesktopHeader = ({ hideSellButton = false }) => {
           </div>
 
           {/* Actions */}
-          <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3 transition-all duration-500 group-focus-within/search:opacity-0 group-focus-within/search:translate-x-4 group-focus-within/search:pointer-events-none">
+          <div className="flex shrink-0 items-center gap-1.5 lg:gap-2 xl:gap-3 transition-all duration-500 peer-focus-within/search:opacity-0 peer-focus-within/search:translate-x-4 peer-focus-within/search:pointer-events-none">
           <div className="flex items-center gap-2 mr-2">
             <LanguageSelector variant="desktop" />
             <CurrencySelector variant="desktop" />
