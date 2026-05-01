@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import axios from 'axios';
+import api from '../utils/api';
 
 const useCurrencyStore = create(
     persist(
@@ -19,16 +19,16 @@ const useCurrencyStore = create(
             fetchCurrencies: async () => {
                 set({ isLoading: true });
                 try {
-                    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/currencies`);
-                    if (response.data.success) {
+                    const response = await api.get('/currencies');
+                    if (response.success) {
                         set({ 
-                            currencies: response.data.data, 
+                            currencies: response.data, 
                             isLoading: false 
                         });
                         
                         // Ensure selected currency still exists in the fetched list, otherwise default to INR
                         const { selectedCurrency } = get();
-                        const exists = response.data.data.find(c => c.code === selectedCurrency);
+                        const exists = response.data.find(c => c.code === selectedCurrency);
                         if (!exists) {
                             set({ selectedCurrency: 'INR' });
                         }
